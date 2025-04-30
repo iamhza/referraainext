@@ -224,12 +224,200 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Step 1: Service Request Basics */}
+            {/* Step 1: Client Information */}
             {step === 1 && (
               <div className="animate-fade-in space-y-6">
                 <div className="mb-8">
                   <div className="bg-primary/10 text-primary inline-flex items-center px-3 py-1 rounded-full text-sm font-medium mb-2">
                     Step 1
+                  </div>
+                  <h3 className="text-lg font-semibold">Client Information</h3>
+                  <p className="text-gray-500 mt-1">Enter the client's personal details</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      value={formData.firstName}
+                      onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                      placeholder="Enter first name"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      value={formData.lastName}
+                      onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                      placeholder="Enter last name"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                    <Input
+                      id="dateOfBirth"
+                      type="date"
+                      value={formData.dateOfBirth}
+                      onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      placeholder="Enter email address"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      placeholder="(XXX) XXX-XXXX"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Preferred Contact Method</Label>
+                    <RadioGroup
+                      value={formData.preferredContactMethod}
+                      onValueChange={(value: 'email' | 'phone' | 'both') => 
+                        setFormData({...formData, preferredContactMethod: value})}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="email" id="contact-email" />
+                        <Label htmlFor="contact-email">Email</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="phone" id="contact-phone" />
+                        <Label htmlFor="contact-phone">Phone</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="both" id="contact-both" />
+                        <Label htmlFor="contact-both">Both</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="address">Street Address</Label>
+                    <Input
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) => setFormData({...formData, address: e.target.value})}
+                      placeholder="Enter street address"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="city">City</Label>
+                    <Input
+                      id="city"
+                      value={formData.city}
+                      onChange={(e) => setFormData({...formData, city: e.target.value})}
+                      placeholder="Enter city"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="state">State</Label>
+                    <Select
+                      value={formData.state}
+                      onValueChange={(value) => setFormData({...formData, state: value})}
+                    >
+                      <SelectTrigger id="state">
+                        <SelectValue placeholder="Select state" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="MN">Minnesota</SelectItem>
+                        <SelectItem value="WI">Wisconsin</SelectItem>
+                        <SelectItem value="IA">Iowa</SelectItem>
+                        <SelectItem value="ND">North Dakota</SelectItem>
+                        <SelectItem value="SD">South Dakota</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="zipCode">ZIP Code</Label>
+                    <Input
+                      id="zipCode"
+                      value={formData.zipCode}
+                      onChange={(e) => setFormData({...formData, zipCode: e.target.value})}
+                      placeholder="Enter ZIP code"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Insurance Information</Label>
+                    <Select
+                      value={formData.insurance}
+                      onValueChange={(value: InsuranceType) => setFormData({...formData, insurance: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select insurance type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="medicaid">Medicaid</SelectItem>
+                        <SelectItem value="medicare">Medicare</SelectItem>
+                        <SelectItem value="private">Private Insurance</SelectItem>
+                        <SelectItem value="none">No Insurance</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {formData.insurance === 'private' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="insuranceProvider">Insurance Provider</Label>
+                        <Input
+                          id="insuranceProvider"
+                          value={formData.insuranceProvider}
+                          onChange={(e) => setFormData({...formData, insuranceProvider: e.target.value})}
+                          placeholder="Enter insurance provider"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="insuranceNumber">Insurance Number</Label>
+                        <Input
+                          id="insuranceNumber"
+                          value={formData.insuranceNumber}
+                          onChange={(e) => setFormData({...formData, insuranceNumber: e.target.value})}
+                          placeholder="Enter insurance number"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Service Request Basics */}
+            {step === 2 && (
+              <div className="animate-fade-in space-y-6">
+                <div className="mb-8">
+                  <div className="bg-primary/10 text-primary inline-flex items-center px-3 py-1 rounded-full text-sm font-medium mb-2">
+                    Step 2
                   </div>
                   <h3 className="text-lg font-semibold">Service Request Basics</h3>
                   <p className="text-gray-500 mt-1">Tell us what service you're looking for</p>
@@ -337,12 +525,12 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
               </div>
             )}
 
-            {/* Step 2: Provider Matching Preferences */}
-            {step === 2 && (
+            {/* Step 3: Provider Matching Preferences */}
+            {step === 3 && (
               <div className="animate-fade-in space-y-6">
                 <div className="mb-8">
                   <div className="bg-primary/10 text-primary inline-flex items-center px-3 py-1 rounded-full text-sm font-medium mb-2">
-                    Step 2
+                    Step 3
                   </div>
                   <h3 className="text-lg font-semibold">Provider Matching Preferences</h3>
                   <p className="text-gray-500 mt-1">Help us find the right providers</p>
@@ -530,125 +718,26 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
               </div>
             )}
 
-            {/* Step 3: Contact & Follow-Up */}
-            {step === 3 && (
-              <div className="animate-fade-in space-y-6">
-                <div className="mb-8">
-                  <div className="bg-primary/10 text-primary inline-flex items-center px-3 py-1 rounded-full text-sm font-medium mb-2">
-                    Step 3
-                  </div>
-                  <h3 className="text-lg font-semibold">Contact & Follow-Up</h3>
-                  <p className="text-gray-500 mt-1">Your information for provider communications</p>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="managerName">Case Manager Name</Label>
-                      <Input
-                        id="managerName"
-                        value={formData.managerName}
-                        onChange={(e) => setFormData({...formData, managerName: e.target.value})}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="organization">Organization Name</Label>
-                      <Input
-                        id="organization"
-                        value={formData.organization}
-                        onChange={(e) => setFormData({...formData, organization: e.target.value})}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email Address</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Notification Preferences</Label>
-                    <div className="space-y-2 mt-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="notify-email"
-                          checked={formData.notifyEmail}
-                          onCheckedChange={(checked) => 
-                            setFormData({...formData, notifyEmail: checked as boolean})}
-                        />
-                        <label
-                          htmlFor="notify-email"
-                          className="text-sm leading-none"
-                        >
-                          Email notifications
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="notify-sms"
-                          checked={formData.notifySMS}
-                          onCheckedChange={(checked) => 
-                            setFormData({...formData, notifySMS: checked as boolean})}
-                        />
-                        <label
-                          htmlFor="notify-sms"
-                          className="text-sm leading-none"
-                        >
-                          SMS notifications
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="providerNotes">Additional Notes for Providers</Label>
-                    <Textarea 
-                      id="providerNotes"
-                      value={formData.providerNotes}
-                      onChange={(e) => setFormData({...formData, providerNotes: e.target.value})}
-                      placeholder="Any specific details you want providers to know about this referral..."
-                      className="min-h-[100px]"
-                    />
-                  </div>
-
-                  <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
-                    <p className="text-sm text-blue-800">
-                      <strong>Note:</strong> After submitting this referral, matched providers will be notified. You'll be able to communicate directly with providers who accept the referral.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Navigation Buttons */}
-            <div className="flex justify-between mt-8">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={prevStep}
-                disabled={step === 1}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Previous
-              </Button>
+            {/* Form Navigation */}
+            <div className="flex justify-between pt-6 border-t">
+              {step > 1 ? (
+                <Button type="button" variant="outline" onClick={prevStep}>
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Previous Step
+                </Button>
+              ) : (
+                <div></div>
+              )}
+              
               <Button type="submit">
-                {step === totalSteps ? 'Submit Referral' : 'Next'}
-                {step !== totalSteps && <ArrowRight className="h-4 w-4 ml-2" />}
+                {step === totalSteps ? (
+                  'Submit Referral'
+                ) : (
+                  <>
+                    Next Step
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </>
+                )}
               </Button>
             </div>
           </form>
