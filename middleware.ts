@@ -8,11 +8,6 @@ export async function middleware(req: NextRequest) {
   // Log current path for debugging
   console.log('Current path:', req.nextUrl.pathname)
   
-  // Skip middleware for auth callback route
-  if (req.nextUrl.pathname.startsWith('/auth/callback')) {
-    return res;
-  }
-
   // Create a Supabase client configured to use cookies
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -91,5 +86,8 @@ export const config = {
     '/auth/callback',
     '/auth/signin',
     '/auth/login',
+    '/api/referrals/:path*',
+    '/api/phi/:path*',
+    '/api/test/:path*'
   ],
 } 
