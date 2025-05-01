@@ -77,6 +77,42 @@ type ServiceType = 'medical' | 'dental' | 'mental_health';
 type UrgencyLevel = 'low' | 'medium' | 'high';
 type InsuranceType = 'medicaid' | 'medicare' | 'private' | 'none';
 
+interface ReferralFormData {
+  clientInfo: {
+    firstName: string;
+    lastName: string;
+    dateOfBirth: string;
+    email: string;
+    phone: string;
+    address: {
+      street: string;
+      city: string;
+      state: string;
+      zipCode: string;
+    };
+    preferredContactMethod: 'email' | 'phone' | 'both';
+    insurance: {
+      type: 'medicaid' | 'medicare' | 'private' | 'none';
+      provider?: string;
+      number?: string;
+    };
+  };
+  serviceDetails: {
+    type: string;
+    urgency: 'low' | 'medium' | 'high';
+    counties: string[];
+    additionalNotes: string;
+  };
+  providerPreferences: {
+    providerType: 'no-preference' | 'small' | 'large' | 'nonprofit' | 'faith-based';
+    insuranceAccepted: string[];
+    languages: string[];
+    availableTimes: string[];
+    emergencyServices: boolean;
+    showAvailableOnly: boolean;
+  };
+}
+
 interface FormData {
   // Personal Information
   firstName: string;
@@ -179,7 +215,57 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
     }
     
     try {
-      // TODO: Implement your form submission logic here
+      // Format data for API
+      const referralData: ReferralFormData = {
+        clientInfo: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          dateOfBirth: formData.dateOfBirth,
+          email: formData.email,
+          phone: formData.phone,
+          address: {
+            street: formData.address,
+            city: formData.city,
+            state: formData.state,
+            zipCode: formData.zipCode
+          },
+          preferredContactMethod: formData.preferredContactMethod,
+          insurance: {
+            type: formData.insurance as 'medicaid' | 'medicare' | 'private' | 'none',
+            provider: formData.insuranceProvider,
+            number: formData.insuranceNumber
+          }
+        },
+        serviceDetails: {
+          type: formData.selectedService,
+          urgency: formData.urgency as 'low' | 'medium' | 'high',
+          counties: formData.counties,
+          additionalNotes: formData.additionalNotes
+        },
+        providerPreferences: {
+          providerType: formData.providerType,
+          insuranceAccepted: formData.insuranceAccepted,
+          languages: formData.languages,
+          availableTimes: formData.availableTimes,
+          emergencyServices: formData.emergencyServices === 'yes',
+          showAvailableOnly: formData.showAvailableOnly
+        }
+      };
+      
+      // Submit to API
+      const response = await fetch('/api/referrals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(referralData),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to submit referral');
+      }
+      
+      const data = await response.json();
       
       toast({
         title: "Referral Submitted Successfully",
@@ -190,6 +276,7 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
         onComplete();
       }
     } catch (error) {
+      console.error('Error submitting referral:', error);
       toast({
         title: "Error",
         description: "There was an error submitting your referral. Please try again.",
