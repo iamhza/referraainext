@@ -23,59 +23,125 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 
 // Types
 type NavItem = {
   title: string
   href: string
   icon: React.ReactNode
-  role: 'case_manager' | 'provider' | 'both'
+  role: 'case_manager' | 'provider' | 'admin' | 'both'
 }
 
 // Navigation items configuration
 const navItems: NavItem[] = [
+  // Admin nav
+  {
+    title: 'Admin Dashboard',
+    href: '/admin',
+    icon: <LayoutDashboard className="h-5 w-5" />, 
+    role: 'admin'
+  },
+  {
+    title: 'User Management',
+    href: '/admin/users',
+    icon: <Users className="h-5 w-5" />, 
+    role: 'admin'
+  },
+  {
+    title: 'Provider Management',
+    href: '/admin/providers',
+    icon: <UserCheck className="h-5 w-5" />, 
+    role: 'admin'
+  },
+  {
+    title: 'Referrals',
+    href: '/admin/referrals',
+    icon: <ClipboardList className="h-5 w-5" />, 
+    role: 'admin'
+  },
+  {
+    title: 'Settings',
+    href: '/admin/settings',
+    icon: <Settings className="h-5 w-5" />, 
+    role: 'admin'
+  },
+
+  // Provider nav
+  {
+    title: 'Provider Dashboard',
+    href: '/provider',
+    icon: <LayoutDashboard className="h-5 w-5" />, 
+    role: 'provider'
+  },
+  {
+    title: 'My Referrals',
+    href: '/provider/referrals',
+    icon: <ClipboardList className="h-5 w-5" />, 
+    role: 'provider'
+  },
+  {
+    title: 'Messages',
+    href: '/provider/messages',
+    icon: <MessageSquare className="h-5 w-5" />, 
+    role: 'provider'
+  },
+  {
+    title: 'Profile',
+    href: '/provider/profile',
+    icon: <Users className="h-5 w-5" />, 
+    role: 'provider'
+  },
+  {
+    title: 'Settings',
+    href: '/provider/settings',
+    icon: <Settings className="h-5 w-5" />, 
+    role: 'provider'
+  },
+
+  // Case Manager nav (existing)
   {
     title: 'Dashboard',
     href: '/case-manager',
-    icon: <LayoutDashboard className="h-5 w-5" />,
-    role: 'both'
+    icon: <LayoutDashboard className="h-5 w-5" />, 
+    role: 'case_manager'
   },
   {
     title: 'Clients',
     href: '/case-manager/clients',
-    icon: <Users className="h-5 w-5" />,
+    icon: <Users className="h-5 w-5" />, 
     role: 'case_manager'
   },
   {
     title: 'Referrals',
     href: '/case-manager/referrals',
-    icon: <ClipboardList className="h-5 w-5" />,
-    role: 'both'
+    icon: <ClipboardList className="h-5 w-5" />, 
+    role: 'case_manager'
   },
   {
     title: 'New Referral',
     href: '/case-manager/new-referral',
-    icon: <FileText className="h-5 w-5" />,
+    icon: <FileText className="h-5 w-5" />, 
     role: 'case_manager'
   },
   {
     title: 'Matched Providers',
     href: '/case-manager/matched-providers',
-    icon: <UserCheck className="h-5 w-5" />,
+    icon: <UserCheck className="h-5 w-5" />, 
     role: 'case_manager'
   },
   {
     title: 'Messages',
     href: '/case-manager/messages',
-    icon: <MessageSquare className="h-5 w-5" />,
-    role: 'both'
+    icon: <MessageSquare className="h-5 w-5" />, 
+    role: 'case_manager'
   },
   {
     title: 'Settings',
     href: '/case-manager/settings',
-    icon: <Settings className="h-5 w-5" />,
-    role: 'both'
-  }
+    icon: <Settings className="h-5 w-5" />, 
+    role: 'case_manager'
+  },
 ]
 
 export function Sidebar() {
@@ -87,11 +153,42 @@ export function Sidebar() {
 
   // Get user role from auth context
   const userRole = user?.user_metadata?.role || 'case_manager'
+  // TEMP DEBUG: Log the detected user role
+  useEffect(() => {
+    console.log('[Sidebar] Detected userRole:', userRole);
+  }, [userRole]);
 
   // Filter nav items based on user role
   const filteredNavItems = navItems.filter(
-    item => item.role === 'both' || item.role === userRole
+    item => item.role === userRole
   )
+
+  // Group nav items by section
+  const navSections = [
+    {
+      label: 'Main',
+      items: filteredNavItems.filter(item => item.title.toLowerCase().includes('dashboard')),
+    },
+    {
+      label: 'Clients & Providers',
+      items: filteredNavItems.filter(item =>
+        item.title.toLowerCase().includes('client') ||
+        item.title.toLowerCase().includes('provider')
+      ),
+    },
+    {
+      label: 'Referrals',
+      items: filteredNavItems.filter(item => item.title.toLowerCase().includes('referral')),
+    },
+    {
+      label: 'Messages',
+      items: filteredNavItems.filter(item => item.title.toLowerCase().includes('message')),
+    },
+    {
+      label: 'Profile & Settings',
+      items: filteredNavItems.filter(item => item.title.toLowerCase().includes('profile') || item.title.toLowerCase().includes('settings')),
+    },
+  ];
 
   // Toggle sidebar for desktop
   const toggleSidebar = () => {
@@ -115,35 +212,25 @@ export function Sidebar() {
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          "bg-white border-r border-gray-200 fixed h-full z-20 top-0 transition-all duration-300 ease-in-out",
+          "fixed h-full z-20 top-0 left-0 transition-all duration-300 ease-in-out",
+          "backdrop-blur-xl bg-white/80 bg-gradient-to-br from-white/80 to-blue-50/60 shadow-xl",
           isSmallScreen ? (
-            isMobileMenuOpen ? "left-0 w-64" : "-left-64 w-64"
+            isMobileMenuOpen ? "w-64" : "-left-64 w-64"
           ) : (
-            sidebarOpen ? "left-0 w-64" : "left-0 w-16"
+            sidebarOpen ? "w-64" : "w-20"
           )
         )}
       >
         <div className="flex flex-col h-full">
           {/* Sidebar Header */}
-          <div className="h-16 border-b flex items-center justify-between px-4">
-            <div className="w-full">
+          <div className="h-16 border-b-0 flex items-center justify-between px-4">
+            <div className="w-full flex items-center gap-2">
               <Link 
                 href="/" 
                 className="flex items-center justify-center w-full relative h-8 overflow-hidden no-underline hover:no-underline focus:no-underline active:no-underline"
                 style={{ textDecoration: 'none' }}
               >
-                <div className={cn(
-                  "absolute inset-0 flex items-center transition-transform duration-300 ease-in-out",
-                  !sidebarOpen && !isSmallScreen ? "translate-x-[-100%]" : "translate-x-0"
-                )}>
-                  <Logo className="h-8 w-auto" />
-                </div>
-                <div className={cn(
-                  "absolute inset-0 flex items-center justify-center transition-transform duration-300 ease-in-out",
-                  !sidebarOpen && !isSmallScreen ? "translate-x-0" : "translate-x-[100%]"
-                )}>
-                  <span className="text-2xl font-bold text-primary-600">R</span>
-                </div>
+                <Logo className="h-8 w-auto animate-fade-in" />
               </Link>
             </div>
             {isSmallScreen && (
@@ -153,48 +240,50 @@ export function Sidebar() {
             )}
           </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-            {filteredNavItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center py-2 px-3 text-gray-700 rounded-md transition-colors group relative no-underline",
-                  "hover:bg-gray-100 hover:text-primary-600 hover:border-b hover:border-primary-600",
-                  pathname === item.href && "bg-referra-50 text-referra-700",
-                  !sidebarOpen && !isSmallScreen && "justify-center px-2"
-                )}
-              >
-                <div className="flex items-center">
-                  {item.icon}
-                  <span className={cn(
-                    "ml-3 transition-all duration-300",
-                    !sidebarOpen && !isSmallScreen && "hidden"
-                  )}>
-                    {item.title}
-                  </span>
+          {/* Navigation Sections */}
+          <nav className="flex-1 px-2 py-4 space-y-4 overflow-y-auto">
+            {navSections.map(section => (
+              section.items.length > 0 && (
+                <div key={section.label}>
+                  <div className={cn("text-xs font-semibold uppercase tracking-wider text-gray-400 px-3 mb-2", !sidebarOpen && "hidden")}>{section.label}</div>
+                  <ul className="space-y-1">
+                    {section.items.map((item) => {
+                      const isActive = pathname === item.href || (item.href === '/provider' && pathname.startsWith('/provider')) || (item.href === '/admin' && pathname.startsWith('/admin')) || (item.href === '/case-manager' && pathname.startsWith('/case-manager'));
+                      return (
+                        <li key={item.href}>
+                          <Link
+                            href={item.href}
+                            className={cn(
+                              "flex items-center gap-3 py-2 px-3 rounded-lg transition-all group relative font-medium",
+                              isActive ? "bg-primary/10 text-primary-700" : "text-gray-700 hover:bg-primary/5 hover:text-primary-600",
+                              sidebarOpen ? "" : "justify-center px-2"
+                            )}
+                          >
+                            {/* Active pill indicator */}
+                            {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-2 bg-primary-500 rounded-full shadow-md transition-all" />}
+                            <span className="z-10">{item.icon}</span>
+                            <span className={cn("ml-2 z-10 transition-all duration-300", !sidebarOpen && "hidden")}>{item.title}</span>
+                          </Link>
+                        </li>
+                      )
+                    })}
+                  </ul>
                 </div>
-                {(!sidebarOpen && !isSmallScreen) && (
-                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity invisible group-hover:visible whitespace-nowrap">
-                    {item.title}
-                  </div>
-                )}
-              </Link>
+              )
             ))}
           </nav>
 
           {/* User Profile Section */}
-          <div className="p-4 border-t">
+          <div className="p-4 border-t-0 mt-auto">
             <div className={cn(
-              "flex items-center",
-              sidebarOpen || isSmallScreen ? "space-x-3" : "justify-center"
+              "flex items-center gap-3",
+              sidebarOpen || isSmallScreen ? "" : "justify-center"
             )}>
               <div className="relative group">
                 <Avatar>
                   <AvatarImage src="/avatars/user.png" />
                   <AvatarFallback className="bg-referra-100 text-referra-700">
-                    {userRole === 'provider' ? 'P' : 'CM'}
+                    {userRole === 'admin' ? 'A' : userRole === 'provider' ? 'P' : 'CM'}
                   </AvatarFallback>
                 </Avatar>
                 {(!sidebarOpen && !isSmallScreen) && (
@@ -210,7 +299,7 @@ export function Sidebar() {
                       {user?.email || 'Case Manager'}
                     </p>
                     <p className="text-xs text-gray-500 truncate">
-                      {userRole === 'provider' ? 'Service Provider' : 'Case Management'}
+                      {userRole === 'provider' ? 'Service Provider' : userRole === 'admin' ? 'Admin' : 'Case Management'}
                     </p>
                   </div>
                   <Button variant="ghost" size="icon" onClick={signOut}>
@@ -231,7 +320,7 @@ export function Sidebar() {
           onClick={toggleSidebar}
           className={cn(
             "fixed top-5 z-30 transition-all duration-300",
-            sidebarOpen ? "left-60" : "left-[3.25rem]"
+            sidebarOpen ? "left-60" : "left-8"
           )}
         >
           {sidebarOpen ? (

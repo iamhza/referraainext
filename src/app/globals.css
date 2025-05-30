@@ -95,18 +95,7 @@ html {
     @apply tracking-tight;
   }
 
-  /* Link hover effects */
-  a:not(.no-underline) {
-    @apply relative;
-  }
-
-  a:not(.no-underline)::after {
-    @apply absolute bottom-0 left-0 w-0 h-0.5 bg-primary-500 transition-all duration-300 content-[''];
-  }
-
-  a:not(.no-underline):hover::after {
-    @apply w-full;
-  }
+  /* Removed link hover effects that caused the blue line */
 }
 
 :root {

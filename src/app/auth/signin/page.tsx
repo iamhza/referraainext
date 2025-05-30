@@ -31,10 +31,15 @@ export default function SignInPage() {
       // Wait a moment for the session to be fully established
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      if (user?.user_metadata?.role === 'case_manager') {
-        console.log('Redirecting to case manager dashboard...');
-        // Force a hard navigation
-        window.location.href = '/case-manager/referrals';
+      if (user?.user_metadata?.role === 'admin') {
+        console.log('Redirecting to admin dashboard...');
+        window.location.href = '/admin';
+      } else if (user?.user_metadata?.role === 'case_manager') {
+        console.log('Redirecting to case manager splash page...');
+        window.location.href = '/splash';
+      } else if (user?.user_metadata?.role === 'provider') {
+        console.log('Redirecting to provider dashboard...');
+        window.location.href = '/provider';
       } else {
         console.log('Redirecting to home...');
         window.location.href = '/';

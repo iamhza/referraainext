@@ -3,9 +3,10 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { ReactNode } from 'react';
 
 interface PageTemplateProps {
-  title: string;
+  title: string | ReactNode;
   description?: string;
   backHref?: string;
   backLabel?: string;

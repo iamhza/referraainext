@@ -1,47 +1,29 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
-import { Container } from '@/components/ui/container';
-import { PageHeader } from '@/components/ui/page-header';
+'use client';
 
-export default async function MessagesPage() {
-  const cookieStore = cookies();
+import { MessagingLayout } from '@/components/messaging/MessagingLayout';
+import { useConversations } from '@/hooks/use-conversations';
+import { useAuth } from '@/contexts/AuthContext';
+
+export default function CaseManagerMessagesPage() {
+  const { user } = useAuth();
   
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-      },
-    }
-  );
-
-  const { data: { user }, error } = await supabase.auth.getUser();
-
-  if (error || !user) {
-    redirect('/auth/signin');
-  }
-
-  // Verify user role
-  if (user.user_metadata.role !== 'case_manager') {
-    redirect('/');
-  }
-
-  return (
-    <Container>
-      <PageHeader 
-        title="Messages"
-        description="View and manage your messages">
-      </PageHeader>
-      <div className="space-y-4">
-        {/* Message components will be added here */}
-        <div className="text-center text-gray-500 py-8">
-          Message functionality coming soon
-        </div>
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
-    </Container>
+    );
+  }
+  
+  return (
+    <div className="h-[calc(100vh-4rem)]">
+      <MessagingLayout 
+        role="case_manager"
+        userId={user.id || 'current_user'}
+        userName={user.user_metadata?.name || 'Case Manager'}
+        userAvatar={user.user_metadata?.avatar}
+        useConversations={useConversations}
+      />
+    </div>
   );
 } 

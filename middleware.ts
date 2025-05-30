@@ -76,6 +76,19 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/auth/signin', req.url))
   }
 
+  // Handle admin routes
+  if (req.nextUrl.pathname.startsWith('/admin')) {
+    if (!user) {
+      console.log('No user found, redirecting to sign in')
+      return NextResponse.redirect(new URL('/auth/signin', req.url))
+    }
+    const userRole = user.user_metadata.role
+    if (userRole !== 'admin') {
+      console.log('Non-admin attempting to access restricted route')
+      return NextResponse.redirect(new URL('/', req.url))
+    }
+  }
+
   return res
 }
 
@@ -88,6 +101,7 @@ export const config = {
     '/auth/login',
     '/api/referrals/:path*',
     '/api/phi/:path*',
-    '/api/test/:path*'
+    '/api/test/:path*',
+    '/admin/:path*'
   ],
 } 
