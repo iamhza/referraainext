@@ -7,14 +7,21 @@ interface LogoProps {
 
 export function Logo({ className }: LogoProps) {
   return (
-    <div className={cn("inline-block no-underline", className)} style={{ textDecoration: 'none' }}>
+    <div className={cn(
+      "inline-flex items-center transition-all duration-300 ease-in-out",
+      "hover:scale-110 hover:brightness-110",
+      "active:scale-95",
+      "opacity-0 animate-[fadeIn_1.5s_ease-in-out_forwards]",
+      className
+    )}>
       <Image
         src="/referra Main Logo.png"
         alt="Referra"
-        width={120}
+        width={140}
         height={40}
         priority
-        className="no-underline"
+        quality={100}
+        className="h-8 w-auto object-contain transition-all duration-300 ease-in-out"
       />
     </div>
   )
