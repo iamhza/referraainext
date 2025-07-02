@@ -372,6 +372,44 @@ export default function LandingPage() {
           <div className="absolute top-1/2 right-0 -translate-y-1/2 w-64 h-64 bg-[#0066FF]/5 rounded-full blur-3xl"></div>
         </Container>
       </section>
+
+      {/* Footer */}
+      <footer className="bg-[#F8FAFC] border-t">
+        <Container>
+          <div className="py-16 grid md:grid-cols-4 gap-8">
+            <div className="space-y-4">
+              <Logo className="h-8 w-auto" />
+              <p className="text-gray-600">AI-Powered Referrals</p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-4">Product</h4>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-gray-600 hover:text-[#0066FF]">Features</a></li>
+                <li><a href="#" className="text-gray-600 hover:text-[#0066FF]">Pricing</a></li>
+                <li><a href="#" className="text-gray-600 hover:text-[#0066FF]">Security</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-4">Company</h4>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-gray-600 hover:text-[#0066FF]">About Us</a></li>
+                <li><a href="#" className="text-gray-600 hover:text-[#0066FF]">Careers</a></li>
+                <li><a href="#" className="text-gray-600 hover:text-[#0066FF]">Contact</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-4">Legal</h4>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-gray-600 hover:text-[#0066FF]">Privacy Policy</a></li>
+                <li><a href="#" className="text-gray-600 hover:text-[#0066FF]">Terms of Service</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t py-8 text-center text-gray-600 text-sm">
+            &copy; 2024 Referra. All rights reserved.
+          </div>
+        </Container>
+      </footer>
     </div>
   );
 }

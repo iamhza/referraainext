@@ -15,7 +15,6 @@ export default function ProviderSettingsPage() {
   const [profile, setProfile] = useState<any>(null);
   const [form, setForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
-  const [notificationPrefs, setNotificationPrefs] = useState({ email: true, sms: false });
 
   useEffect(() => {
     async function fetchProfile() {
@@ -35,7 +34,6 @@ export default function ProviderSettingsPage() {
   }, [user]);
 
   const handleChange = (e: any) => setForm({ ...form, [e.target.name]: e.target.value });
-  const handleNotifChange = (type: 'email' | 'sms', value: boolean) => setNotificationPrefs((prev) => ({ ...prev, [type]: value }));
 
   const handleSave = async () => {
     if (!user) return;
@@ -81,14 +79,6 @@ export default function ProviderSettingsPage() {
           <div>
             <label className="block text-sm font-medium mb-1" htmlFor="phone">Phone</label>
             <Input name="phone" id="phone" value={form.phone || ''} onChange={handleChange} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Email Notifications</label>
-            <Switch checked={notificationPrefs.email} onCheckedChange={v => handleNotifChange('email', v)} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">SMS Notifications</label>
-            <Switch checked={notificationPrefs.sms} onCheckedChange={v => handleNotifChange('sms', v)} />
           </div>
           <Button onClick={handleSave} disabled={saving} className="mt-4">Save Settings</Button>
         </CardContent>

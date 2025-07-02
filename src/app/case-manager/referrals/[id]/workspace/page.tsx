@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { EnhancedCollaborativeWorkspace } from '@/components/referrals/EnhancedCollaborativeWorkspace';
+import { CollaborativeWorkspace } from '@/components/referrals/CollaborativeWorkspace';
 import { useReferralTimeline } from '@/hooks/use-referral-timeline';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -267,20 +267,14 @@ export default function CaseManagerReferralWorkspace() {
             This workspace provides collaborative features to manage this referral, including activity tracking, file sharing, and real-time collaboration.
           </p>
           
-          <EnhancedCollaborativeWorkspace
-            referralId={referralId as string}
+          <CollaborativeWorkspace
+            referralId={referralId || ''}
             referral={referral}
             userRole="case_manager"
-            currentUser={currentUser}
             onStatusUpdate={handleStatusUpdate}
             onNewTask={handleNewTask}
             onTaskComplete={handleTaskComplete}
-            onNewComment={addComment}
-            onAddReaction={addReaction}
-            onAddAttachment={addAttachment}
-            onTagEvent={addTag}
-            onViewEvent={handleViewEvent}
-            onAssignUser={handleAssignUser}
+            onNewComment={(comment) => addComment && addComment('', comment)}
           />
         </div>
       </div>

@@ -22,6 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import confetti from 'canvas-confetti';
+import { useRouter } from 'next/navigation';
 
 type ServiceType = 'medical' | 'dental' | 'mental_health';
 type UrgencyLevel = 'low' | 'medium' | 'high';
@@ -190,6 +191,9 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
     isSuccess: false,
     message: ''
   });
+  const [clientPrefillLoading, setClientPrefillLoading] = useState(false);
+  const [clientPrefillError, setClientPrefillError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchServices() {
@@ -208,6 +212,43 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
     }
 
     fetchServices();
+  }, []);
+
+  // Pre-fill form if clientId is present in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const clientIdFromUrl = urlParams.get('clientId');
+    if (clientIdFromUrl && !formData.firstName && !formData.lastName && !formData.dateOfBirth) {
+      setClientPrefillLoading(true);
+      setClientPrefillError(null);
+      fetch(`/api/clients/${clientIdFromUrl}`)
+        .then(async (res) => {
+          if (!res.ok) throw new Error('Failed to fetch client info');
+          const data = await res.json();
+          if (!data.client) throw new Error('Client not found');
+          const c = data.client;
+          setFormData((prev) => ({
+            ...prev,
+            firstName: c.firstName || '',
+            lastName: c.lastName || '',
+            dateOfBirth: c.dateOfBirth || '',
+            email: c.email || '',
+            phone: c.phone || '',
+            address: c.address?.street || c.address || '',
+            city: c.address?.city || c.city || '',
+            state: c.address?.state || c.state || '',
+            zipCode: c.address?.zipCode || c.zipCode || '',
+            preferredContactMethod: c.preferredContactMethod || 'email',
+            insurance: c.insurance?.type || '',
+            insuranceProvider: c.insurance?.provider || '',
+            insuranceNumber: c.insurance?.number || '',
+          }));
+        })
+        .catch((err) => {
+          setClientPrefillError(err.message || 'Failed to fetch client info');
+        })
+        .finally(() => setClientPrefillLoading(false));
+    }
   }, []);
 
   // Simulate confetti effect
@@ -394,6 +435,17 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
       className="min-h-screen bg-gradient-to-b from-gray-50 to-white"
     >
       <div className="max-w-3xl mx-auto px-4 py-8">
+        {clientPrefillLoading && (
+          <div className="mb-6 p-4 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 flex items-center gap-2">
+            <Loader2 className="animate-spin h-5 w-5" />
+            Loading client info...
+          </div>
+        )}
+        {clientPrefillError && (
+          <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
+            {clientPrefillError}
+          </div>
+        )}
         <AnimatePresence mode="wait">
           {!submissionState.isSubmitting && !submissionState.isSuccess ? (
             <motion.div

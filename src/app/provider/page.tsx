@@ -20,26 +20,11 @@ interface Referral {
   status: string;
 }
 
-interface Notification {
-  id: string;
-  read: boolean;
-}
-
-interface Message {
-  id: string;
-  read: boolean;
-  toUserId: string;
-}
-
 export default function ProviderDashboard() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [referralsLoading, setReferralsLoading] = useState(true);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [notificationsLoading, setNotificationsLoading] = useState(true);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [messagesLoading, setMessagesLoading] = useState(true);
 
   // Fetch referrals for this provider
   useEffect(() => {
@@ -58,44 +43,6 @@ export default function ProviderDashboard() {
       }
     }
     if (user) fetchReferrals();
-  }, [user]);
-
-  // Fetch notifications for this provider
-  useEffect(() => {
-    async function fetchNotifications() {
-      setNotificationsLoading(true);
-      try {
-        if (!user) return;
-        const res = await fetch('/api/notifications');
-        if (!res.ok) throw new Error('Failed to fetch notifications');
-        const data = await res.json();
-        setNotifications(data.notifications || []);
-      } catch (err) {
-        setNotifications([]);
-      } finally {
-        setNotificationsLoading(false);
-      }
-    }
-    if (user) fetchNotifications();
-  }, [user]);
-
-  // Fetch messages for this provider
-  useEffect(() => {
-    async function fetchMessages() {
-      setMessagesLoading(true);
-      try {
-        if (!user) return;
-        const res = await fetch('/api/messages');
-        if (!res.ok) throw new Error('Failed to fetch messages');
-        const data = await res.json();
-        setMessages(data.messages || []);
-      } catch (err) {
-        setMessages([]);
-      } finally {
-        setMessagesLoading(false);
-      }
-    }
-    if (user) fetchMessages();
   }, [user]);
 
   if (loading) return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
@@ -129,8 +76,6 @@ export default function ProviderDashboard() {
 
   // What's New stats
   const newUrgentReferrals = referrals.filter(r => r.status === 'under_review' || r.status === 'provider_selection_required').length;
-  const unreadNotificationsCount = notifications.filter(n => !n.read).length;
-  const unreadMessagesCount = messages.filter(m => !m.read && m.toUserId === (user ? user.id : '')).length;
 
   // Example: Get provider's name from user metadata
   const providerName = user.user_metadata?.fullName || user.user_metadata?.name || 'Provider';
@@ -170,7 +115,7 @@ export default function ProviderDashboard() {
                 <ol className="list-decimal pl-6 space-y-2 text-blue-900">
                   <li>Complete your <Link href="/provider/profile" className="underline text-blue-700">profile</Link> and set your availability.</li>
                   <li>Review new referrals and take action.</li>
-                  <li>Collaborate with case managers using in-app messaging.</li>
+                  <li>Collaborate with case managers to coordinate care.</li>
                 </ol>
               </CardContent>
             </Card>
@@ -240,14 +185,6 @@ export default function ProviderDashboard() {
                       <div className="flex flex-col items-center">
                         <span className="text-sm text-muted-foreground">New/Urgent Referrals</span>
                         <span className="text-xl font-semibold text-blue-700">{newUrgentReferrals}</span>
-                      </div>
-                      <div className="flex flex-col items-center">
-                        <span className="text-sm text-muted-foreground">Unread Notifications</span>
-                        <span className="text-xl font-semibold text-blue-700">{unreadNotificationsCount}</span>
-                      </div>
-                      <div className="flex flex-col items-center">
-                        <span className="text-sm text-muted-foreground">Unread Messages</span>
-                        <span className="text-xl font-semibold text-blue-700">{unreadMessagesCount}</span>
                       </div>
                     </div>
                   </CardContent>

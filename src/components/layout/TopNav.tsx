@@ -15,12 +15,10 @@ import {
   ClipboardList,
   FileText,
   Users,
-  MessageSquare,
   Settings,
   LogOut,
   Menu,
   UserCheck,
-  Bell,
   Search,
   ChevronDown,
   Home
@@ -58,25 +56,41 @@ const navItems: NavItem[] = [
     icon: <Users className="h-5 w-5" />, 
     role: 'case_manager'
   },
+]
+
+// Admin navigation items
+const adminNavItems: NavItem[] = [
+  {
+    title: 'Dashboard',
+    href: '/admin',
+    icon: <LayoutDashboard className="h-5 w-5" />, 
+    role: 'admin'
+  },
+  {
+    title: 'Users',
+    href: '/admin/users',
+    icon: <Users className="h-5 w-5" />, 
+    role: 'admin'
+  },
+  {
+    title: 'Providers',
+    href: '/admin/providers',
+    icon: <UserCheck className="h-5 w-5" />, 
+    role: 'admin'
+  },
   {
     title: 'Referrals',
-    href: '/case-manager/referrals',
+    href: '/admin/referrals',
     icon: <ClipboardList className="h-5 w-5" />, 
-    role: 'case_manager'
+    role: 'admin'
   },
   {
-    title: 'Matched Providers',
-    href: '/case-manager/matched-providers',
-    icon: <UserCheck className="h-5 w-5" />, 
-    role: 'case_manager'
-  },
-  {
-    title: 'Messages',
-    href: '/case-manager/messages',
-    icon: <MessageSquare className="h-5 w-5" />, 
-    role: 'case_manager'
-  },
-]
+    title: 'Settings',
+    href: '/admin/settings',
+    icon: <Settings className="h-5 w-5" />, 
+    role: 'admin'
+  }
+];
 
 export function TopNav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -88,9 +102,9 @@ export function TopNav() {
   const userRole = user?.user_metadata?.role || 'case_manager'
   
   // Filter nav items based on user role
-  const filteredNavItems = navItems.filter(
-    item => item.role === userRole
-  )
+  const filteredNavItems = userRole === 'admin'
+    ? adminNavItems
+    : navItems.filter(item => item.role === userRole);
 
   // Toggle mobile menu
   const toggleMobileMenu = () => {
@@ -149,24 +163,20 @@ export function TopNav() {
               <Search className="h-5 w-5" />
             </Button>
 
-            {/* Notifications */}
-            <Button variant="ghost" size="icon" className="text-gray-600 hover:text-blue-600 hover:bg-blue-50/60 relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 flex h-2 w-2 rounded-full bg-red-500"></span>
-            </Button>
-
-            {/* New Referral Button */}
-            <EnhancedButton 
-              variant="gradient" 
-              size="sm" 
-              asChild 
-              rounded="full"
-              className="hidden sm:flex shadow-md hover:shadow-lg transition-all duration-200">
-              <Link href="/case-manager/new-referral">
-                <FileText className="mr-2 h-4 w-4" />
-                New Referral
-              </Link>
-            </EnhancedButton>
+            {/* New Referral Button (only for case manager) */}
+            {userRole !== 'admin' && (
+              <EnhancedButton 
+                variant="gradient" 
+                size="sm" 
+                asChild 
+                rounded="full"
+                className="hidden sm:flex shadow-md hover:shadow-lg transition-all duration-200">
+                <Link href="/case-manager/new-referral">
+                  <FileText className="mr-2 h-4 w-4" />
+                  New Referral
+                </Link>
+              </EnhancedButton>
+            )}
 
             {/* User Menu */}
             <DropdownMenu>
@@ -191,7 +201,7 @@ export function TopNav() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-100" />
                 <DropdownMenuItem asChild className="px-4 py-2.5 text-base rounded-lg focus:bg-blue-50 focus:text-blue-600">
-                  <Link href="/case-manager/settings">
+                  <Link href={userRole === 'admin' ? "/admin/settings" : "/case-manager/settings"}>
                     <Settings className="mr-3 h-4 w-4" />
                     <span>Settings</span>
                   </Link>
@@ -234,17 +244,20 @@ export function TopNav() {
             </div>
             
             <div className="p-5">
-              <EnhancedButton 
-                variant="gradient" 
-                className="w-full mb-6"
-                rounded="full"
-                size="lg"
-                asChild>
-                <Link href="/case-manager/new-referral">
-                  <FileText className="mr-2 h-5 w-5" />
-                  New Referral
-                </Link>
-              </EnhancedButton>
+              {/* New Referral Button (only for case manager) */}
+              {userRole !== 'admin' && (
+                <EnhancedButton 
+                  variant="gradient" 
+                  className="w-full mb-6"
+                  rounded="full"
+                  size="lg"
+                  asChild>
+                  <Link href="/case-manager/new-referral">
+                    <FileText className="mr-2 h-5 w-5" />
+                    New Referral
+                  </Link>
+                </EnhancedButton>
+              )}
 
               <nav className="space-y-2">
                 {filteredNavItems.map((item) => (

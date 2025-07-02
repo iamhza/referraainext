@@ -104,6 +104,7 @@ To incorporate the collaborative workspace into a referral page:
 ```tsx
 import { EnhancedCollaborativeWorkspace } from '@/components/referrals/EnhancedCollaborativeWorkspace';
 import { useReferralTimeline } from '@/hooks/use-referral-timeline';
+import (Use
 
 // In your component:
 const {

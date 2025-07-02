@@ -29,7 +29,8 @@ import {
   ChevronsUpDown,
   HelpCircle,
   Activity,
-  PlusCircle
+  PlusCircle,
+  ChevronUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -121,6 +122,9 @@ export function ReferralsList({ providerId, mode = 'case_manager' }: ReferralsLi
   // Sorting
   const [sortField, setSortField] = useState<'name' | 'date' | 'status' | 'urgency'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  const [groupByClient, setGroupByClient] = useState(true);
+  const [expandedClients, setExpandedClients] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     async function fetchReferrals() {
@@ -319,9 +323,18 @@ export function ReferralsList({ providerId, mode = 'case_manager' }: ReferralsLi
     }
   };
 
+  // Group referrals by client (prefer _id, fallback to name+dob)
+  const groupedByClient = referrals.reduce((acc, referral) => {
+    const client = referral.clientInfo as typeof referral.clientInfo & { _id?: string };
+    const clientId = client._id || `${client.firstName} ${client.lastName} ${client.dateOfBirth}`;
+    if (!acc[clientId]) acc[clientId] = [];
+    acc[clientId].push(referral);
+    return acc;
+  }, {} as Record<string, MongoReferral[]>);
+
   return (
     <div className="space-y-6">
-      {/* Search and Filters */}
+      {/* Search, Filters, and Group Toggle */}
       <Card className="rounded-xl overflow-hidden border border-gray-100 shadow-sm">
         <div className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row gap-4 items-start">
@@ -334,8 +347,14 @@ export function ReferralsList({ providerId, mode = 'case_manager' }: ReferralsLi
                 className="pl-10 py-2 rounded-full border-gray-200 hover:border-gray-300 focus:border-blue-300 transition-colors"
               />
             </div>
-            
-            <div className="flex gap-2 w-full sm:w-auto justify-end">
+            <div className="flex gap-2 w-full sm:w-auto justify-end items-center">
+              <Button
+                variant={groupByClient ? 'default' : 'outline'}
+                className="rounded-full border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                onClick={() => setGroupByClient((v) => !v)}
+              >
+                {groupByClient ? 'Grouped by Client' : 'Flat List'}
+              </Button>
               <Button 
                 variant="outline" 
                 onClick={() => setShowFilters(!showFilters)}
@@ -506,32 +525,66 @@ export function ReferralsList({ providerId, mode = 'case_manager' }: ReferralsLi
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-500"></div>
           </div>
-        ) : currentItems.length === 0 ? (
-          <Card className="rounded-xl border border-gray-100 shadow-sm">
-            <div className="text-center py-20">
-              <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 mb-4">
-                <Search className="h-8 w-8 text-blue-500" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No referrals found</h3>
-              <p className="text-gray-600 max-w-lg mx-auto">
-                {searchTerm || statusFilter !== 'all' || urgencyFilter !== 'all' 
-                  ? "Try adjusting your filters or search criteria to find what you're looking for." 
-                  : "You don't have any referrals yet. Create your first referral to get started."}
-              </p>
-              {!searchTerm && statusFilter === 'all' && urgencyFilter === 'all' && (
-                <EnhancedButton 
-                  variant="gradient" 
-                  rounded="full"
-                  className="mt-6 shadow-md hover:shadow-lg transition-all duration-200" 
-                  asChild>
-                  <Link href="/case-manager/new-referral">
-                    <PlusCircle className="mr-2 h-5 w-5" />
-                    New Referral
-                  </Link>
-                </EnhancedButton>
-              )}
-            </div>
-          </Card>
+        ) : groupByClient ? (
+          // Grouped by client view
+          Object.entries(groupedByClient).map(([clientId, clientReferrals]) => {
+            const client = clientReferrals[0].clientInfo;
+            const initials = getClientInitials(client.firstName, client.lastName);
+            const isExpanded = expandedClients[clientId] ?? true;
+            return (
+              <Card key={clientId} className="rounded-xl border border-gray-100 shadow-md">
+                <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-blue-50/30" onClick={() => setExpandedClients(prev => ({ ...prev, [clientId]: !isExpanded }))}>
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-sm">
+                      {initials}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-lg text-gray-900">{client.firstName} {client.lastName}</div>
+                      <div className="text-sm text-gray-500">{client.email} • {client.phone}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge className="bg-blue-100 text-blue-700 border-blue-200 rounded-full text-xs">
+                      {clientReferrals.length} Referral{clientReferrals.length > 1 ? 's' : ''}
+                    </Badge>
+                    <Button variant="ghost" size="icon" className="rounded-full">
+                      {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                    </Button>
+                  </div>
+                </div>
+                {isExpanded && (
+                  <div className="divide-y">
+                    {clientReferrals.map((referral) => {
+                      const statusConfig = getStatusConfig(referral.status);
+                      const StatusIcon = statusConfig.icon;
+                      return (
+                        <div key={referral._id} className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-4 hover:bg-blue-50/10 transition-all">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <span className="font-medium text-gray-900">{referral.serviceDetails.type}</span>
+                              {getUrgencyBadge(referral.serviceDetails.urgency)}
+                              <Badge className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold', statusConfig.className)}>
+                                <StatusIcon className="h-3 w-3 mr-1" />
+                                {statusConfig.label}
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-gray-500 mb-1">Submitted: {format(new Date(referral.createdAt), 'MMM d, yyyy')}</div>
+                            <div className="text-xs text-gray-400">ID: {referral._id}</div>
+                          </div>
+                          <div className="flex gap-2 items-center mt-2 md:mt-0">
+                            <Button asChild size="sm" variant="outline" className="rounded-full border-blue-200 text-blue-700 hover:bg-blue-50">
+                              <Link href={`/case-manager/referrals/${referral._id}`}>View Details</Link>
+                            </Button>
+                            {/* Inline actions, e.g., mark complete, send message, etc. */}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+            );
+          })
         ) : (
           currentItems.map((referral) => {
             const statusConfig = getStatusConfig(referral.status);

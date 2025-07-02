@@ -92,33 +92,6 @@ export async function GET(req: Request) {
   }
 }
 
-async function notify(userId: string, type: string, content: string) {
-  try {
-    // Check for required URL and parameters
-    if (!process.env.NEXT_PUBLIC_BASE_URL) {
-      console.warn('Missing NEXT_PUBLIC_BASE_URL for notifications');
-      return;
-    }
-    if (!userId || !type || !content) {
-      console.warn('Missing required parameters for notification');
-      return;
-    }
-    
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/notifications`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, type, content }),
-    });
-    
-    if (!res.ok) {
-      console.warn(`Notification API returned ${res.status}: ${await res.text()}`);
-    }
-  } catch (error) {
-    console.error('Error sending notification:', error);
-    // Suppress the error to prevent it from breaking the main functionality
-  }
-}
-
 export async function POST(req: Request) {
   const session = await getSession();
   if (!session || !['case_manager', 'admin'].includes(session.user.user_metadata?.role)) {
@@ -246,22 +219,9 @@ export async function POST(req: Request) {
     
     const result = await db.collection(COLLECTION).insertOne(referral);
     
-    // Try to notify admins, but don't fail the request if this errors
-    try {
-      const admins = await db.collection('users').find({ role: 'admin' }).toArray();
-      for (const admin of admins) {
-        await notify(admin._id.toString(), 'referral_created', `New referral submitted by ${session.user.email || 'a case manager'}.`);
-      }
-    } catch (notifyError) {
-      console.error('Error sending notifications (but referral was created):', notifyError);
-    }
-    
-    return NextResponse.json({ 
-      success: true, 
-      referral: { _id: result.insertedId, ...referral } 
-    }, { status: 201 });
-  } catch (error) {
-    console.error('Error creating referral:', error);
+    return NextResponse.json({ ...referral, _id: result.insertedId }, { status: 201 });
+  } catch (error: any) {
+    console.error("Failed to create referral:", error);
     return NextResponse.json({ error: 'Failed to create referral' }, { status: 500 });
   }
 }
@@ -303,40 +263,17 @@ export async function PATCH(req: Request) {
     }
     
     // Update the referral
-    update.updatedAt = new Date().toISOString();
-    
     const result = await db.collection(COLLECTION).findOneAndUpdate(
       { _id: new ObjectId(id) },
-      { $set: update },
+      { $set: { ...update, updatedAt: new Date().toISOString() } },
       { returnDocument: 'after' }
     );
     
     if (!result || !result.value) {
-      return NextResponse.json({ error: 'Failed to update referral' }, { status: 500 });
+      return NextResponse.json({ error: 'Referral not found or failed to update' }, { status: 404 });
     }
     
-    // Notification logic
-    const updated = result.value;
-    // Notify on status change
-    if (update.status && existingReferral && update.status !== existingReferral.status) {
-      // Notify case manager
-      if (updated.caseManagerId) await notify(updated.caseManagerId, 'referral_status', `Referral status changed to ${update.status}.`);
-      // Notify assigned provider
-      if (updated.providerId) await notify(updated.providerId, 'referral_status', `Referral status changed to ${update.status}.`);
-      // Notify all admins
-      const admins = await db.collection('users').find({ role: 'admin' }).toArray();
-      for (const admin of admins) {
-        await notify(admin._id.toString(), 'referral_status', `Referral status changed to ${update.status}.`);
-      }
-    }
-    // Notify on provider assignment
-    if (update.providerId && existingReferral && update.providerId !== existingReferral.providerId) {
-      await notify(update.providerId, 'referral_assigned', 'You have been assigned a new referral.');
-    }
-    return NextResponse.json({ 
-      success: true, 
-      referral: result.value 
-    });
+    return NextResponse.json({ success: true, referral: result.value });
   } catch (error) {
     console.error('Error updating referral:', error);
     return NextResponse.json({ error: 'Failed to update referral' }, { status: 500 });

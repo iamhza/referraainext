@@ -15,6 +15,7 @@ import { MoreHorizontal, Hourglass, UserCheck, CheckCircle, XCircle, AlertCircle
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose } from '@/components/ui/drawer';
 
 interface UIReferral {
   id: string;
@@ -34,6 +35,81 @@ const BRAND_COLOR = '#11acf8fe';
 
 // Add a UIReferralEdit type for local editing, including provider
 type UIReferralEdit = Partial<UIReferral> & { provider?: string };
+
+// Mock provider data
+const mockProviders = [
+  { id: '1', name: 'Wellness Center', lastSeen: '2m ago', responseTime: 12, rating: 4.8 },
+  { id: '2', name: 'Hope Clinic', lastSeen: '10m ago', responseTime: 18, rating: 4.6 },
+  { id: '3', name: 'Bright Futures', lastSeen: '1h ago', responseTime: 25, rating: 4.9 },
+  { id: '4', name: 'Sunrise Health', lastSeen: '5m ago', responseTime: 15, rating: 4.7 },
+  { id: '5', name: 'Pathways', lastSeen: '20m ago', responseTime: 20, rating: 4.5 },
+];
+
+function ReferralDetailsDrawer({ referral, open, onClose }: { referral: UIReferral | null, open: boolean, onClose: () => void }) {
+  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
+
+  const handleProviderToggle = (id: string) => {
+    setSelectedProviders((prev) =>
+      prev.includes(id)
+        ? prev.filter((pid) => pid !== id)
+        : prev.length < 5 ? [...prev, id] : prev
+    );
+  };
+
+  useEffect(() => {
+    if (!open) setSelectedProviders([]);
+  }, [open]);
+
+  if (!referral) return null;
+  return (
+    <Drawer open={open} onClose={onClose}>
+      <DrawerContent className="max-w-lg w-full p-6">
+        <DrawerHeader>
+          <DrawerTitle>Referral Details</DrawerTitle>
+          <DrawerDescription>Review and assign providers</DrawerDescription>
+        </DrawerHeader>
+        <div className="mb-6">
+          <div className="font-semibold text-lg mb-1">{referral.name}</div>
+          <div className="text-sm text-gray-500 mb-2">Service: {referral.service.type}</div>
+          <div className="text-sm text-gray-500 mb-2">Urgency: {referral.service.urgency}</div>
+          <div className="text-sm text-gray-500 mb-2">Status: {referral.status}</div>
+          <div className="text-xs text-gray-400">Created: {format(new Date(referral.createdAt), 'PPpp')}</div>
+        </div>
+        <div className="mb-4">
+          <div className="font-medium mb-2">Assign Providers (1-5)</div>
+          <div className="space-y-2">
+            {mockProviders.map((provider) => (
+              <label key={provider.id} className="flex items-center gap-3 p-2 rounded-lg border hover:bg-blue-50 transition cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedProviders.includes(provider.id)}
+                  onChange={() => handleProviderToggle(provider.id)}
+                  disabled={
+                    !selectedProviders.includes(provider.id) && selectedProviders.length >= 5
+                  }
+                  className="form-checkbox h-5 w-5 text-blue-600"
+                />
+                <div className="flex-1">
+                  <div className="font-semibold">{provider.name}</div>
+                  <div className="text-xs text-gray-500 flex gap-2">
+                    <span>Last seen: {provider.lastSeen}</span>
+                    <span>Response: {provider.responseTime} min</span>
+                    <span>Rating: {provider.rating}</span>
+                  </div>
+                </div>
+              </label>
+            ))}
+          </div>
+          <div className="text-xs text-gray-400 mt-2">Select up to 5 providers to assign.</div>
+        </div>
+        <div className="flex justify-end gap-2 mt-6">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="default" disabled={selectedProviders.length === 0}>Assign Providers</Button>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
 
 export function AdminReferralsTable() {
   const [referrals, setReferrals] = useState<UIReferral[]>([]);
@@ -71,6 +147,8 @@ export function AdminReferralsTable() {
   const [editingCell, setEditingCell] = useState<{ rowId: string; col: string } | null>(null);
   const [editValues, setEditValues] = useState<Record<string, UIReferralEdit>>({});
   const inputRef = useRef<HTMLInputElement>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedReferral, setSelectedReferral] = useState<UIReferral | null>(null);
 
   useEffect(() => {
     async function fetchReferrals() {
@@ -625,6 +703,7 @@ export function AdminReferralsTable() {
           </Button>
         </div>
       </div>
+      <ReferralDetailsDrawer referral={selectedReferral} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </div>
   );
 } 

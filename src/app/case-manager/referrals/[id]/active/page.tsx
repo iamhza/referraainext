@@ -9,7 +9,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { 
-  MessageSquare, 
   CheckCircle,
   Clock,
   Calendar,
@@ -23,7 +22,6 @@ import {
   Users,
   CheckCircle2,
   XCircle,
-  Send
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -37,16 +35,6 @@ interface Task {
   dueDate: string;
   completedDate?: string;
   completedBy?: string;
-}
-
-interface Message {
-  id: string;
-  sender: {
-    name: string;
-    role: 'provider' | 'case_manager';
-  };
-  content: string;
-  timestamp: string;
 }
 
 interface Update {
@@ -63,10 +51,12 @@ interface Update {
 
 export default function ActiveReferralPage() {
   const params = useParams();
-  const [newMessage, setNewMessage] = useState('');
   const [newUpdate, setNewUpdate] = useState('');
   const [updateType, setUpdateType] = useState<'progress' | 'outcome' | 'general'>('progress');
 
+  if (!params) {
+    return <div>Loading...</div>;
+  }
   // This would come from your API/database
   const referral = {
     id: params.id,
@@ -142,36 +132,10 @@ export default function ActiveReferralPage() {
         }
       }
     ] as Update[],
-    messages: [
-      {
-        id: 'MSG-1',
-        sender: {
-          name: 'Dr. Sarah Williams',
-          role: 'provider'
-        },
-        content: 'Initial assessment completed. Would you like to review the findings?',
-        timestamp: '2024-04-18T15:35:00Z'
-      },
-      {
-        id: 'MSG-2',
-        sender: {
-          name: 'Michael Thompson',
-          role: 'case_manager'
-        },
-        content: 'Yes, please share the detailed report when ready.',
-        timestamp: '2024-04-18T15:40:00Z'
-      }
-    ] as Message[]
   };
 
   const handleCompleteTask = async (taskId: string) => {
     // API call to complete task
-  };
-
-  const handleSendMessage = async () => {
-    if (!newMessage.trim()) return;
-    // API call to send message
-    setNewMessage('');
   };
 
   const handleAddUpdate = async () => {
@@ -214,7 +178,6 @@ export default function ActiveReferralPage() {
             <TabsList>
               <TabsTrigger value="tasks">Tasks</TabsTrigger>
               <TabsTrigger value="updates">Updates</TabsTrigger>
-              <TabsTrigger value="messages">Messages</TabsTrigger>
             </TabsList>
 
             {/* Tasks Tab */}
@@ -278,122 +241,35 @@ export default function ActiveReferralPage() {
             <TabsContent value="updates">
               <Card>
                 <CardHeader>
-                  <CardTitle>Client Updates</CardTitle>
-                  <CardDescription>Track progress and outcomes</CardDescription>
+                  <CardTitle>Service Updates</CardTitle>
+                  <CardDescription>Log and view progress or outcome updates</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Add Update Form */}
-                  <div className="space-y-4 border-b pb-6">
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant={updateType === 'progress' ? 'default' : 'outline'}
-                        onClick={() => setUpdateType('progress')}
-                      >
-                        Progress Update
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={updateType === 'outcome' ? 'default' : 'outline'}
-                        onClick={() => setUpdateType('outcome')}
-                      >
-                        Outcome
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={updateType === 'general' ? 'default' : 'outline'}
-                        onClick={() => setUpdateType('general')}
-                      >
-                        General Note
-                      </Button>
-                    </div>
+                  {/* Add new update */}
+                  <div className="space-y-2">
                     <Textarea
-                      placeholder="Add an update..."
+                      placeholder="Enter a new update..."
                       value={newUpdate}
                       onChange={(e) => setNewUpdate(e.target.value)}
                     />
-                    <Button onClick={handleAddUpdate}>
-                      Add Update
-                    </Button>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                         {/* RadioGroup for update type would go here */}
+                      </div>
+                      <Button onClick={handleAddUpdate}>Add Update</Button>
+                    </div>
                   </div>
-
-                  {/* Updates List */}
+                  {/* List of updates */}
                   <div className="space-y-4">
                     {referral.updates.map((update) => (
-                      <div key={update.id} className="border rounded-lg p-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-medium">{update.title}</h3>
-                              <Badge variant="outline">
-                                {update.type === 'progress' && 'Progress'}
-                                {update.type === 'outcome' && 'Outcome'}
-                                {update.type === 'general' && 'Note'}
-                              </Badge>
-                            </div>
-                            <p className="text-sm">{update.content}</p>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <span>{update.createdBy.name}</span>
-                              <span>•</span>
-                              <span>{new Date(update.createdAt).toLocaleString()}</span>
-                            </div>
-                          </div>
-                        </div>
+                      <div key={update.id} className="border-t pt-4">
+                        <p className="font-medium">{update.title}</p>
+                        <p className="text-sm text-muted-foreground">{update.content}</p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {update.createdBy.name} on {new Date(update.createdAt).toLocaleDateString()}
+                        </p>
                       </div>
                     ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Messages Tab */}
-            <TabsContent value="messages">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Messages</CardTitle>
-                  <CardDescription>Communicate with the provider</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[400px] flex flex-col">
-                    <div className="flex-1 space-y-4 overflow-y-auto mb-4">
-                      {referral.messages.map((message) => (
-                        <div
-                          key={message.id}
-                          className={cn(
-                            "flex gap-2",
-                            message.sender.role === 'case_manager' && "justify-end"
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              "rounded-lg p-3 max-w-[80%]",
-                              message.sender.role === 'case_manager' 
-                                ? "bg-blue-500 text-white"
-                                : "bg-gray-100"
-                            )}
-                          >
-                            <p className="text-sm font-medium mb-1">
-                              {message.sender.name}
-                            </p>
-                            <p className="text-sm">{message.content}</p>
-                            <p className="text-xs text-muted mt-1">
-                              {new Date(message.timestamp).toLocaleTimeString()}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Type a message..."
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                      />
-                      <Button onClick={handleSendMessage}>
-                        <Send className="h-4 w-4" />
-                      </Button>
-                    </div>
                   </div>
                 </CardContent>
               </Card>

@@ -14,7 +14,6 @@ import {
   ClipboardList,
   FileText,
   Users,
-  MessageSquare,
   Settings,
   LogOut,
   X,
@@ -81,12 +80,6 @@ const navItems: NavItem[] = [
     role: 'provider'
   },
   {
-    title: 'Messages',
-    href: '/provider/messages',
-    icon: <MessageSquare className="h-5 w-5" />, 
-    role: 'provider'
-  },
-  {
     title: 'Profile',
     href: '/provider/profile',
     icon: <Users className="h-5 w-5" />, 
@@ -128,12 +121,6 @@ const navItems: NavItem[] = [
     title: 'Matched Providers',
     href: '/case-manager/matched-providers',
     icon: <UserCheck className="h-5 w-5" />, 
-    role: 'case_manager'
-  },
-  {
-    title: 'Messages',
-    href: '/case-manager/messages',
-    icon: <MessageSquare className="h-5 w-5" />, 
     role: 'case_manager'
   },
   {
@@ -179,10 +166,6 @@ export function Sidebar() {
     {
       label: 'Referrals',
       items: filteredNavItems.filter(item => item.title.toLowerCase().includes('referral')),
-    },
-    {
-      label: 'Messages',
-      items: filteredNavItems.filter(item => item.title.toLowerCase().includes('message')),
     },
     {
       label: 'Profile & Settings',
@@ -248,7 +231,7 @@ export function Sidebar() {
                   <div className={cn("text-xs font-semibold uppercase tracking-wider text-gray-400 px-3 mb-2", !sidebarOpen && "hidden")}>{section.label}</div>
                   <ul className="space-y-1">
                     {section.items.map((item) => {
-                      const isActive = pathname === item.href || (item.href === '/provider' && pathname.startsWith('/provider')) || (item.href === '/admin' && pathname.startsWith('/admin')) || (item.href === '/case-manager' && pathname.startsWith('/case-manager'));
+                      const isActive = pathname === item.href || (item.href === '/provider' && pathname?.startsWith('/provider')) || (item.href === '/admin' && pathname?.startsWith('/admin')) || (item.href === '/case-manager' && pathname?.startsWith('/case-manager'));
                       return (
                         <li key={item.href}>
                           <Link
