@@ -17,7 +17,7 @@ export default function ToastTestPage() {
     toast({
       title: 'Success!',
       description: 'Operation completed successfully',
-      variant: 'success',
+      variant: 'default',
     });
   };
   

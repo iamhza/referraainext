@@ -62,8 +62,21 @@ export async function POST(req: Request) {
   const client = await clientPromise;
   const db = client.db('referradb');
   const now = new Date().toISOString();
+  // Calculate profile completion
+  const profileComplete = !!(
+    data.firstName && 
+    data.lastName &&
+    data.phone && 
+    data.email && 
+    data.address && 
+    data.city &&
+    data.state &&
+    data.county
+  );
+
   const result = await db.collection(COLLECTION).insertOne({
     ...data,
+    profileComplete,
     createdAt: now,
     updatedAt: now,
   });

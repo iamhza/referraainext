@@ -483,7 +483,7 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
         <div className="absolute bottom-20 right-32 w-16 h-16 bg-secondary-500/8 rounded-full"></div>
       </div>
       
-      <div className="w-full max-w-5xl mx-auto px-6 py-8 relative z-10">
+      <div className="w-full max-w-7xl mx-auto px-6 py-8 relative z-10">
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-gray-100 p-8 md:p-12">
         {clientPrefillLoading && (
           <div className="mb-6 p-4 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 flex items-center gap-2">
@@ -511,7 +511,7 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                 initial={{ opacity: 0, x: -40 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
-                className="w-80 flex-shrink-0"
+                className="w-96 flex-shrink-0"
               >
                 <div className="sticky top-8">
                   <motion.div
@@ -774,7 +774,7 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
               </motion.div>
 
               {/* Form Content */}
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 max-w-4xl">
                 <form onSubmit={handleSubmit} className="space-y-8">
 
                 <AnimatePresence mode="wait">
@@ -795,8 +795,8 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                         <p className="text-lg text-gray-600">This helps us understand their basic details before matching them with a provider.</p>
                       </motion.div>
                         
-                      <div className="max-w-2xl mx-auto space-y-6">
-                        <div className="grid grid-cols-2 gap-4">
+                      <div className="max-w-4xl mx-auto space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2">
                             <Label htmlFor="firstName" className="text-base font-medium text-gray-900">
                               First Name
@@ -946,7 +946,7 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                               />
                             </div>
                             
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                   <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-primary/10 to-secondary/10 group-hover:from-primary/20 group-hover:to-secondary/20 transition-all duration-300">
@@ -1271,7 +1271,7 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                         <p className="text-lg text-gray-600">Select all that apply for this client.</p>
                       </motion.div>
                         
-                      <div className="max-w-2xl mx-auto space-y-6">
+                      <div className="max-w-4xl mx-auto space-y-6">
                         {loading ? (
                           <div className="space-y-6">
                           <div className="space-y-2">
@@ -1478,7 +1478,7 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                         <p className="text-lg text-gray-600">Help us find the perfect provider match</p>
                       </motion.div>
                       
-                      <div className="max-w-2xl mx-auto space-y-6">
+                      <div className="max-w-4xl mx-auto space-y-6">
                         
                         <div className="space-y-4">
                           <div className="space-y-2">
@@ -2062,11 +2062,11 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                   Create New Referral
                 </Button>
                 <Button
-                  onClick={() => window.location.href = '/'}
+                  onClick={() => window.location.href = '/case-manager'}
                   variant="outline"
                   className="h-12 px-8 rounded-xl border-2 border-gray-300 hover:border-primary-400 text-gray-700 hover:text-primary-600 font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
-                  Go Back Home
+                  Back to Dashboard
                 </Button>
               </motion.div>
             </motion.div>

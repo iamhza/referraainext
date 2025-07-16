@@ -1,4 +1,4 @@
-import { TopNav } from '@/components/layout/TopNav'
+import { Sidebar } from '@/components/layout/Sidebar'
 
 export default function CaseManagerLayout({
   children,
@@ -6,9 +6,9 @@ export default function CaseManagerLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50/50 flex flex-col">
-      <TopNav />
-      <main className="flex-1 container mx-auto px-8 md:px-12 lg:px-16 xl:px-24 max-w-screen-2xl">
+    <div className="min-h-screen bg-gray-50">
+      <Sidebar />
+      <main className="min-h-screen lg:pl-64">
         {children}
       </main>
     </div>

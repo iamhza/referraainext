@@ -57,7 +57,8 @@ const statusConfigs: Record<string, {
 };
 
 export default function AdminReferralDetailsPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string;
   const [referral, setReferral] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

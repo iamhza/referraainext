@@ -2,6 +2,106 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Shepherd.js Tour Styles */
+.shepherd-element {
+  border-radius: 12px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+.shepherd-content {
+  padding: 24px !important;
+}
+
+.shepherd-title {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: #111827 !important;
+  margin-bottom: 8px !important;
+}
+
+.shepherd-text {
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  color: #6b7280 !important;
+  margin-bottom: 20px !important;
+}
+
+.shepherd-footer {
+  padding: 0 !important;
+  margin-top: 20px !important;
+}
+
+.shepherd-button {
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  padding: 8px 16px !important;
+  transition: all 0.2s ease !important;
+}
+
+.shepherd-button-primary {
+  background-color: #2563eb !important;
+  color: white !important;
+  border: none !important;
+}
+
+.shepherd-button-primary:hover {
+  background-color: #1d4ed8 !important;
+}
+
+.shepherd-button-secondary {
+  background-color: transparent !important;
+  color: #6b7280 !important;
+  border: 1px solid #d1d5db !important;
+  margin-right: 8px !important;
+}
+
+.shepherd-button-secondary:hover {
+  background-color: #f9fafb !important;
+  border-color: #9ca3af !important;
+}
+
+.shepherd-arrow {
+  border-color: #e5e7eb !important;
+}
+
+.shepherd-arrow:before {
+  border-color: #e5e7eb !important;
+}
+
+.shepherd-modal-overlay-container {
+  background-color: rgba(0, 0, 0, 0.4) !important;
+}
+
+.shepherd-target-click-disabled.shepherd-enabled.shepherd-element {
+  pointer-events: none !important;
+}
+
+.shepherd-enabled.shepherd-element {
+  z-index: 9999 !important;
+}
+
+/* Custom progress indicator */
+.shepherd-progress {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.shepherd-progress-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #d1d5db;
+  transition: background-color 0.2s ease;
+}
+
+.shepherd-progress-dot.active {
+  background-color: #2563eb;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -193,6 +293,89 @@ html {
 
   .has-tooltip:hover .tooltip {
     @apply visible opacity-100;
+  }
+
+  /* Remote-inspired layout utilities */
+  .dashboard-container {
+    @apply max-w-6xl mx-auto px-8 py-8;
+  }
+  
+  .page-background {
+    @apply min-h-screen bg-gray-50;
+  }
+  
+  /* Remote-style cards */
+  .remote-card {
+    @apply bg-white border border-gray-200 rounded-lg shadow-sm;
+  }
+  
+  .remote-card-hover {
+    @apply bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow;
+  }
+  
+  /* Remote typography */
+  .remote-header {
+    @apply text-3xl font-bold text-gray-900;
+  }
+  
+  .remote-section-title {
+    @apply text-lg font-semibold text-gray-900;
+  }
+  
+  .remote-description {
+    @apply text-gray-500 text-base font-normal;
+  }
+  
+  .remote-subtext {
+    @apply text-sm text-gray-600 font-normal;
+  }
+  
+  /* Remote button variants */
+  .btn-remote-primary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors;
+  }
+  
+  .btn-remote-outline {
+    @apply border-blue-600 text-blue-600 hover:bg-blue-50 font-medium transition-colors;
+  }
+  
+  .btn-remote-ghost {
+    @apply border-gray-300 text-gray-700 hover:bg-gray-50 font-medium transition-colors;
+  }
+  
+  /* Remote alert styles */
+  .remote-alert-orange {
+    @apply bg-orange-50 border border-orange-200 rounded-lg px-4 py-3;
+  }
+  
+  .remote-alert-blue {
+    @apply bg-blue-50 border border-blue-200 rounded-lg px-4 py-3;
+  }
+  
+  /* Remote table styles */
+  .remote-table-header {
+    @apply text-xs font-medium text-gray-500 uppercase tracking-wider;
+  }
+  
+  .remote-table-row {
+    @apply hover:bg-gray-50 transition-colors;
+  }
+  
+  /* Remote status badges */
+  .remote-badge-blue {
+    @apply bg-blue-50 text-blue-700 border-blue-200;
+  }
+  
+  .remote-badge-green {
+    @apply bg-green-50 text-green-700 border-green-200;
+  }
+  
+  .remote-badge-orange {
+    @apply bg-orange-50 text-orange-700 border-orange-200;
+  }
+  
+  .remote-badge-gray {
+    @apply bg-gray-50 text-gray-700 border-gray-200;
   }
 }
 

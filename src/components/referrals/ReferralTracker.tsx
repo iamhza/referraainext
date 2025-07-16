@@ -95,7 +95,7 @@ export function ReferralTracker({ referralId }: ReferralTrackerProps) {
                     <Badge
                       variant={
                         step.status === 'completed'
-                          ? 'success'
+                          ? 'default'
                           : step.status === 'in_progress'
                           ? 'default'
                           : 'secondary'

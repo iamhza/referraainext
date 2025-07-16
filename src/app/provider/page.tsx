@@ -7,7 +7,7 @@ import { EnhancedButton } from '@/components/ui/enhanced-button';
 import { PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 import { PageTemplate } from '@/components/templates/page-template';
-import { RecentReferrals } from '@/components/dashboard/RecentReferrals';
+
 import { Sidebar } from '@/components/layout/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -198,8 +198,35 @@ export default function ProviderDashboard() {
                   <TabsTrigger value="completed">Completed</TabsTrigger>
                 </TabsList>
                 <TabsContent value="my_referrals">
-                  {/* Use RecentReferrals or a provider-specific version if needed */}
-                  <RecentReferrals />
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>My Referrals</CardTitle>
+                      <CardDescription>All referrals assigned to you</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {referralsLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-blue-500"></div>
+                        </div>
+                      ) : referrals.length > 0 ? (
+                        <div className="space-y-4">
+                          {referrals.map((referral) => (
+                            <div key={referral.id} className="border border-gray-200 rounded-lg p-4">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-medium">Referral #{referral.id.slice(-6)}</h4>
+                                  <p className="text-sm text-gray-600">Status: {referral.status}</p>
+                                </div>
+                                <Badge>{referral.status}</Badge>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-center text-gray-500 py-8">No referrals found</p>
+                      )}
+                    </CardContent>
+                  </Card>
                 </TabsContent>
                 <TabsContent value="needs_action">
                   <Card>

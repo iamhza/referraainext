@@ -53,28 +53,82 @@ export async function POST(req: Request) {
     const db = client.db('referradb');
     const now = new Date().toISOString();
     
-    // Prepare clients for insertion with timestamps and defaults
-    const clientsToInsert = validClients.map(client => ({
-      ...client,
-      status: client.status || 'UNPLACED_NEW',
-      createdAt: now,
-      updatedAt: now
-    }));
+    // Check for existing providers and prepare provider linking
+    const providersCollection = db.collection('providers');
+    const existingProviders = await providersCollection.find({}).toArray();
+    
+    // Prepare clients for insertion with enhanced fields
+    const clientsToInsert = validClients.map(clientData => {
+      // Try to link to existing provider
+      let linkedProvider = null;
+      if (clientData.currentProvider) {
+        linkedProvider = existingProviders.find(provider => 
+          provider.name?.toLowerCase().includes(clientData.currentProvider.toLowerCase()) ||
+          provider.organizationName?.toLowerCase().includes(clientData.currentProvider.toLowerCase())
+        );
+      }
+
+      return {
+        firstName: clientData.firstName,
+        lastName: clientData.lastName,
+        status: clientData.status || 'UNPLACED_NEW',
+        phone: clientData.phone || null,
+        email: clientData.email || null,
+        address: clientData.address || null,
+        city: clientData.city || null,
+        state: clientData.state || null,
+        zipCode: clientData.zipCode || null,
+        county: clientData.county || null,
+        notes: clientData.notes || null,
+        
+        // Provider information
+        currentProvider: clientData.currentProvider || null,
+        linkedProviderId: linkedProvider?._id || null,
+        providerOnboarded: !!linkedProvider,
+        
+        // Profile completion tracking - comprehensive check for essential fields
+        profileComplete: !!(
+          clientData.firstName && 
+          clientData.lastName &&
+          clientData.phone && 
+          clientData.email && 
+          clientData.address && 
+          clientData.city &&
+          clientData.state &&
+          clientData.county
+        ),
+        
+        // Metadata
+        createdAt: now,
+        updatedAt: now,
+        createdBy: session.user.id,
+        
+        // Legacy fields for backward compatibility
+        providerName: clientData.currentProvider || clientData.providerName || null,
+        placementDate: clientData.placementDate || null
+      };
+    });
     
     // Insert clients in bulk
     const result = await db.collection(COLLECTION).insertMany(clientsToInsert);
     
-    // Calculate status counts for reporting
-    const statusCounts = {
-      ACTIVE_STABLE: clientsToInsert.filter(c => c.status === 'ACTIVE_STABLE').length,
-      ACTIVE_FRUSTRATED: clientsToInsert.filter(c => c.status === 'ACTIVE_FRUSTRATED').length,
-      UNPLACED_NEW: clientsToInsert.filter(c => c.status === 'UNPLACED_NEW').length
+    // Calculate comprehensive statistics
+    const stats = {
+      imported: result.insertedCount,
+      withProviders: clientsToInsert.filter(c => c.currentProvider).length,
+      linkedProviders: clientsToInsert.filter(c => c.linkedProviderId).length,
+      pendingProviders: clientsToInsert.filter(c => c.currentProvider && !c.linkedProviderId).length,
+      profileComplete: clientsToInsert.filter(c => c.profileComplete).length,
+      statusCounts: {
+        ACTIVE_STABLE: clientsToInsert.filter(c => c.status === 'ACTIVE_STABLE').length,
+        ACTIVE_FRUSTRATED: clientsToInsert.filter(c => c.status === 'ACTIVE_FRUSTRATED').length,
+        UNPLACED_NEW: clientsToInsert.filter(c => c.status === 'UNPLACED_NEW').length
+      }
     };
 
     return NextResponse.json({
       success: true,
-      imported: result.insertedCount,
-      statusCounts,
+      ...stats,
       insertedIds: result.insertedIds
     }, { status: 201 });
   } catch (error) {

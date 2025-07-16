@@ -24,25 +24,23 @@ import {
   User,
   ChevronLeft,
   Home,
-  MessageSquare,
   Clock,
-  FileText,
+  MessageSquare,
   AlertCircle,
   Shield,
   PlusCircle,
   Settings2,
-  CheckCircle,
   Star,
   Edit,
-  Info
+  Info,
+  Send
 } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
 import { formatSafeDate } from '@/lib/date-utils';
 import Link from "next/link";
-import { ClientTasks } from '@/components/referrals/ClientTasks';
-import { ClientComments } from '@/components/referrals/ClientComments';
+
 import { ClientStatusSelector } from '@/components/clients/ClientStatusSelector';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import type { Client, ClientStatus, RelationshipEvent } from '@/types';
@@ -106,7 +104,6 @@ export default function ClientDetailsPage() {
         setRelationshipEvents(data.events || []);
       } catch (err) {
         console.error("Error fetching relationship events:", err);
-        // Set empty array instead of using mock data
         setRelationshipEvents([]);
       }
     }
@@ -164,585 +161,403 @@ export default function ClientDetailsPage() {
     }
   };
 
-  // Helper function to count pending tasks
-  const countPendingTasks = () => {
-    // If we have task data, use it, otherwise return 0
-    return client?.tasks?.filter(task => !task.completed)?.length || 0;
-  };
+
 
   const clientName = client ? `${client.firstName || ''} ${client.lastName || ''}`.trim() : '';
   const clientInitials = client ? 
     `${client.firstName?.charAt(0) || ''}${client.lastName?.charAt(0) || ''}`.trim().toUpperCase() : 
     'CL';
 
-  if (loading) return (
-    <div className="min-h-screen flex justify-center items-center">
-      <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-blue-500"></div>
-    </div>
-  );
-
-  if (error || !client) return (
-    <div className="min-h-screen flex flex-col justify-center items-center gap-4">
-      <AlertCircle className="h-16 w-16 text-red-500" />
-      <h3 className="text-xl font-semibold text-gray-900">Error Loading Client</h3>
-      <p className="text-gray-600">{error || 'Client not found.'}</p>
-      <Button asChild>
-        <Link href="/case-manager/clients">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Clients
-        </Link>
-      </Button>
-    </div>
-  );
-
-  function renderTruncatedId(id: string) {
+  // Helper function to render truncated ID
+  const renderTruncatedId = (id: string) => {
     if (!id) return null;
     return `${id.slice(0, 4)}...${id.slice(-4)}`;
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex justify-center items-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error || !client) {
+    return (
+      <div className="min-h-screen flex flex-col justify-center items-center gap-4">
+        <AlertCircle className="h-16 w-16 text-red-500" />
+        <h3 className="text-xl font-semibold text-gray-900">Error Loading Client</h3>
+        <p className="text-gray-600">{error || 'Client not found.'}</p>
+        <Button asChild>
+          <Link href="/case-manager/clients">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Clients
+          </Link>
+        </Button>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top navigation */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      {/* Enhanced Top Navigation */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Button 
-              variant="ghost" 
-              asChild
-              className="gap-1"
-            >
-              <Link href="/case-manager/clients">
-                <ChevronLeft className="h-4 w-4" />
-                Back to Clients
-              </Link>
-            </Button>
+            {/* Breadcrumb Navigation */}
+            <div className="flex items-center gap-2 text-sm">
+              <Button variant="ghost" size="sm" asChild className="h-8 px-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                <Link href="/case-manager">
+                  <Home className="h-4 w-4 mr-1" />
+                  Dashboard
+                </Link>
+              </Button>
+              <span className="text-gray-400">/</span>
+              <Button variant="ghost" size="sm" asChild className="h-8 px-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100">
+                <Link href="/case-manager/clients">
+                  <Users className="h-4 w-4 mr-1" />
+                  Clients
+                </Link>
+              </Button>
+              <span className="text-gray-400">/</span>
+              <span className="font-medium text-gray-900">{clientName}</span>
+            </div>
             
-            <EnhancedButton 
-              variant="gradient" 
-              asChild
-              rounded="default"
-              className="shadow-sm"
-            >
-              <Link href={`/case-manager/new-referral?clientId=${id}`}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Create New Referral
-              </Link>
-            </EnhancedButton>
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                asChild
+                className="border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md font-medium"
+              >
+                <Link href={`/case-manager/clients/${id}/edit`}>
+                  <Edit className="h-4 w-4 mr-2 text-gray-600" />
+                  Edit Client
+                </Link>
+              </Button>
+              <Button 
+                size="sm"
+                asChild
+                className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all duration-200 font-medium"
+              >
+                <Link href={`/case-manager/new-referral?clientId=${id}`}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Create Referral
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </div>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Client Header */}
+        {/* Enhanced Client Header */}
         <div className="mb-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20 rounded-full border-4 border-white shadow-md bg-gradient-to-br from-blue-500 to-blue-600 text-white font-medium text-xl">
-                <AvatarFallback>{clientInitials}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">{clientName}</h1>
-                <div className="flex items-center gap-6 mt-2 text-sm text-gray-600">
-                  {client.email && (
-                    <div className="flex items-center gap-1.5">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                      {client.email}
+          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+            <CardContent className="p-8">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div className="flex items-center gap-6">
+                  <Avatar className="h-24 w-24 rounded-2xl border-4 border-white shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold text-2xl">
+                    <AvatarFallback>{clientInitials}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h1 className="text-4xl font-bold text-gray-900 mb-2">{clientName}</h1>
+                    <div className="flex flex-col sm:flex-row gap-4 text-sm text-gray-600">
+                      {client.email && (
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-blue-500" />
+                          <span className="font-medium">{client.email}</span>
+                        </div>
+                      )}
+                      {client.phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-green-500" />
+                          <span className="font-medium">{client.phone}</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {client.phone && (
-                    <div className="flex items-center gap-1.5">
-                      <Phone className="h-4 w-4 text-gray-400" />
-                      {client.phone}
+                    
+                    {/* Client ID with enhanced styling */}
+                    <div className="flex items-center gap-3 mt-3">
+                      <span className="text-sm font-medium text-gray-600">Client ID:</span>
+                      <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-1 border">
+                        <code className="text-gray-800 font-mono text-sm">
+                          {showId ? client._id : renderTruncatedId(client._id)}
+                        </code>
+                        <Button variant="ghost" size="icon" onClick={() => setShowId((v) => !v)} className="h-6 w-6">
+                          {showId ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={handleCopyId} className="h-6 w-6">
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                        {copied && <span className="text-green-600 text-xs font-medium">Copied!</span>}
+                      </div>
                     </div>
-                  )}
+                  </div>
+                </div>
+                
+                {/* Status Selector */}
+                <div className="flex flex-col items-end gap-3">
+                  <ClientStatusSelector
+                    clientId={client._id}
+                    initialStatus={client.status || 'UNPLACED_NEW'}
+                    onStatusChange={handleStatusChange}
+                    className="min-w-[200px] bg-white shadow-sm"
+                  />
                 </div>
               </div>
-            </div>
-            
-            <div className="flex gap-3 items-center">
-              <ClientStatusSelector
-                clientId={client._id}
-                initialStatus={client.status || 'UNPLACED_NEW'}
-                onStatusChange={handleStatusChange}
-                className="min-w-[180px] bg-white shadow-sm"
-              />
-              
-              <Button 
-                variant="outline" 
-                asChild
-                className="gap-1"
-              >
-                <Link href={`/case-manager/clients/${id}/edit`}>
-                  <Edit className="h-4 w-4" />
-                  Edit Client
-                </Link>
-              </Button>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <span className="font-medium">Client ID:</span>
-            <code className="bg-gray-100 px-2 py-1 rounded text-gray-800 font-mono">
-              {showId ? client._id : renderTruncatedId(client._id)}
-            </code>
-            <Button variant="ghost" size="icon" onClick={() => setShowId((v) => !v)} className="h-7 w-7 rounded-full">
-              {showId ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handleCopyId} className="h-7 w-7 rounded-full">
-              <Copy className="h-3.5 w-3.5" />
-            </Button>
-            {copied && <span className="text-green-600 text-xs">Copied!</span>}
-          </div>
+            </CardContent>
+          </Card>
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left column: Client Information */}
+          {/* Left Column: Client Information */}
           <div className="lg:col-span-1 space-y-6">
-            {/* Client Information Card */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2">
+            {/* Basic Information */}
+            <Card className="shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg">
                   <User className="h-5 w-5 text-blue-500" />
-                  Client Information
+                  Basic Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-4">
-                <div className="space-y-6">
-                  {/* Basic Information */}
+              <CardContent className="space-y-4">
+                <div className="grid gap-4">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center">
-                      <Info className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
-                      Basic Information
-                    </h3>
-                    <dl className="grid grid-cols-2 gap-x-3 gap-y-4 text-sm">
-                      <div>
-                        <dt className="text-gray-500">Full Name</dt>
-                        <dd className="font-medium text-gray-900 mt-1">{clientName}</dd>
-                      </div>
-                      
-                      {client.dateOfBirth && (
-                        <div>
-                          <dt className="text-gray-500">Date of Birth</dt>
-                          <dd className="font-medium text-gray-900 mt-1">
-                            {typeof client.dateOfBirth === 'string' 
-                              ? new Date(client.dateOfBirth).toLocaleDateString() 
-                              : 'N/A'}
-                          </dd>
-                        </div>
-                      )}
-                      
-                      {client.preferredContactMethod && (
-                        <div>
-                          <dt className="text-gray-500">Preferred Contact</dt>
-                          <dd className="font-medium text-gray-900 mt-1">{client.preferredContactMethod}</dd>
-                        </div>
-                      )}
-                    </dl>
+                    <dt className="text-sm font-medium text-gray-600 mb-1">Full Name</dt>
+                    <dd className="text-sm text-gray-900 font-medium">{clientName}</dd>
                   </div>
                   
-                  <Separator />
-                  
-                  {/* Contact Information */}
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center">
-                      <Phone className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
-                      Contact Information
-                    </h3>
-                    <dl className="grid grid-cols-1 gap-y-4 text-sm">
-                      {client.email && (
-                        <div>
-                          <dt className="text-gray-500">Email</dt>
-                          <dd className="font-medium text-gray-900 mt-1">{client.email}</dd>
-                        </div>
-                      )}
-                      
-                      {client.phone && (
-                        <div>
-                          <dt className="text-gray-500">Phone</dt>
-                          <dd className="font-medium text-gray-900 mt-1">{client.phone}</dd>
-                        </div>
-                      )}
-                    </dl>
+                    <dt className="text-sm font-medium text-gray-600 mb-1">Date of Birth</dt>
+                    <dd className="text-sm text-gray-900 font-medium">
+                      {client.dateOfBirth ? formatSafeDate(client.dateOfBirth) : 'Not provided'}
+                    </dd>
                   </div>
                   
-                  <Separator />
-                  
-                  {/* Address Information */}
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center">
-                      <MapPin className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
-                      Address Information
-                    </h3>
-                    <dl className="grid grid-cols-1 gap-y-4 text-sm">
-                      {client.address && (
-                        <div>
-                          <dt className="text-gray-500">Street Address</dt>
-                          <dd className="font-medium text-gray-900 mt-1">
-                            {typeof client.address === 'string'
-                              ? client.address
-                              : client.address.street || 'N/A'}
-                          </dd>
-                        </div>
-                      )}
-                      
-                      {client.city && client.state && (
-                        <div>
-                          <dt className="text-gray-500">City, State, ZIP</dt>
-                          <dd className="font-medium text-gray-900 mt-1">
-                            {client.city}, {client.state} {client.zipCode}
-                          </dd>
-                        </div>
-                      )}
-                      
-                      {client.county && (
-                        <div>
-                          <dt className="text-gray-500">County</dt>
-                          <dd className="font-medium text-gray-900 mt-1">{client.county}</dd>
-                        </div>
-                      )}
-                    </dl>
+                    <dt className="text-sm font-medium text-gray-600 mb-1">Preferred Contact</dt>
+                    <dd className="text-sm text-gray-900 font-medium">
+                      {client.preferredContactMethod || 'email'}
+                    </dd>
                   </div>
-                  
-                  {client.insurance && (
-                    <>
-                      <Separator />
-                      
-                      {/* Insurance Information */}
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center">
-                          <Shield className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
-                          Insurance Information
-                        </h3>
-                        <dl className="grid grid-cols-2 gap-x-3 gap-y-4 text-sm">
-                          {client.insurance.type && (
-                            <div>
-                              <dt className="text-gray-500">Type</dt>
-                              <dd className="font-medium text-gray-900 mt-1">{client.insurance.type}</dd>
-                            </div>
-                          )}
-                          
-                          {client.insurance.provider && (
-                            <div>
-                              <dt className="text-gray-500">Provider</dt>
-                              <dd className="font-medium text-gray-900 mt-1">{client.insurance.provider}</dd>
-                            </div>
-                          )}
-                          
-                          {client.insurance.number && (
-                            <div>
-                              <dt className="text-gray-500">Policy Number</dt>
-                              <dd className="font-medium text-gray-900 font-mono mt-1">{client.insurance.number}</dd>
-                            </div>
-                          )}
-                        </dl>
-                      </div>
-                    </>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Contact Information */}
+            <Card className="shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Phone className="h-5 w-5 text-green-500" />
+                  Contact Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4">
+                  {client.email && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-600 mb-1">Email</dt>
+                      <dd className="text-sm text-gray-900 font-medium">{client.email}</dd>
+                    </div>
                   )}
                   
-                  <Separator />
+                  {client.phone && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-600 mb-1">Phone</dt>
+                      <dd className="text-sm text-gray-900 font-medium">{client.phone}</dd>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Address Information */}
+            <Card className="shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <MapPin className="h-5 w-5 text-red-500" />
+                  Address Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4">
+                                     {client.address && (
+                     <div>
+                       <dt className="text-sm font-medium text-gray-600 mb-1">Street Address</dt>
+                       <dd className="text-sm text-gray-900 font-medium">
+                         {typeof client.address === 'string' ? client.address : client.address.street || 'N/A'}
+                       </dd>
+                     </div>
+                   )}
                   
-                  {/* Account Information */}
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center">
-                      <Calendar className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
-                      Account Information
-                    </h3>
-                    <dl className="grid grid-cols-1 gap-y-4 text-sm">
+                  <div className="grid grid-cols-2 gap-4">
+                    {client.city && (
                       <div>
-                        <dt className="text-gray-500">Client Created</dt>
-                        <dd className="font-medium text-gray-900 mt-1">
-                          {client.createdAt 
-                            ? formatSafeDate(client.createdAt, 'MMMM d, yyyy') 
-                            : 'Unknown date'}
-                        </dd>
+                        <dt className="text-sm font-medium text-gray-600 mb-1">City</dt>
+                        <dd className="text-sm text-gray-900 font-medium">{client.city}</dd>
                       </div>
-                      
-                      {client.source === 'created_from_referral' && client.referralDate && (
-                        <div>
-                          <dt className="text-gray-500">Original Referral Date</dt>
-                          <dd className="font-medium text-gray-900 mt-1">
-                            {formatSafeDate(client.referralDate, 'MMMM d, yyyy')}
-                          </dd>
-                        </div>
-                      )}
-                      
-                      {client.source && (
-                        <div>
-                          <dt className="text-gray-500">Source</dt>
-                          <dd className="font-medium text-gray-900 mt-1">
-                            {client.source === 'created_from_referral' ? 'Created from referral' : 
-                             client.source === 'migration_from_referral' ? 'Migrated from referral' : 
-                             client.source}
-                          </dd>
-                        </div>
-                      )}
-                    </dl>
+                    )}
+                    
+                    {client.state && (
+                      <div>
+                        <dt className="text-sm font-medium text-gray-600 mb-1">State</dt>
+                        <dd className="text-sm text-gray-900 font-medium">{client.state}</dd>
+                      </div>
+                    )}
                   </div>
+                  
+                  {client.zipCode && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-600 mb-1">ZIP Code</dt>
+                      <dd className="text-sm text-gray-900 font-medium">{client.zipCode}</dd>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
           </div>
           
-          {/* Right column: Referrals, Tasks, Notes */}
+          {/* Right Column: Referrals and Services */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Client Referrals - Unified section for all referrals */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2">
-                  <ClipboardList className="h-5 w-5 text-blue-500" />
-                  Client Referrals
-                </CardTitle>
-                <CardDescription className="flex items-center justify-between">
-                  <span>
-                    {allReferrals.length === 0 
-                      ? 'This client does not have any referrals' 
-                      : `${allReferrals.length} referral${allReferrals.length > 1 ? 's' : ''}`}
-                  </span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={refreshReferrals}
-                    className="h-8 text-xs text-blue-600"
-                  >
-                    Refresh Referrals
-                  </Button>
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-4">
-                {allReferrals.length === 0 ? (
-                  <div className="bg-gray-50 rounded-lg p-6 text-center">
-                    <ClipboardList className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-                    <h3 className="text-gray-800 font-medium text-lg mb-2">No Referrals</h3>
-                    <p className="text-gray-600 mb-4">
-                      Create a new referral to connect this client with a service provider.
-                    </p>
-                    <EnhancedButton 
-                      variant="gradient" 
-                      asChild
-                      rounded="default"
-                      className="mx-auto"
-                    >
-                      <Link href={`/case-manager/new-referral?clientId=${id}`}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Create First Referral
-                      </Link>
-                    </EnhancedButton>
+            {/* All Referrals - Enhanced */}
+            <Card className="shadow-sm">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                      <ClipboardList className="h-6 w-6 text-blue-500" />
+                      Referrals & Services
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      All referrals for this client, their status, and provider connections
+                    </CardDescription>
                   </div>
-                ) : (
-                  <div className="space-y-6">
-                    {/* Active Referrals Group */}
-                    {activeReferrals.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
-                          <Clock className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
-                          Active ({activeReferrals.length})
-                        </h3>
-                        <div className="space-y-4">
-                          {activeReferrals.map((referral) => (
-                            <div 
-                              key={referral._id} 
-                              className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
-                            >
-                              <div className="p-4">
-                                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                                  <div>
-                                    <div className="flex items-center gap-2">
-                                      <h3 className="font-medium text-gray-900">{referral.serviceDetails?.type || 'Service'}</h3>
-                                      <Badge 
-                                        className={cn(
-                                          "rounded-full text-xs font-medium",
-                                          referral.status === 'pending' && "bg-amber-100 text-amber-800 border-amber-200",
-                                          referral.status === 'accepted' && "bg-green-100 text-green-800 border-green-200",
-                                          referral.status === 'in_progress' && "bg-blue-100 text-blue-800 border-blue-200"
-                                        )}
-                                      >
-                                        {referral.status === 'pending' && "Pending"}
-                                        {referral.status === 'accepted' && "Accepted"}
-                                        {referral.status === 'in_progress' && "In Progress"}
-                                        {!referral.status && "Active"}
-                                      </Badge>
-                                    </div>
-                                    <p className="text-sm text-gray-600">
-                                      Provider: {referral.providerName || 'Pending Assignment'}
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      Created: {formatSafeDate(referral.createdAt, 'MMM d, yyyy')}
-                                    </p>
-                                  </div>
-                                  <div className="flex gap-2 self-end">
-                                    <Button size="sm" variant="outline" asChild className="text-sm rounded">
-                                      <Link href={`/case-manager/referrals/${referral._id}`}>
-                                        View Details
-                                      </Link>
-                                    </Button>
-                                    <Button size="sm" variant="outline" asChild className="text-sm rounded">
-                                      <Link href={`/case-manager/referrals/${referral._id}/workspace`}>
-                                        Workspace
-                                      </Link>
-                                    </Button>
-                                  </div>
-                                </div>
-                                
-                                {/* Progress Indicator */}
-                                {referral.status !== 'pending' && (
-                                  <div className="mt-4">
-                                    <div className="flex justify-between text-xs text-gray-500 mb-1">
-                                      <span>Progress</span>
-                                      <span>{referral.progressPercentage || 50}%</span>
-                                    </div>
-                                    <Progress value={referral.progressPercentage || 50} className="h-2" />
-                                  </div>
-                                )}
+                  {activeReferrals && activeReferrals.length > 0 && (
+                    <Badge className="bg-blue-100 text-blue-800 border-blue-200 px-3 py-1">
+                      {activeReferrals.length} Active
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {referralsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-200 border-t-blue-500"></div>
+                  </div>
+                ) : activeReferrals && activeReferrals.length > 0 ? (
+                  <div className="space-y-4">
+                    {activeReferrals.map((referral, index) => (
+                      <div key={referral._id} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-all duration-200 bg-white">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-sm">
+                              {referral.providerName ? referral.providerName.substring(0, 2).toUpperCase() : 'PR'}
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-gray-900 text-lg">
+                                {referral.providerName || 'Provider Assignment Pending'}
+                              </h4>
+                              <p className="text-gray-600 font-medium">
+                                {referral.serviceDetails?.type || 'Service Details Pending'}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
+                                <Calendar className="h-4 w-4" />
+                                <span>Created {formatSafeDate(referral.createdAt)}</span>
                               </div>
                             </div>
-                          ))}
+                          </div>
+                          <StatusBadge status={referral.status as ClientStatus} />
                         </div>
-                      </div>
-                    )}
-
-                    {/* Other Referrals Group */}
-                    {allReferrals.filter(r => 
-                      !['accepted', 'in_progress', 'active', 'pending', 'completed'].includes(r.status)
-                    ).length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
-                          <AlertCircle className="h-3.5 w-3.5 mr-1.5 text-gray-500" />
-                          Other Status ({allReferrals.filter(r => 
-                            !['accepted', 'in_progress', 'active', 'pending', 'completed'].includes(r.status)
-                          ).length})
-                        </h3>
-                        <div className="space-y-3">
-                          {allReferrals
-                            .filter(r => !['accepted', 'in_progress', 'active', 'pending', 'completed'].includes(r.status))
-                            .map((referral) => (
-                              <div 
-                                key={referral._id} 
-                                className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col md:flex-row justify-between md:items-center gap-3"
-                              >
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <h3 className="font-medium text-gray-900">{referral.serviceDetails?.type || 'Service'}</h3>
-                                    <Badge className="bg-gray-100 text-gray-800 border-gray-200 rounded-full text-xs">
-                                      {referral.status || 'Unknown Status'}
-                                    </Badge>
-                                  </div>
-                                  <p className="text-sm text-gray-600">
-                                    Provider: {referral.providerName || 'Not Assigned'}
-                                  </p>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Created: {formatSafeDate(referral.createdAt, 'MMM d, yyyy')}
-                                  </p>
-                                </div>
-                                <div className="flex gap-2 self-end">
-                                  <Button size="sm" variant="outline" asChild className="text-sm rounded">
-                                    <Link href={`/case-manager/referrals/${referral._id}`}>
-                                      View Details
-                                    </Link>
-                                  </Button>
-                                  <Button size="sm" variant="outline" asChild className="text-sm rounded">
-                                    <Link href={`/case-manager/referrals/${referral._id}/workspace`}>
-                                      Workspace
-                                    </Link>
-                                  </Button>
-                                </div>
+                        
+                        {referral.serviceDetails?.description && (
+                          <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                            <p className="text-sm text-gray-700">
+                              {referral.serviceDetails.description}
+                            </p>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-6 text-sm text-gray-500">
+                            {referral.updatedAt && (
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-4 w-4" />
+                                <span>Updated {formatSafeDate(referral.updatedAt)}</span>
                               </div>
-                            ))
-                          }
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Completed Referrals Group */}
-                    {completedReferrals.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
-                          <CheckCircle className="h-3.5 w-3.5 mr-1.5 text-green-500" />
-                          Completed ({completedReferrals.length})
-                        </h3>
-                        <div className="space-y-3">
-                          {completedReferrals.map((referral) => (
-                            <div 
-                              key={referral._id} 
-                              className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col md:flex-row justify-between md:items-center gap-3"
+                            )}
+                          </div>
+                          
+                          <div className="flex gap-3">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              asChild
+                              className="border-gray-300 hover:border-blue-400 hover:text-blue-600"
                             >
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-medium text-gray-900">{referral.serviceDetails?.type || 'Service'}</h3>
-                                  <Badge className="bg-green-100 text-green-800 border-green-200 rounded-full text-xs">
-                                    Completed
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-gray-600">
-                                  Provider: {referral.providerName || 'Unknown'}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  Completed: {referral.updatedAt ? formatSafeDate(referral.updatedAt, 'MMM d, yyyy') : 'Unknown'}
-                                </p>
-                              </div>
-                              <Button size="sm" variant="outline" asChild className="text-sm rounded self-start md:self-center">
-                                <Link href={`/case-manager/referrals/${referral._id}`}>
-                                  View Details
+                              <Link href={`/case-manager/referrals/${referral._id}`}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </Link>
+                            </Button>
+                            
+                            {referral.status === 'in_progress' && (
+                              <Button 
+                                size="sm" 
+                                asChild
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                <Link href={`/case-manager/referrals/${referral._id}/thread`}>
+                                  <MessageSquare className="h-4 w-4 mr-2" />
+                                  Workspace
                                 </Link>
                               </Button>
-                            </div>
-                          ))}
+                            )}
+                          </div>
                         </div>
                       </div>
-                    )}
-
-                    {/* Add referral button at the bottom */}
-                    <div className="flex justify-center mt-6">
-                      <EnhancedButton 
-                        variant="gradient" 
+                    ))}
+                    
+                    {/* Create New Referral Card */}
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-all duration-200">
+                      <PlusCircle className="h-8 w-8 text-gray-400 mx-auto mb-3" />
+                      <h4 className="font-medium text-gray-900 mb-2">Add Another Referral</h4>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Connect this client with additional services or providers
+                      </p>
+                      <Button 
+                        size="sm"
                         asChild
-                        rounded="default"
-                        className="shadow-sm"
+                        className="bg-blue-600 hover:bg-blue-700"
                       >
                         <Link href={`/case-manager/new-referral?clientId=${id}`}>
                           <PlusCircle className="mr-2 h-4 w-4" />
                           Create New Referral
                         </Link>
-                      </EnhancedButton>
+                      </Button>
                     </div>
                   </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <ClipboardList className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Referrals Yet</h3>
+                    <p className="text-gray-600 mb-6 max-w-sm mx-auto">
+                      This client doesn't have any referrals yet. Create their first referral to connect them with services.
+                    </p>
+                    <Button 
+                      asChild
+                      className="bg-blue-600 hover:bg-blue-700 px-6"
+                    >
+                      <Link href={`/case-manager/new-referral?clientId=${id}`}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Create First Referral
+                      </Link>
+                    </Button>
+                  </div>
                 )}
-              </CardContent>
-            </Card>
-            
-            {/* Client Tasks */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-blue-500" />
-                  Client Tasks
-                  {countPendingTasks() > 0 && (
-                    <Badge className="ml-2 bg-amber-100 text-amber-800 border-amber-200">
-                      {countPendingTasks()} pending
-                    </Badge>
-                  )}
-                </CardTitle>
-                <CardDescription>
-                  Manage tasks related to this client
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-4">
-                {client && <ClientTasks clientId={client._id} />}
-              </CardContent>
-            </Card>
-            
-            {/* Client Notes */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-blue-500" />
-                  Client Notes
-                </CardTitle>
-                <CardDescription>
-                  Notes and updates about this client
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-4">
-                {client && <ClientComments clientId={client._id} />}
               </CardContent>
             </Card>
           </div>

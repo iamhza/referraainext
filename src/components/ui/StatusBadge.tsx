@@ -23,29 +23,29 @@ export function StatusBadge({
         return {
           label: 'Active & Stable',
           icon: Shield,
-          className: 'bg-green-50 text-green-700 border-green-100',
-          iconClassName: 'text-green-500'
+          className: 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border-green-200 shadow-sm',
+          iconClassName: 'text-green-600'
         };
       case 'ACTIVE_FRUSTRATED':
         return {
           label: 'Active & Frustrated',
           icon: AlertTriangle,
-          className: 'bg-amber-50 text-amber-700 border-amber-100',
-          iconClassName: 'text-amber-500'
+          className: 'bg-gradient-to-r from-amber-50 to-orange-50 text-amber-700 border-amber-200 shadow-sm',
+          iconClassName: 'text-amber-600'
         };
       case 'UNPLACED_NEW':
         return {
           label: 'Unplaced/New',
           icon: User,
-          className: 'bg-blue-50 text-blue-700 border-blue-100',
-          iconClassName: 'text-blue-500'
+          className: 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border-blue-200 shadow-sm',
+          iconClassName: 'text-blue-600'
         };
       default:
         return {
           label: 'Unknown Status',
           icon: User,
-          className: 'bg-gray-50 text-gray-700 border-gray-100',
-          iconClassName: 'text-gray-500'
+          className: 'bg-gradient-to-r from-gray-50 to-slate-50 text-gray-700 border-gray-200 shadow-sm',
+          iconClassName: 'text-gray-600'
         };
     }
   };
@@ -54,21 +54,21 @@ export function StatusBadge({
   const Icon = config.icon;
   
   const sizeClasses = {
-    sm: 'text-xs py-1 px-2',
-    md: 'text-sm py-1.5 px-3',
-    lg: 'text-base py-2 px-4'
+    sm: 'text-xs py-1.5 px-3 gap-1.5',
+    md: 'text-sm py-2 px-4 gap-2',
+    lg: 'text-base py-2.5 px-5 gap-2.5'
   };
   
   return (
     <Badge 
       className={cn(
-        'flex items-center gap-1.5 font-medium rounded-full',
+        'flex items-center font-semibold rounded-lg border transition-all duration-200 hover:shadow-md',
         config.className,
         sizeClasses[size],
         className
       )}
     >
-      {showIcon && <Icon className={cn('h-4 w-4', config.iconClassName)} />}
+      {showIcon && <Icon className={cn('h-3.5 w-3.5', config.iconClassName)} />}
       {config.label}
     </Badge>
   );

@@ -11,6 +11,7 @@ type AuthContextType = {
   signIn: (email: string, password: string) => Promise<{ user: User | null }>;
   signUp: (email: string, password: string, metadata?: { [key: string]: any }) => Promise<void>;
   signOut: () => Promise<void>;
+  updateProfile: (updates: { name?: string; [key: string]: any }) => Promise<void>;
   error: string | null;
 };
 
@@ -98,8 +99,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateProfile = async (updates: { name?: string; [key: string]: any }) => {
+    try {
+      setError(null);
+      const { error } = await supabase.auth.updateUser({
+        data: updates
+      });
+      
+      if (error) throw error;
+      
+      // Refresh the user data
+      const { data: { user: updatedUser } } = await supabase.auth.getUser();
+      if (updatedUser) {
+        setUser(updatedUser);
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'An error occurred during profile update');
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, error }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, updateProfile, error }}>
       {children}
     </AuthContext.Provider>
   );

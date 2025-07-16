@@ -1,10 +1,12 @@
+"use client";
+
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Users } from 'lucide-react';
+import { ArrowLeft, Users, MessageSquare } from 'lucide-react';
 
 interface Referral {
   id: string;
@@ -18,7 +20,8 @@ interface Referral {
 export default function ProviderReferralDetailPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const { id } = router.query as { id: string };
+  const params = useParams();
+  const id = params?.id as string;
   const [referral, setReferral] = useState<Referral | null>(null);
   const [referralLoading, setReferralLoading] = useState(true);
 
@@ -74,9 +77,9 @@ export default function ProviderReferralDetailPage() {
               <div className="flex flex-wrap gap-2 mt-4">
                 <Button variant="outline" onClick={() => router.back()}>Back</Button>
                 <Button variant="outline" asChild className="ml-2">
-                  <Link href={`/provider/referrals/${id}/workspace`}>
-                    <Users className="mr-2 h-4 w-4" />
-                    Collaboration Workspace
+                  <Link href={`/provider/referrals/${id}/thread`}>
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Referral Workspace
                   </Link>
                 </Button>
               </div>

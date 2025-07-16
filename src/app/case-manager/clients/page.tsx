@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/table';
 import { PlusIcon, DownloadIcon } from '@radix-ui/react-icons';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Copy, User, Upload, Users, Loader2, Database, RefreshCw } from 'lucide-react';
+import { Eye, EyeOff, Copy, User, Upload, Users, Loader2, Database, RefreshCw, CheckCircle, AlertCircle, Clock, UserCheck, UserX, Shield } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ImportClientsModal } from '@/components/clients/ImportClientsModal';
 import { useToast } from '@/hooks/use-toast';
@@ -168,6 +168,12 @@ export default function ClientsPage() {
     return `${first?.[0] || ''}${last?.[0] || ''}`.toUpperCase();
   };
 
+  // Helper for proper name capitalization
+  const capitalizeName = (name: string) => {
+    if (!name) return '';
+    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+  };
+
   // Function to refresh clients
   const fetchClients = async () => {
     try {
@@ -181,7 +187,7 @@ export default function ClientsPage() {
   };
 
   return (
-    <div className="w-full mx-auto py-10 px-4 animate-fade-in">
+    <div className="max-w-6xl mx-auto py-10 px-4 animate-fade-in">
       {/* Import Modal */}
       <ImportClientsModal 
         isOpen={showImportModal} 
@@ -189,46 +195,63 @@ export default function ClientsPage() {
         onComplete={handleImportComplete}
       />
 
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+      {/* Clean header with inline metrics */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-1">Clients</h1>
-          <p className="text-lg text-gray-500">Manage your clients and their referrals</p>
+          <div className="flex items-center gap-4 mb-2">
+            <h1 className="text-2xl font-semibold text-gray-900">
+              Clients
+              {clients.length > 0 && (
+                <span className="text-gray-500 font-normal ml-2">({clients.length} total)</span>
+              )}
+            </h1>
+          </div>
+          {clients.length > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                <CheckCircle className="w-3 h-3 mr-1" />
+                {clients.filter(c => c.status === 'ACTIVE_STABLE' || c.status === 'ACTIVE_FRUSTRATED').length} Active
+              </span>
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <Clock className="w-3 h-3 mr-1" />
+                {clients.filter(c => c.status === 'UNPLACED_NEW' || !c.status).length} Unplaced
+              </span>
+            </div>
+          )}
         </div>
-        <div className="flex gap-3">
+        
+        <div className="flex items-center gap-2">
           <Button 
-            size="lg" 
             variant="outline"
-            className="px-6 py-2 text-base font-semibold rounded-xl border-blue-200 text-blue-700 hover:bg-blue-50"
+            size="sm"
             onClick={handleMigrateReferrals}
             disabled={isMigrating}
+            className="text-sm"
           >
             {isMigrating ? (
               <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Migrating...
               </>
             ) : (
               <>
-                <RefreshCw className="mr-2 h-5 w-5" />
-                Migrate Referrals to Clients
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Migrate
               </>
             )}
           </Button>
           <Button 
-            size="lg" 
             variant="outline"
-            className="px-6 py-2 text-base font-semibold rounded-xl border-blue-200 text-blue-700 hover:bg-blue-50"
+            size="sm"
             onClick={() => setShowImportModal(true)}
+            className="text-sm"
           >
-            <Upload className="mr-2 h-5 w-5" />
-            Import Clients
+            <Upload className="mr-2 h-4 w-4" />
+            Import
           </Button>
           <Link href="/case-manager/clients/new">
-            <Button 
-              size="lg" 
-              className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg px-6 py-2 text-base font-semibold rounded-xl"
-            >
-              <PlusIcon className="mr-2 h-5 w-5" />
+            <Button size="sm" className="text-sm">
+              <PlusIcon className="mr-2 h-4 w-4" />
               Add New Client
             </Button>
           </Link>
@@ -253,42 +276,7 @@ export default function ClientsPage() {
         </Alert>
       )}
       
-      {/* Client Ecosystem Stats */}
-      {clients.length > 0 && (
-        <div className="flex flex-wrap gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow-sm border border-blue-100 p-4 flex items-center gap-3 flex-1 md:flex-auto">
-            <div className="bg-blue-100 h-10 w-10 rounded-full flex items-center justify-center">
-              <Users className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <div className="text-sm text-gray-500">Total Clients</div>
-              <div className="text-2xl font-bold text-gray-900">{clients.length}</div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-green-100 p-4 flex items-center gap-3 flex-1 md:flex-auto">
-            <div className="bg-green-100 h-10 w-10 rounded-full flex items-center justify-center">
-              <Badge className="h-5 w-5 text-green-600 bg-green-100 p-1" />
-            </div>
-            <div>
-              <div className="text-sm text-gray-500">Active Clients</div>
-              <div className="text-2xl font-bold text-gray-900">
-                {clients.filter(c => c.status === 'ACTIVE_STABLE' || c.status === 'ACTIVE_FRUSTRATED').length}
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-amber-100 p-4 flex items-center gap-3 flex-1 md:flex-auto">
-            <div className="bg-amber-100 h-10 w-10 rounded-full flex items-center justify-center">
-              <Badge className="h-5 w-5 text-amber-600 bg-amber-100 p-1" />
-            </div>
-            <div>
-              <div className="text-sm text-gray-500">Unplaced Clients</div>
-              <div className="text-2xl font-bold text-gray-900">
-                {clients.filter(c => c.status === 'UNPLACED_NEW' || !c.status).length}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
         <Input
@@ -301,112 +289,244 @@ export default function ClientsPage() {
         {/* Future: Add filter dropdowns here */}
       </div>
       
-      <div className="rounded-2xl shadow-xl bg-white/90 border border-gray-100 p-0 md:p-6 animate-fade-in relative w-full">
+      {/* Clean Remote-style table container */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden animate-fade-in">
         {loading ? (
-          <div className="p-16 text-center text-muted-foreground text-lg">Loading clients...</div>
+          <div className="p-16 text-center text-gray-500">Loading clients...</div>
         ) : error ? (
-          <div className="p-16 text-center text-red-500 text-lg">{error}</div>
+          <div className="p-16 text-center text-red-500">{error}</div>
         ) : filteredClients.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24">
-            <User className="h-16 w-16 text-blue-200 mb-4" />
-            <h2 className="text-2xl font-semibold text-gray-700 mb-2">No clients found</h2>
+            <User className="h-16 w-16 text-gray-300 mb-4" />
+            <h2 className="text-xl font-medium text-gray-700 mb-2">No clients found</h2>
             <p className="text-gray-500 mb-6">Try adjusting your search or add a new client to get started.</p>
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <Button 
                 onClick={handleMigrateReferrals} 
                 disabled={isMigrating}
-                size="lg" 
                 variant="outline"
-                className="px-6 py-2 text-base font-semibold rounded-xl border-blue-200 text-blue-700 hover:bg-blue-50"
+                className="px-4 py-2"
               >
                 {isMigrating ? (
                   <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Migrating...
                   </>
                 ) : (
                   <>
-                    <RefreshCw className="mr-2 h-5 w-5" />
-                    Migrate Referrals to Clients
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Migrate Referrals
                   </>
                 )}
               </Button>
               <Button 
-                size="lg" 
                 variant="outline"
-                className="px-6 py-2 text-base font-semibold rounded-xl border-blue-200 text-blue-700 hover:bg-blue-50"
+                className="px-4 py-2"
                 onClick={() => setShowImportModal(true)}
               >
-                <Upload className="mr-2 h-5 w-5" />
+                <Upload className="mr-2 h-4 w-4" />
                 Import Clients
               </Button>
               <Link href="/case-manager/clients/new">
-                <Button 
-                  size="lg" 
-                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg px-6 py-2 text-base font-semibold rounded-xl"
-                >
-                  <PlusIcon className="mr-2 h-5 w-5" />
+                <Button className="px-4 py-2">
+                  <PlusIcon className="mr-2 h-4 w-4" />
                   Add New Client
                 </Button>
               </Link>
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl w-full">
-            <Table className="w-full text-[16px] font-medium">
-              <TableHeader className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-gray-200 shadow-sm">
-                <TableRow>
-                  <TableHead className="text-lg text-gray-700 font-bold">Client ID</TableHead>
-                  <TableHead className="text-lg text-gray-700 font-bold">Name</TableHead>
-                  <TableHead className="text-lg text-gray-700 font-bold">Email</TableHead>
-                  <TableHead className="text-lg text-gray-700 font-bold">Phone</TableHead>
-                  <TableHead className="text-lg text-gray-700 font-bold">Date of Birth</TableHead>
-                  <TableHead className="text-lg text-gray-700 font-bold">Actions</TableHead>
+          <div className="overflow-x-auto">
+            <Table className="w-full">
+              <TableHeader>
+                <TableRow className="border-b border-gray-200">
+                  <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">
+                    Name
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">
+                    Status
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">
+                    Provider
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">
+                    Profile
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">
+                    Contact
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">
+                    Location
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-right">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredClients.map((client) => (
-                  <TableRow key={client._id} className="transition-all duration-200 hover:bg-blue-50/60 hover:shadow-md group">
-                  <TableCell>
-                      <span className="font-mono text-base bg-gray-100 px-3 py-1 rounded-lg">
-                      {showIds[client._id] ? client._id : renderTruncatedId(client._id)}
-                    </span>
-                    <Button variant="ghost" size="icon" onClick={() => handleToggleId(client._id)}>
-                        {showIds[client._id] ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleCopyId(client._id)}>
-                        <Copy className="h-5 w-5" />
-                    </Button>
-                      {copiedId === client._id && <span className="text-sm text-green-600 ml-2">Copied!</span>}
-                  </TableCell>
-                  <TableCell>
+                {filteredClients.map((client, index) => (
+                  <TableRow 
+                    key={client._id} 
+                    className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                      index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
+                    }`}
+                  >
+                    <TableCell className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-700 text-lg shadow-sm">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-medium text-gray-600">
                           {getInitials(client.firstName, client.lastName)}
                         </div>
-                        <div>
-                          <div className="font-semibold text-gray-900 text-lg">{client.firstName} {client.lastName}</div>
-                          <div className="text-gray-500 text-sm">{client.city}, {client.state}</div>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">
+                            {capitalizeName(client.firstName)} {capitalizeName(client.lastName)}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-xs text-gray-500 hover:text-gray-700 h-auto p-1 font-normal"
+                              onClick={() => handleToggleId(client._id)}
+                            >
+                              {showIds[client._id] ? 'Hide ID' : 'Show ID'}
+                            </Button>
+                            {showIds[client._id] && (
+                              <>
+                                <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-600">
+                                  {client._id}
+                                </span>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-5 w-5 p-0 hover:bg-gray-200"
+                                  onClick={() => handleCopyId(client._id)}
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                                {copiedId === client._id && (
+                                  <span className="text-xs text-green-600">Copied!</span>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
-                  </TableCell>
-                    <TableCell className="text-gray-700 text-base">{client.email}</TableCell>
-                    <TableCell className="text-gray-700 text-base">{client.phone}</TableCell>
-                    <TableCell className="text-gray-700 text-base">{client.dateOfBirth}</TableCell>
-                  <TableCell className="space-x-2">
-                    <Link href={`/case-manager/clients/${client._id}`}>
-                        <Button variant="outline" size="sm" className="rounded-lg border-blue-500 text-blue-700 hover:bg-blue-50 hover:text-blue-900 transition-colors font-semibold">
-                        View Details
-                      </Button>
-                    </Link>
-                      <Button variant="secondary" size="sm" className="rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors font-semibold" onClick={() => handleCreateReferral(client)}>
-                      Create Referral
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                    </TableCell>
+                    
+                    <TableCell className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        client.status === 'ACTIVE_STABLE' 
+                          ? 'bg-green-100 text-green-800'
+                          : client.status === 'ACTIVE_FRUSTRATED'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : client.status === 'UNPLACED_NEW'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {client.status === 'ACTIVE_STABLE' && <CheckCircle className="w-3 h-3 mr-1" />}
+                        {client.status === 'ACTIVE_FRUSTRATED' && <AlertCircle className="w-3 h-3 mr-1" />}
+                        {client.status === 'UNPLACED_NEW' && <Clock className="w-3 h-3 mr-1" />}
+                        {!client.status && <AlertCircle className="w-3 h-3 mr-1" />}
+                        {client.status === 'ACTIVE_STABLE' && 'Active'}
+                        {client.status === 'ACTIVE_FRUSTRATED' && 'Needs Attention'}
+                        {client.status === 'UNPLACED_NEW' && 'New'}
+                        {!client.status && 'Unknown'}
+                      </span>
+                    </TableCell>
+                    
+                    <TableCell className="px-6 py-4">
+                      {client.currentProvider ? (
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          client.providerOnboarded 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-orange-100 text-orange-800'
+                        }`}>
+                          {client.providerOnboarded ? (
+                            <UserCheck className="w-3 h-3 mr-1" />
+                          ) : (
+                            <Shield className="w-3 h-3 mr-1" />
+                          )}
+                          {client.currentProvider}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center text-xs text-gray-500">
+                          <UserX className="w-3 h-3 mr-1" />
+                          No provider assigned
+                        </span>
+                      )}
+                    </TableCell>
+                    
+                    <TableCell className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs ${
+                        client.profileComplete 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {client.profileComplete ? (
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                        ) : (
+                          <Clock className="w-3 h-3 mr-1" />
+                        )}
+                        {client.profileComplete ? 'Complete' : 'Incomplete'} Profile
+                      </span>
+                    </TableCell>
+                    
+                    <TableCell className="px-6 py-4">
+                      <div className="text-sm text-gray-900">
+                        {client.email && (
+                          <div className="mb-1">{client.email}</div>
+                        )}
+                        {client.phone && (
+                          <div className="text-gray-500">{client.phone}</div>
+                        )}
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell className="px-6 py-4">
+                      <div className="text-sm text-gray-900">
+                        {client.city && client.state ? (
+                          `${client.city}, ${client.state}`
+                        ) : (
+                          <span className="text-gray-400">Not specified</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link href={`/case-manager/clients/${client._id}`}>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                          >
+                            View
+                          </Button>
+                        </Link>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-blue-600 hover:text-blue-900 hover:bg-blue-50"
+                          onClick={() => handleCreateReferral(client)}
+                        >
+                          Create Referral
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+        
+        {/* Table footer with record count - Remote style */}
+        {!loading && !error && filteredClients.length > 0 && (
+          <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-500">
+                {filteredClients.length} record{filteredClients.length !== 1 ? 's' : ''}
+              </div>
+            </div>
           </div>
         )}
       </div>

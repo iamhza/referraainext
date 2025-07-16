@@ -34,8 +34,6 @@ export default async function NewReferralPage() {
     <PageTemplate
       title="New Referral"
       description="Create a new referral"
-      backHref="/case-manager/referrals"
-      backLabel="Back to Referrals"
     >
       <ReferralForm />
     </PageTemplate>

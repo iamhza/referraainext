@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { TourProvider } from "@/contexts/TourContext";
 import { Toaster } from "@/components/ui/toaster";
 import InitDatabase from "./init-db";
 
@@ -26,7 +27,9 @@ export default function RootLayout({
         {/* Initialize MongoDB collections */}
         <InitDatabase />
         <AuthProvider>
-          {children}
+          <TourProvider>
+            {children}
+          </TourProvider>
         </AuthProvider>
         <Toaster />
       </body>

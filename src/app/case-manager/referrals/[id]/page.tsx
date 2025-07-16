@@ -12,8 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { ReferralComments } from '@/components/referrals/ReferralComments';
-import { ReferralTasks } from '@/components/referrals/ReferralTasks';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -44,7 +43,9 @@ import {
   Send,
   User,
   Users, 
-  Info
+  Info,
+  Loader2,
+  Activity
 } from 'lucide-react';
 import { formatSafeDate } from '@/lib/date-utils';
 
@@ -283,7 +284,7 @@ export default function ReferralDetails() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white to-blue-50/20">
-      <div className="py-8">
+      <div className="max-w-6xl mx-auto py-8 px-4">
         <div className="animate-fade-in">
           {/* Header with Back Button and Basic Info */}
           <div className="mb-6">
@@ -291,17 +292,6 @@ export default function ReferralDetails() {
               <h1 className="text-2xl font-bold tracking-tight">
                 Referral Details
               </h1>
-              
-              <Button 
-                variant="default" 
-                className="bg-blue-600 hover:bg-blue-700 shadow-md"
-                asChild
-              >
-                <Link href={`/case-manager/referrals/${referralId}/workspace`}>
-                  <Users className="mr-2 h-4 w-4" />
-                  Go to Collaboration Workspace
-                </Link>
-              </Button>
             </div>
             
             <div className="text-md text-gray-500 mt-1">
@@ -309,19 +299,37 @@ export default function ReferralDetails() {
             </div>
           </div>
           
-          <div className="mb-6 flex items-center">
-            <Button 
-              variant="outline" 
-              asChild
-              className="mr-4 rounded-full border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all group"
-            >
-              <Link href="/case-manager/referrals">
-                <ChevronLeft className="mr-1 h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-                Back to Referrals
-              </Link>
-            </Button>
+          {/* Navigation and Action Buttons */}
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                asChild
+                className="rounded-full border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all group"
+              >
+                <Link href="/case-manager/referrals">
+                  <ChevronLeft className="mr-1 h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+                  Back to Referrals
+                </Link>
+              </Button>
+              
+              <div className="h-4 w-px bg-gray-300"></div>
+              
+              <Badge 
+                className={cn(
+                  "px-3 py-1 text-sm font-medium flex items-center gap-1.5 rounded-full",
+                  statusConfig.color === 'amber' && "bg-amber-100 text-amber-800 border-amber-200",
+                  statusConfig.color === 'green' && "bg-green-100 text-green-800 border-green-200",
+                  statusConfig.color === 'blue' && "bg-blue-100 text-blue-800 border-blue-200",
+                  statusConfig.color === 'red' && "bg-red-100 text-red-800 border-red-200"
+                )}
+              >
+                <statusConfig.icon className="h-3.5 w-3.5" />
+                {statusConfig.label}
+              </Badge>
+            </div>
             
-            <div className="ml-auto flex gap-2">
+            <div className="flex items-center gap-2 sm:ml-auto">
               {status !== 'completed' && status !== 'cancelled' && (
                 <Button 
                   variant="outline" 
@@ -329,7 +337,7 @@ export default function ReferralDetails() {
                   className="rounded-full border-red-200 hover:border-red-300 hover:bg-red-50 text-red-600 hover:text-red-700"
                 >
                   <XCircle className="mr-2 h-4 w-4" />
-                  Cancel Referral
+                  Cancel
                 </Button>
               )}
               
@@ -347,17 +355,25 @@ export default function ReferralDetails() {
             </div>
           </div>
           
-          {/* Add an info banner about workspace purpose */}
-          <div className="mb-6 p-4 rounded-lg bg-blue-50 border border-blue-100">
+          {/* Workspace Access Banner */}
+          <div className="mb-6 p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
             <div className="flex items-start gap-3">
               <div className="mt-1">
-                <Info className="h-5 w-5 text-blue-500" />
+                <MessageSquare className="h-5 w-5 text-blue-600" />
               </div>
-              <div>
-                <h3 className="font-medium text-blue-800">About this page</h3>
-                <p className="text-blue-700 mt-1">
-                  This page provides a comprehensive view of the referral details. For collaborative features like task management, messaging, and timeline updates, use the <Link href={`/case-manager/referrals/${referralId}/workspace`} className="font-medium underline">Collaboration Workspace</Link>.
+              <div className="flex-1">
+                <h3 className="font-medium text-blue-900">Collaborate with the provider</h3>
+                <p className="text-blue-800 mt-1 mb-3">
+                  Send updates, ask questions, and coordinate care through the unified workspace.
                 </p>
+                <div className="flex gap-2">
+                  <Button variant="default" size="sm" asChild className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Link href={`/case-manager/referrals/${referralId}/thread`}>
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      Open Workspace
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -441,617 +457,459 @@ export default function ReferralDetails() {
           </div>
 
           {/* Tabs and Content */}
-          <Tabs 
-            defaultValue="overview" 
-            value={activeTab} 
-            onValueChange={setActiveTab}
-            className="space-y-6"
-          >
-            <TabsList className="bg-blue-50/50 p-1 rounded-xl">
-              <TabsTrigger 
-                value="overview" 
-                className="rounded-lg text-base py-2.5 px-4 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm"
-              >
-                Overview
-              </TabsTrigger>
-              <TabsTrigger 
-                value="details" 
-                className="rounded-lg text-base py-2.5 px-4 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm"
-              >
-                Client Details
-              </TabsTrigger>
-              <TabsTrigger 
-                value="tasks" 
-                className="rounded-lg text-base py-2.5 px-4 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm"
-              >
-                Tasks
-              </TabsTrigger>
-              <TabsTrigger 
-                value="comments" 
-                className="rounded-lg text-base py-2.5 px-4 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm"
-              >
-                Comments
-              </TabsTrigger>
-              <TabsTrigger 
-                value="timeline" 
-                className="rounded-lg text-base py-2.5 px-4 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm"
-              >
-                Timeline
-              </TabsTrigger>
-            </TabsList>
-            
-            {/* Overview Tab */}
-            <TabsContent value="overview" className="animate-fade-in">
-              <div className="grid gap-6 md:grid-cols-3">
-                <div className="md:col-span-2 space-y-6">
-                  {/* Service Details */}
-                  <Card className="rounded-xl border border-gray-100 hover:shadow-md transition-all duration-300">
-                    <CardHeader className="pb-4 pt-6">
-                      <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                        <Package className="h-5 w-5 text-blue-500" />
-                        Service Details
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0 pb-6 space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-4 rounded-lg bg-gray-50/80">
-                          <h4 className="text-sm font-medium text-gray-500 mb-1">Service Type</h4>
-                          <p className="text-base font-medium">{serviceType}</p>
+          <div className="space-y-6">
+            {/* Main Content Grid */}
+            <div className="grid gap-6 lg:grid-cols-3">
+              {/* Left Column - Primary Information */}
+              <div className="lg:col-span-2 space-y-6">
+                
+                {/* Service & Status Overview */}
+                <Card className="rounded-xl border border-gray-100 hover:shadow-md transition-all duration-300">
+                  <CardHeader className="pb-4 pt-6">
+                    <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                      <Package className="h-5 w-5 text-blue-500" />
+                      Service Overview
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0 pb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div className="p-4 rounded-lg bg-blue-50/50 border border-blue-100">
+                          <h4 className="text-sm font-medium text-blue-700 mb-2">Service Requested</h4>
+                          <p className="text-lg font-semibold text-blue-900">{serviceType}</p>
                         </div>
                         
                         <div className="p-4 rounded-lg bg-gray-50/80">
-                          <h4 className="text-sm font-medium text-gray-500 mb-1">Priority</h4>
-                          <p className="text-base font-medium flex items-center gap-2">
+                          <h4 className="text-sm font-medium text-gray-600 mb-2">Priority Level</h4>
+                          <div className="flex items-center gap-2">
                             {referral?.serviceDetails?.urgency === 'high' && (
-                              <><span className="w-2 h-2 rounded-full bg-red-500"></span> High</>
+                              <>
+                                <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                                <span className="font-medium text-red-700">High Priority</span>
+                              </>
                             )}
                             {referral?.serviceDetails?.urgency === 'medium' && (
-                              <><span className="w-2 h-2 rounded-full bg-amber-500"></span> Medium</>
+                              <>
+                                <span className="w-3 h-3 rounded-full bg-amber-500"></span>
+                                <span className="font-medium text-amber-700">Medium Priority</span>
+                              </>
                             )}
                             {referral?.serviceDetails?.urgency === 'low' && (
-                              <><span className="w-2 h-2 rounded-full bg-green-500"></span> Low</>
+                              <>
+                                <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                                <span className="font-medium text-green-700">Low Priority</span>
+                              </>
                             )}
-                          </p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <div className="p-4 rounded-lg bg-gray-50/80">
+                          <h4 className="text-sm font-medium text-gray-600 mb-2">Current Status</h4>
+                          <div className="flex items-center gap-2">
+                            <statusConfig.icon className="h-4 w-4 text-gray-500" />
+                            <span className="font-medium">{statusConfig.label}</span>
+                          </div>
+                          <p className="text-sm text-gray-600 mt-1">{statusConfig.description}</p>
                         </div>
                         
-                        {referral?.serviceDetails?.counties && referral.serviceDetails.counties.length > 0 && (
-                          <div className="p-4 rounded-lg bg-gray-50/80">
-                            <h4 className="text-sm font-medium text-gray-500 mb-1">Service Area</h4>
-                            <div className="flex flex-wrap gap-2 mt-1">
-                              {referral.serviceDetails.counties.map((county: string, idx: number) => (
-                                <Badge 
-                                  key={idx} 
-                                  variant="outline" 
-                                  className="bg-blue-50 text-blue-700 border-blue-200 rounded-full"
-                                >
-                                  {county}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {notes && (
-                        <div className="mt-4">
-                          <h4 className="text-sm font-medium text-gray-500 mb-2">Additional Notes</h4>
-                          <div className="p-4 rounded-lg bg-blue-50/50 border border-blue-100 text-blue-900">
-                            {notes}
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                  
-                  {/* Status-specific content */}
-                  {status === 'provider_selection_required' && (
-                    <Card className="rounded-xl border border-gray-100 hover:shadow-md transition-all duration-300">
-                      <CardHeader className="pb-4 pt-6">
-                        <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                          <UserCircle className="h-5 w-5 text-blue-500" />
-                          Select a Provider
-                        </CardTitle>
-                        <CardDescription className="text-base">
-                          These providers match your client's needs
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="pt-0 pb-6 space-y-6">
-                        {referral.matchedProviders && referral.matchedProviders.map((provider: any) => (
-                          <div 
-                            key={provider.id}
-                            className={cn(
-                              "border rounded-xl p-5",
-                              "transition-all duration-200",
-                              selectedProvider === provider.id 
-                                ? "border-blue-300 bg-blue-50/60 shadow-sm" 
-                                : "border-gray-100 hover:border-blue-200 hover:bg-blue-50/20"
-                            )}
-                          >
-                            <div className="flex flex-col md:flex-row justify-between gap-4">
-                              <div className="space-y-3">
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <h3 className="font-medium text-lg">{provider.name}</h3>
-                                    <Badge className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1 rounded-full">
-                                      <Heart className="h-3 w-3 fill-green-500 stroke-green-500" />
-                                      {provider.matchScore}% Match
-                                    </Badge>
-                                  </div>
-                                  <p className="text-base text-gray-600">{provider.organization}</p>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                  <Badge variant="outline" className="flex items-center gap-1 rounded-full">
-                                    <MapPin className="h-3 w-3" />
-                                    {provider.distance}
-                                  </Badge>
-                                  <Badge variant="outline" className="flex items-center gap-1 rounded-full">
-                                    <Clock className="h-3 w-3" />
-                                    Wait: {provider.waitTime}
-                                  </Badge>
-                                  <Badge variant="outline" className="flex items-center gap-1 rounded-full">
-                                    <Calendar className="h-3 w-3" />
-                                    {provider.availability} availability
-                                  </Badge>
-                                </div>
-                                <div className="grid sm:grid-cols-2 gap-3 text-sm mt-2">
-                                  <p className="flex items-center gap-2 text-gray-700">
-                                    <Phone className="h-4 w-4 text-gray-400" />
-                                    {provider.phone}
-                                  </p>
-                                  <p className="flex items-center gap-2 text-gray-700">
-                                    <Mail className="h-4 w-4 text-gray-400" />
-                                    {provider.email}
-                                  </p>
-                                  <p className="flex items-center gap-2 text-gray-700 sm:col-span-2">
-                                    <MapPin className="h-4 w-4 text-gray-400" />
-                                    {provider.address}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex md:flex-col gap-2 mt-4 md:mt-0">
-                                <Button
-                                  variant={selectedProvider === provider.id ? "default" : "outline"}
-                                  onClick={() => handleProviderSelection(provider.id)}
-                                  className={cn(
-                                    "flex-1 md:flex-none rounded-full",
-                                    selectedProvider === provider.id 
-                                      ? "bg-blue-600 hover:bg-blue-700"
-                                      : "border-blue-200 text-blue-600 hover:text-blue-700"
-                                  )}
-                                >
-                                  {selectedProvider === provider.id ? "Selected" : "Select Provider"}
-                                </Button>
-                                <Button variant="outline" className="flex-1 md:flex-none rounded-full">
-                                  View Profile
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-
-                        <div className="flex justify-end mt-6">
-                          <EnhancedButton
-                            disabled={!selectedProvider || assigning}
-                            variant="gradient"
-                            rounded="full"
-                            onClick={handleConfirmSelection}
-                            className="shadow-md hover:shadow-lg transition-all duration-200"
-                          >
-                            {assigning ? 'Assigning...' : 'Confirm Selection'}
-                            <ChevronRight className="ml-2 h-4 w-4" />
-                          </EnhancedButton>
-                        </div>
-                        {assignError && (
-                          <div className="text-red-500 text-sm mt-2 flex items-center gap-2">
-                            <AlertCircle className="h-4 w-4" />
-                            {assignError}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )}
-                  
-                  {/* Active Provider Details */}
-                  {status === 'in_progress' && referral.selectedProvider && (
-                    <Card className="rounded-xl border border-gray-100 hover:shadow-md transition-all duration-300">
-                      <CardHeader className="pb-4 pt-6">
-                        <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                          <UserCircle className="h-5 w-5 text-green-500" />
-                          Active Provider
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0 pb-6 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="font-medium text-lg">{referral.selectedProvider.name}</h3>
-                            <p className="text-base text-gray-600">{referral.selectedProvider.organization}</p>
-                          </div>
-                        </div>
-
-                        <div className="grid sm:grid-cols-2 gap-3 mt-4 p-4 rounded-lg bg-gray-50/80">
-                          <p className="flex items-center gap-2 text-gray-700">
-                            <Phone className="h-4 w-4 text-gray-400" />
-                            {referral.selectedProvider.phone}
-                          </p>
-                          <p className="flex items-center gap-2 text-gray-700">
-                            <Mail className="h-4 w-4 text-gray-400" />
-                            {referral.selectedProvider.email}
-                          </p>
-                          <p className="flex items-center gap-2 text-gray-700 sm:col-span-2">
-                            <MapPin className="h-4 w-4 text-gray-400" />
-                            {referral.selectedProvider.address}
-                          </p>
-                        </div>
-
-                        {referral.selectedProvider.nextAppointment && (
-                          <div className="mt-4 p-4 border border-blue-100 rounded-lg bg-blue-50/50">
-                            <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
-                              <Calendar className="h-4 w-4" />
-                              Upcoming Appointment
-                            </h4>
-                            <p className="text-blue-700">
-                              {new Date(referral.selectedProvider.nextAppointment).toLocaleDateString()}{' '}
-                              at {new Date(referral.selectedProvider.nextAppointment).toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'})}
-                            </p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-                
-                {/* Side Content */}
-                <div className="space-y-6">
-                  {/* What's Next? */}
-                  <Card className="rounded-xl border border-gray-100 hover:shadow-md transition-all duration-300">
-                    <CardHeader className="pb-4 pt-6">
-                      <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                        <CheckCircle className="h-5 w-5 text-blue-500" />
-                        What's Next?
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0 pb-6">
-                      <ul className="space-y-3 text-base">
-                        {status === 'under_review' && referral.expectedReviewCompletion && (
-                          <>
-                            <li className="flex gap-2 items-start">
-                              <CheckCircle2 className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                              <span>Admin team is reviewing your referral</span>
-                            </li>
-                            <li className="flex gap-2 items-start">
-                              <CheckCircle2 className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                              <span>They will match suitable providers based on the requirements</span>
-                            </li>
-                            <li className="flex gap-2 items-start">
-                              <CheckCircle2 className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                              <span>You'll be notified when providers are ready for selection</span>
-                            </li>
-                            <li className="flex gap-2 items-start">
-                              <Calendar className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                              <span>Expected completion: {new Date(referral.expectedReviewCompletion).toLocaleDateString()}</span>
-                            </li>
-                          </>
-                        )}
-                        {status === 'provider_selection_required' && (
-                          <>
-                            <li className="flex gap-2 items-start">
-                              <CheckCircle2 className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                              <span>Review the matched providers</span>
-                            </li>
-                            <li className="flex gap-2 items-start">
-                              <CheckCircle2 className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                              <span>Compare match scores, availability, and location</span>
-                            </li>
-                            <li className="flex gap-2 items-start">
-                              <CheckCircle2 className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                              <span>Select the most suitable provider for your client</span>
-                            </li>
-                            <li className="flex gap-2 items-start">
-                              <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                              <span>The provider will be notified after confirmation</span>
-                            </li>
-                          </>
-                        )}
-                        {status === 'in_progress' && (
-                          <>
-                            <li className="flex gap-2 items-start">
-                              <CheckCircle2 className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                              <span>Monitor the client's progress with the provider</span>
-                            </li>
-                            <li className="flex gap-2 items-start">
-                              <CheckCircle2 className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                              <span>Add notes for important updates or concerns</span>
-                            </li>
-                            <li className="flex gap-2 items-start">
-                              <CheckCircle2 className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                              <span>Contact the provider directly for any questions</span>
-                            </li>
-                            <li className="flex gap-2 items-start">
-                              <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                              <span>The provider will update the status as needed</span>
-                            </li>
-                          </>
-                        )}
-                        {status === 'completed' && (
-                          <>
-                            <li className="flex gap-2 items-start">
-                              <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                              <span>This referral has been completed</span>
-                            </li>
-                            <li className="flex gap-2 items-start">
-                              <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                              <span>You can view the full history in the timeline</span>
-                            </li>
-                            <li className="flex gap-2 items-start">
-                              <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                              <span>Create a new referral if additional services are needed</span>
-                            </li>
-                          </>
-                        )}
-                        {status === 'cancelled' && (
-                          <>
-                            <li className="flex gap-2 items-start">
-                              <XCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
-                              <span>This referral has been cancelled</span>
-                            </li>
-                            <li className="flex gap-2 items-start">
-                              <CheckCircle2 className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                              <span>Create a new referral if needed</span>
-                            </li>
-                          </>
-                        )}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                  
-                  {/* Client Contact Info */}
-                  <Card className="rounded-xl border border-gray-100 hover:shadow-md transition-all duration-300">
-                    <CardHeader className="pb-4 pt-6">
-                      <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                        <User className="h-5 w-5 text-blue-500" />
-                        Contact Information
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0 pb-6 space-y-3">
-                      {referral.clientInfo?.email && (
-                        <p className="flex items-center gap-2 text-gray-700">
-                          <Mail className="h-4 w-4 text-gray-400" />
-                          {referral.clientInfo.email}
-                        </p>
-                      )}
-                      {referral.clientInfo?.phone && (
-                        <p className="flex items-center gap-2 text-gray-700">
-                          <Phone className="h-4 w-4 text-gray-400" />
-                          {referral.clientInfo.phone}
-                        </p>
-                      )}
-                      {referral.clientInfo?.address && (
-                        <p className="flex items-center gap-2 text-gray-700">
-                          <MapPin className="h-4 w-4 text-gray-400" />
-                          {typeof referral.clientInfo.address === 'string'
-                            ? referral.clientInfo.address
-                            : [
-                                referral.clientInfo.address.street,
-                                referral.clientInfo.address.city,
-                                referral.clientInfo.address.state,
-                                referral.clientInfo.address.zipCode
-                              ].filter(Boolean).join(', ')}
-                        </p>
-                      )}
-                      
-                      <div className="pt-3 mt-3 border-t border-gray-100">
-                        <Button 
-                          className="w-full rounded-full" 
-                          variant="outline"
-                          asChild
-                        >
-                          <Link href={`/case-manager/clients/${referral.clientInfo?._id}`}>
-                            <UserCircle className="h-4 w-4 mr-2" />
-                            View Full Client Profile
-                          </Link>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </TabsContent>
-            
-            {/* Client Details Tab */}
-            <TabsContent value="details" className="animate-fade-in">
-              <Card className="rounded-xl border border-gray-100 hover:shadow-md transition-all duration-300">
-                <CardHeader className="pb-4 pt-6">
-                  <CardTitle className="text-xl font-semibold">Client Information</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0 pb-6">
-                  <div className="grid gap-6 md:grid-cols-2">
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="text-base font-medium text-gray-500 mb-1">Basic Information</h3>
-                        <div className="space-y-3 p-4 rounded-lg bg-gray-50/80">
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-500">Full Name</h4>
-                            <p className="text-lg font-medium">{clientName}</p>
-                          </div>
-                          
-                          {referral.clientInfo?.dateOfBirth && (
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-500">Date of Birth</h4>
-                              <p className="text-base">
-                                {referral.clientInfo.dateOfBirth ? new Date(referral.clientInfo.dateOfBirth).toLocaleDateString() : 'N/A'}
-                              </p>
-                            </div>
-                          )}
-                          
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-500">Client ID</h4>
-                            <p className="text-base font-mono">{clientId}</p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-base font-medium text-gray-500 mb-1">Contact Information</h3>
-                        <div className="space-y-3 p-4 rounded-lg bg-gray-50/80">
-                          {referral.clientInfo?.email && (
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-500">Email</h4>
-                              <p className="text-base">{referral.clientInfo.email}</p>
-                            </div>
-                          )}
-                          
-                          {referral.clientInfo?.phone && (
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-500">Phone</h4>
-                              <p className="text-base">{referral.clientInfo.phone}</p>
-                            </div>
-                          )}
-                          
-                          {referral.clientInfo?.preferredContactMethod && (
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-500">Preferred Contact Method</h4>
-                              <p className="text-base">{referral.clientInfo.preferredContactMethod}</p>
-                            </div>
-                          )}
+                        <div className="p-4 rounded-lg bg-gray-50/80">
+                          <h4 className="text-sm font-medium text-gray-600 mb-2">Submitted</h4>
+                          <p className="font-medium">{submittedDate ? formatSafeDate(submittedDate) : 'N/A'}</p>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="text-base font-medium text-gray-500 mb-1">Address Information</h3>
-                        <div className="space-y-3 p-4 rounded-lg bg-gray-50/80">
-                          {referral.clientInfo?.address && (
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-500">Address</h4>
-                              <p className="text-base">
-                                {typeof referral.clientInfo.address === 'string'
-                                  ? referral.clientInfo.address
-                                  : [
-                                      referral.clientInfo.address.street,
-                                      referral.clientInfo.address.city,
-                                      referral.clientInfo.address.state,
-                                      referral.clientInfo.address.zipCode
-                                    ].filter(Boolean).join(', ')}
-                              </p>
-                            </div>
-                          )}
-                          
-                          {referral.clientInfo?.county && (
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-500">County</h4>
-                              <p className="text-base">{referral.clientInfo.county}</p>
-                            </div>
-                          )}
+                    {referral?.serviceDetails?.counties && referral.serviceDetails.counties.length > 0 && (
+                      <div className="mt-6 p-4 rounded-lg bg-gray-50/80">
+                        <h4 className="text-sm font-medium text-gray-600 mb-2">Service Areas</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {referral.serviceDetails.counties.map((county: string, idx: number) => (
+                            <Badge 
+                              key={idx} 
+                              variant="outline" 
+                              className="bg-blue-50 text-blue-700 border-blue-200 rounded-full"
+                            >
+                              <MapPin className="h-3 w-3 mr-1" />
+                              {county}
+                            </Badge>
+                          ))}
                         </div>
                       </div>
+                    )}
+                    
+                    {notes && (
+                      <div className="mt-6">
+                        <h4 className="text-sm font-medium text-gray-600 mb-2">Additional Notes</h4>
+                        <div className="p-4 rounded-lg bg-blue-50/50 border border-blue-100">
+                          <p className="text-blue-900 whitespace-pre-wrap">{notes}</p>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Provider Selection or Active Provider */}
+                {status === 'provider_selection_required' && (
+                  <Card className="rounded-xl border border-gray-100 hover:shadow-md transition-all duration-300">
+                    <CardHeader className="pb-4 pt-6">
+                      <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                        <Users className="h-5 w-5 text-blue-500" />
+                        Select a Provider
+                      </CardTitle>
+                      <CardDescription className="text-base">
+                        Choose the best provider for your client's needs
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0 pb-6 space-y-4">
+                      {referral.matchedProviders && referral.matchedProviders.map((provider: any) => (
+                        <div 
+                          key={provider.id}
+                          className={cn(
+                            "border rounded-xl p-5 transition-all duration-200 cursor-pointer",
+                            selectedProvider === provider.id 
+                              ? "border-blue-300 bg-blue-50/60 shadow-sm" 
+                              : "border-gray-200 hover:border-blue-200 hover:bg-blue-50/20"
+                          )}
+                          onClick={() => handleProviderSelection(provider.id)}
+                        >
+                          <div className="flex flex-col lg:flex-row justify-between gap-4">
+                            <div className="space-y-3 flex-1">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-semibold">
+                                  {provider.name.charAt(0)}
+                                </div>
+                                <div>
+                                  <h3 className="font-semibold text-lg">{provider.name}</h3>
+                                  <p className="text-gray-600">{provider.organization}</p>
+                                </div>
+                                <Badge className="bg-green-50 text-green-700 border-green-200 flex items-center gap-1 rounded-full ml-auto">
+                                  <Heart className="h-3 w-3 fill-green-500 stroke-green-500" />
+                                  {provider.matchScore}% Match
+                                </Badge>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="h-4 w-4 text-gray-400" />
+                                  <span>{provider.distance} away</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4 text-gray-400" />
+                                  <span>{provider.waitTime} wait time</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-4 w-4 text-gray-400" />
+                                  <span>{provider.availability} availability</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Phone className="h-4 w-4 text-gray-400" />
+                                  <span>{provider.phone}</span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex flex-col justify-center gap-2">
+                              <Button
+                                variant={selectedProvider === provider.id ? "default" : "outline"}
+                                className={cn(
+                                  "rounded-full",
+                                  selectedProvider === provider.id 
+                                    ? "bg-blue-600 hover:bg-blue-700"
+                                    : "border-blue-200 text-blue-600 hover:text-blue-700"
+                                )}
+                              >
+                                {selectedProvider === provider.id ? (
+                                  <>
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Selected
+                                  </>
+                                ) : (
+                                  "Select Provider"
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      <div className="flex justify-end pt-4">
+                        <EnhancedButton
+                          disabled={!selectedProvider || assigning}
+                          variant="gradient"
+                          rounded="full"
+                          onClick={handleConfirmSelection}
+                          className="shadow-md hover:shadow-lg transition-all duration-200"
+                        >
+                          {assigning ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Assigning...
+                            </>
+                          ) : (
+                            <>
+                              Confirm Selection
+                              <ChevronRight className="ml-2 h-4 w-4" />
+                            </>
+                          )}
+                        </EnhancedButton>
+                      </div>
                       
-                      {referral.clientInfo?.insurance && (
+                      {assignError && (
+                        <div className="text-red-500 text-sm mt-2 flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4" />
+                          {assignError}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+                
+                {/* Active Provider (In Progress) */}
+                {status === 'in_progress' && referral.selectedProvider && (
+                  <Card className="rounded-xl border border-gray-100 hover:shadow-md transition-all duration-300">
+                    <CardHeader className="pb-4 pt-6">
+                      <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                        <UserCircle className="h-5 w-5 text-green-500" />
+                        Active Provider
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0 pb-6">
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="h-12 w-12 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-semibold text-lg">
+                          {referral.selectedProvider.name.charAt(0)}
+                        </div>
                         <div>
-                          <h3 className="text-base font-medium text-gray-500 mb-1">Insurance Information</h3>
-                          <div className="space-y-3 p-4 rounded-lg bg-gray-50/80">
-                            {referral.clientInfo.insurance.type && (
-                              <div>
-                                <h4 className="text-sm font-medium text-gray-500">Insurance Type</h4>
-                                <p className="text-base">{referral.clientInfo.insurance.type}</p>
-                              </div>
-                            )}
-                            
-                            {referral.clientInfo.insurance.provider && (
-                              <div>
-                                <h4 className="text-sm font-medium text-gray-500">Provider</h4>
-                                <p className="text-base">{referral.clientInfo.insurance.provider}</p>
-                              </div>
-                            )}
-                            
-                            {referral.clientInfo.insurance.number && (
-                              <div>
-                                <h4 className="text-sm font-medium text-gray-500">Policy Number</h4>
-                                <p className="text-base font-mono">{referral.clientInfo.insurance.number}</p>
-                              </div>
-                            )}
+                          <h3 className="font-semibold text-lg">{referral.selectedProvider.name}</h3>
+                          <p className="text-gray-600">{referral.selectedProvider.organization}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-lg bg-green-50/50 border border-green-100">
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-green-600" />
+                          <span className="text-green-800">{referral.selectedProvider.phone}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-green-600" />
+                          <span className="text-green-800">{referral.selectedProvider.email}</span>
+                        </div>
+                        <div className="flex items-center gap-2 sm:col-span-2">
+                          <MapPin className="h-4 w-4 text-green-600" />
+                          <span className="text-green-800">{referral.selectedProvider.address}</span>
+                        </div>
+                      </div>
+
+                      {referral.selectedProvider.nextAppointment && (
+                        <div className="mt-4 p-4 border border-blue-100 rounded-lg bg-blue-50/50">
+                          <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            Next Appointment
+                          </h4>
+                          <p className="text-blue-700 font-medium">
+                            {new Date(referral.selectedProvider.nextAppointment).toLocaleDateString()}{' '}
+                            at {new Date(referral.selectedProvider.nextAppointment).toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'})}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+
+              </div>
+              
+              {/* Right Column - Supporting Information */}
+              <div className="space-y-6">
+                {/* What's Next */}
+                <Card className="rounded-xl border border-gray-100 hover:shadow-md transition-all duration-300">
+                  <CardHeader className="pb-4 pt-6">
+                    <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-blue-500" />
+                      What's Next?
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0 pb-6">
+                    <div className="space-y-3">
+                      {status === 'under_review' && (
+                        <>
+                          <div className="flex gap-3 items-start">
+                            <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+                            <div>
+                              <p className="font-medium text-gray-900">Review in Progress</p>
+                              <p className="text-sm text-gray-600">Admin team is matching providers</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-3 items-start">
+                            <div className="w-2 h-2 rounded-full bg-gray-300 mt-2 flex-shrink-0"></div>
+                            <div>
+                              <p className="font-medium text-gray-700">Provider Selection</p>
+                              <p className="text-sm text-gray-600">You'll receive matched providers soon</p>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      
+                      {status === 'provider_selection_required' && (
+                        <>
+                          <div className="flex gap-3 items-start">
+                            <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+                            <div>
+                              <p className="font-medium text-gray-900">Review Providers</p>
+                              <p className="text-sm text-gray-600">Compare options and select the best fit</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-3 items-start">
+                            <div className="w-2 h-2 rounded-full bg-gray-300 mt-2 flex-shrink-0"></div>
+                            <div>
+                              <p className="font-medium text-gray-700">Confirm Selection</p>
+                              <p className="text-sm text-gray-600">Provider will be notified automatically</p>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      
+                      {status === 'in_progress' && (
+                        <>
+                          <div className="flex gap-3 items-start">
+                            <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
+                            <div>
+                              <p className="font-medium text-gray-900">Service Active</p>
+                              <p className="text-sm text-gray-600">Monitor progress and stay in touch</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-3 items-start">
+                            <div className="w-2 h-2 rounded-full bg-gray-300 mt-2 flex-shrink-0"></div>
+                            <div>
+                              <p className="font-medium text-gray-700">Service Completion</p>
+                              <p className="text-sm text-gray-600">Provider will update when finished</p>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      
+                      {status === 'completed' && (
+                        <div className="flex gap-3 items-start">
+                          <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
+                          <div>
+                            <p className="font-medium text-green-900">Service Completed</p>
+                            <p className="text-sm text-green-700">Referral has been successfully completed</p>
                           </div>
                         </div>
                       )}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            {/* Tasks Tab */}
-            <TabsContent value="tasks" className="animate-fade-in">
-              <Card className="rounded-xl border border-gray-100 hover:shadow-md transition-all duration-300">
-                <CardHeader className="pb-4 pt-6">
-                  <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-blue-500" />
-                    Tasks & Follow-ups
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0 pb-6">
-                  <ReferralTasks referralId={referralId as string} />
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            {/* Comments Tab */}
-            <TabsContent value="comments" className="animate-fade-in">
-              <Card className="rounded-xl border border-gray-100 hover:shadow-md transition-all duration-300">
-                <CardHeader className="pb-4 pt-6">
-                  <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5 text-blue-500" />
-                    Comments & Updates
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0 pb-6">
-                  <ReferralComments referralId={referralId as string} />
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            {/* Timeline Tab */}
-            <TabsContent value="timeline" className="animate-fade-in">
-              <Card className="rounded-xl border border-gray-100 hover:shadow-md transition-all duration-300">
-                <CardHeader className="pb-4 pt-6">
-                  <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-blue-500" />
-                    Timeline
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0 pb-6">
-                  <div className="space-y-6">
-                    {Array.isArray(referral.timeline) && referral.timeline.length > 0 ? (
-                      referral.timeline.map((event: any, index: number) => (
-                        <div key={index} className="flex gap-4">
-                          <div className="flex flex-col items-center">
-                            <div className="w-3 h-3 rounded-full bg-blue-500 ring-4 ring-blue-50"></div>
-                            {index < referral.timeline.length - 1 && (
-                              <div className="w-0.5 bg-blue-200 h-full mt-1"></div>
-                            )}
-                          </div>
-                          <div className="flex-1 pb-6">
-                            <p className="font-medium text-lg text-gray-900">{event.status}</p>
-                            <p className="text-base text-gray-600 mt-1">{event.description}</p>
-                            <p className="text-sm text-gray-500 mt-1">
-                              {new Date(event.date).toLocaleString()}
-                            </p>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-10 text-center">
-                        <Clock className="h-12 w-12 text-gray-300 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-700">No timeline events yet</h3>
-                        <p className="text-gray-500 max-w-md mt-1">
-                          Timeline events will appear here as the referral progresses through different stages
-                        </p>
+                  </CardContent>
+                </Card>
+                
+                {/* Client Summary */}
+                <Card className="rounded-xl border border-gray-100 hover:shadow-md transition-all duration-300">
+                  <CardHeader className="pb-4 pt-6">
+                    <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                      <User className="h-5 w-5 text-blue-500" />
+                      Client Summary
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0 pb-6 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white font-medium text-lg">
+                        <AvatarFallback>{clientInitials}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-semibold text-lg">{clientName}</h3>
+                        <p className="text-sm text-gray-600">ID: {clientId.substring(0, 8)}</p>
                       </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {referral.clientInfo?.email && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Mail className="h-4 w-4 text-gray-400" />
+                          <span className="text-gray-700">{referral.clientInfo.email}</span>
+                        </div>
+                      )}
+                      {referral.clientInfo?.phone && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone className="h-4 w-4 text-gray-400" />
+                          <span className="text-gray-700">{referral.clientInfo.phone}</span>
+                        </div>
+                      )}
+                      {referral.clientInfo?.address && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <MapPin className="h-4 w-4 text-gray-400" />
+                          <span className="text-gray-700">
+                            {typeof referral.clientInfo.address === 'string'
+                              ? referral.clientInfo.address
+                              : [
+                                  referral.clientInfo.address.city,
+                                  referral.clientInfo.address.state
+                                ].filter(Boolean).join(', ')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="pt-3 border-t border-gray-100">
+                      <Button 
+                        className="w-full rounded-full" 
+                        variant="outline"
+                        asChild
+                      >
+                        <Link href={`/case-manager/clients/${referral.clientInfo?._id}`}>
+                          <UserCircle className="h-4 w-4 mr-2" />
+                          View Full Profile
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                {/* Quick Actions */}
+                <Card className="rounded-xl border border-gray-100 hover:shadow-md transition-all duration-300">
+                  <CardHeader className="pb-4 pt-6">
+                    <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                      <Activity className="h-5 w-5 text-blue-500" />
+                      Quick Actions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0 pb-6 space-y-3">
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start rounded-full"
+                      asChild
+                    >
+                      <Link href={`/case-manager/referrals/${referralId}/thread`}>
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Open Workspace
+                      </Link>
+                    </Button>
+                    
+                    {canMessage && (
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start rounded-full"
+                        onClick={() => setShowChat(true)}
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Message Provider
+                      </Button>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                    
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start rounded-full"
+                      asChild
+                    >
+                      <Link href={`/case-manager/clients/${referral.clientInfo?._id}`}>
+                        <User className="h-4 w-4 mr-2" />
+                        View Client Profile
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
           
           {/* Cancel Dialog */}
           <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>

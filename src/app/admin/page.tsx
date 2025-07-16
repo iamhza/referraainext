@@ -7,7 +7,7 @@ import { EnhancedButton } from '@/components/ui/enhanced-button';
 import { Users, PlusCircle, Bell } from 'lucide-react';
 import Link from 'next/link';
 import { PageTemplate } from '@/components/templates/page-template';
-import { RecentReferrals } from '@/components/dashboard/RecentReferrals';
+
 import { AdminReferralsTable } from '@/components/dashboard/AdminReferralsTable';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
@@ -20,7 +20,7 @@ import { Logo } from '@/components/ui/Logo';
 import { TopNav } from '@/components/layout/TopNav';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { AdminLayout } from '@/components/layout/AdminLayout';
+import AdminLayout from '@/components/layout/AdminLayout';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -56,6 +56,8 @@ export default function AdminDashboard() {
   const [usersLoading, setUsersLoading] = useState(true);
   const [usersError, setUsersError] = useState<string | null>(null);
   const [userForm, setUserForm] = useState({ name: '', email: '', role: '', organization: '', status: 'active' });
+  const [cleanupLoading, setCleanupLoading] = useState(false);
+  const [cleanupResult, setCleanupResult] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchStats() {
@@ -229,6 +231,32 @@ export default function AdminDashboard() {
     }
   }
 
+  async function handleCleanupBrokenClients() {
+    if (!window.confirm('Are you sure you want to delete all clients with broken CSV data? This action cannot be undone.')) return;
+    
+    setCleanupLoading(true);
+    setCleanupResult(null);
+    
+    try {
+      const res = await fetch('/api/admin/cleanup-broken-clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to cleanup broken clients');
+      }
+      
+      setCleanupResult(`✅ Successfully deleted ${data.deletedCount} clients with broken CSV data`);
+    } catch (err: any) {
+      setCleanupResult(`❌ Error: ${err.message}`);
+    } finally {
+      setCleanupLoading(false);
+    }
+  }
+
   const getProviderStatusBadge = (status: string | undefined) => {
     return (
       <Badge variant="outline" className={status === 'Active' || status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}>
@@ -309,6 +337,7 @@ export default function AdminDashboard() {
             <TabsTrigger value="providers">Providers</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="activity">Activity</TabsTrigger>
+            <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
           </TabsList>
           <TabsContent value="referrals">
             <AdminReferralsTable />
@@ -343,6 +372,38 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-center text-gray-400 py-12">Activity feed coming soon...</div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="maintenance">
+            <Card>
+              <CardHeader>
+                <CardTitle>Data Maintenance</CardTitle>
+                <CardDescription>Clean up corrupted or invalid data</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="border rounded-lg p-4 bg-orange-50 border-orange-200">
+                  <h3 className="font-medium text-orange-900 mb-2">Cleanup Broken CSV Clients</h3>
+                  <p className="text-sm text-orange-700 mb-4">
+                    Remove clients with corrupted data from failed CSV imports. These clients have incomplete addresses 
+                    and incorrect field mapping (e.g., city names in county field).
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <Button 
+                      onClick={handleCleanupBrokenClients}
+                      disabled={cleanupLoading}
+                      variant="destructive"
+                      size="sm"
+                    >
+                      {cleanupLoading ? 'Cleaning up...' : 'Delete Broken Clients'}
+                    </Button>
+                    {cleanupResult && (
+                      <div className="text-sm font-medium">
+                        {cleanupResult}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

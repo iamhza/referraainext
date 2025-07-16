@@ -3,6 +3,9 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
+import { validateClientData, validateObjectId, validateRequestSize } from '@/lib/validation';
+import { logger, getRequestContext } from '@/lib/logger';
+import { applyRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 const COLLECTION = 'clients';
 
@@ -27,6 +30,12 @@ export async function GET(
   req: Request,
   { params }: { params: { id: string } }
 ) {
+  // Apply rate limiting
+  const rateLimitResponse = applyRateLimit(req, 'client_read', RATE_LIMITS.read);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   const session = await getSession();
   if (!session || !['case_manager', 'admin', 'provider'].includes(session.user.user_metadata?.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -63,6 +72,12 @@ export async function PATCH(
   req: Request,
   { params }: { params: { id: string } }
 ) {
+  // Apply rate limiting
+  const rateLimitResponse = applyRateLimit(req, 'client_update', RATE_LIMITS.write);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   const session = await getSession();
   if (!session || !['case_manager', 'admin'].includes(session.user.user_metadata?.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -74,7 +89,15 @@ export async function PATCH(
       return NextResponse.json({ error: 'Missing client ID' }, { status: 400 });
     }
 
-    // Read request body
+    // Validate request size
+    const contentLength = parseInt(req.headers.get('content-length') || '0');
+    try {
+      validateRequestSize(contentLength);
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : 'Request too large' }, { status: 413 });
+    }
+
+    // Read and validate request body
     let data;
     try {
       data = await req.json();
@@ -82,6 +105,16 @@ export async function PATCH(
     } catch (parseError) {
       console.error('Error parsing request body:', parseError);
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    // Validate and sanitize input data
+    try {
+      data = validateClientData(data);
+    } catch (validationError) {
+      console.error('Input validation error:', validationError);
+      return NextResponse.json({ 
+        error: validationError instanceof Error ? validationError.message : 'Invalid input data' 
+      }, { status: 400 });
     }
 
     // Connect to database
@@ -98,11 +131,11 @@ export async function PATCH(
     // Validate ObjectId
     let objectId;
     try {
-      objectId = new ObjectId(id);
+      objectId = validateObjectId(id);
       console.log('Valid ObjectId:', objectId);
     } catch (idError) {
       console.error('Invalid ObjectId:', idError);
-      return NextResponse.json({ error: 'Invalid client ID format' }, { status: 400 });
+      return NextResponse.json({ error: idError instanceof Error ? idError.message : 'Invalid client ID format' }, { status: 400 });
     }
     
     // Get the existing client to check permissions
@@ -123,18 +156,32 @@ export async function PATCH(
     const userRole = session.user.user_metadata?.role;
     const userId = session.user.id;
     
-    // Temporarily skip permission check for debugging
-    /*
     const canUpdate = 
       userRole === 'admin' || 
       (userRole === 'case_manager' && existingClient.caseManagerId === userId);
     
     if (!canUpdate) {
-      console.log('Permission denied: User role:', userRole, 'User ID:', userId, 'Client manager ID:', existingClient.caseManagerId);
+      const context = getRequestContext(req, session);
+      logger.permissionDenied('Client update permission denied', {
+        ...context,
+        attemptedClientId: id,
+        clientManagerId: existingClient.caseManagerId,
+      });
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
-    */
     
+    // Calculate profile completion
+    const profileComplete = !!(
+      data.firstName && 
+      data.lastName &&
+      data.phone && 
+      data.email && 
+      data.address && 
+      data.city &&
+      data.state &&
+      data.county
+    );
+
     // Prepare update data - make sure we don't override critical fields
     const updateData = {
       firstName: data.firstName,
@@ -149,6 +196,7 @@ export async function PATCH(
       county: data.county,
       preferredContactMethod: data.preferredContactMethod,
       insurance: data.insurance,
+      profileComplete,
       updatedAt: new Date().toISOString()
     };
     
@@ -180,17 +228,25 @@ export async function PATCH(
         client: updatedClient 
       });
     } catch (updateError) {
-      console.error('MongoDB update error:', updateError);
+      const context = getRequestContext(req, session);
+      logger.databaseError('MongoDB update error', updateError as Error, {
+        ...context,
+        operation: 'client_update',
+        clientId: id,
+      });
       return NextResponse.json({ 
         error: 'Database error updating client',
-        details: updateError instanceof Error ? updateError.message : 'Unknown error'
       }, { status: 500 });
     }
   } catch (error) {
-    console.error('Unexpected error in update client API:', error);
+         const context = getRequestContext(req, session);
+     logger.error('Unexpected error in update client API', error as Error, {
+       ...context,
+       operation: 'client_update',
+       clientId: params.id,
+     });
     return NextResponse.json({ 
       error: 'Failed to update client',
-      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 } 

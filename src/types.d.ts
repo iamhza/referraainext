@@ -39,6 +39,15 @@ export interface Client {
   county?: string;
   preferredContactMethod: string;
   status?: ClientStatus;
+  
+  // Provider relationship fields
+  currentProvider?: string;
+  linkedProviderId?: string;
+  providerOnboarded?: boolean;
+  
+  // Profile completion tracking
+  profileComplete?: boolean;
+  
   insurance?: {
     type: string;
     provider?: string;
@@ -57,6 +66,7 @@ export interface Client {
   source?: string;
   referralDate?: string;
   caseManagerId?: string;
+  notes?: string;
 }
 
 export interface ClientRelationship {

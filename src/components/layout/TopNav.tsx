@@ -166,6 +166,7 @@ export function TopNav() {
             {/* New Referral Button (only for case manager) */}
             {userRole !== 'admin' && (
               <EnhancedButton 
+                id="nav-new-referral"
                 variant="gradient" 
                 size="sm" 
                 asChild 

@@ -271,7 +271,7 @@ export async function PATCH(req: Request) {
     
     if (!result || !result.value) {
       return NextResponse.json({ error: 'Referral not found or failed to update' }, { status: 404 });
-    }
+      }
     
     return NextResponse.json({ success: true, referral: result.value });
   } catch (error) {

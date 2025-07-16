@@ -9,7 +9,8 @@ interface ContainerProps {
 export function Container({ children, className }: ContainerProps) {
   return (
     <div className={cn(
-      "mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl",
+      "mx-auto px-4 sm:px-6 lg:px-8",
+      "max-w-[1400px]", // Custom width for better form display
       "pt-8 sm:pt-12",
       "animate-in fade-in-50 slide-in-from-bottom-4",
       "duration-700 ease-in-out",
