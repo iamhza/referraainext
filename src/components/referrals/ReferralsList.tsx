@@ -223,7 +223,7 @@ export function ReferralsList({ providerId, mode = 'case_manager' }: ReferralsLi
   };
 
   const getUrgencyBadge = (urgency: 'high' | 'medium' | 'low') => {
-    const configs = {
+    const urgencyConfigs = {
       high: {
         label: 'High Priority',
         className: 'bg-red-50 text-red-700 border-red-200 py-1 px-2.5',
@@ -242,7 +242,10 @@ export function ReferralsList({ providerId, mode = 'case_manager' }: ReferralsLi
         color: 'text-green-700',
         dot: 'bg-green-500'
       }
-    }[urgency];
+    };
+
+    // Default to medium priority if urgency is not recognized
+    const configs = urgencyConfigs[urgency as keyof typeof urgencyConfigs] || urgencyConfigs.medium;
 
     return (
       <Badge variant="outline" className={cn("flex items-center gap-1.5 rounded-full text-sm", configs.className)}>
