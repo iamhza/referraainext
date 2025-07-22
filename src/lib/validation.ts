@@ -98,16 +98,31 @@ export function validateClientData(data: any): any {
   const sanitized = {
     firstName: sanitizeString(data.firstName),
     lastName: sanitizeString(data.lastName),
+    dateOfBirth: data.dateOfBirth ? validateDateString(data.dateOfBirth) : undefined,
+    sex: data.sex ? validateEnum(data.sex, ['male', 'female', 'non-binary', 'prefer-not-to-say', 'other'], 'sex') : undefined,
     email: data.email ? sanitizeEmail(data.email) : undefined,
     phone: data.phone ? sanitizePhone(data.phone) : undefined,
+    preferredContactMethod: data.preferredContactMethod ? 
+      validateEnum(data.preferredContactMethod, ['email', 'phone', 'both'], 'preferredContactMethod') : undefined,
     address: data.address ? sanitizeString(data.address) : undefined,
     city: data.city ? sanitizeString(data.city) : undefined,
     state: data.state ? sanitizeString(data.state) : undefined,
     zipCode: data.zipCode ? sanitizeString(data.zipCode) : undefined,
     county: data.county ? sanitizeString(data.county) : undefined,
-    dateOfBirth: data.dateOfBirth ? validateDateString(data.dateOfBirth) : undefined,
-    preferredContactMethod: data.preferredContactMethod ? 
-      validateEnum(data.preferredContactMethod, ['email', 'phone', 'text'], 'preferredContactMethod') : undefined,
+    insuranceProvider: data.insuranceProvider ? sanitizeString(data.insuranceProvider) : undefined,
+    insuranceNumber: data.insuranceNumber ? sanitizeString(data.insuranceNumber) : undefined,
+    pmiNumber: data.pmiNumber ? sanitizeString(data.pmiNumber) : undefined,
+    waiverType: data.waiverType ? sanitizeString(data.waiverType) : undefined,
+    primaryLanguage: data.primaryLanguage ? sanitizeString(data.primaryLanguage) : undefined,
+    needsTranslator: typeof data.needsTranslator === 'boolean' ? data.needsTranslator : undefined,
+    historyOfViolence: typeof data.historyOfViolence === 'boolean' ? data.historyOfViolence : undefined,
+    mobilityStatus: data.mobilityStatus ? 
+      validateEnum(data.mobilityStatus, ['ambulatory', 'wheelchair-bound', 'bed-bound', 'other'], 'mobilityStatus') : undefined,
+    livingSituation: data.livingSituation ? 
+      validateEnum(data.livingSituation, ['alone', 'with-family', 'group-setting', 'other'], 'livingSituation') : undefined,
+    primaryDiagnosis: data.primaryDiagnosis ? sanitizeString(data.primaryDiagnosis) : undefined,
+    culturalConsiderations: data.culturalConsiderations ? sanitizeString(data.culturalConsiderations) : undefined,
+    additionalNotes: data.additionalNotes ? sanitizeString(data.additionalNotes) : undefined,
     insurance: data.insurance ? sanitizeString(data.insurance) : undefined,
   };
   

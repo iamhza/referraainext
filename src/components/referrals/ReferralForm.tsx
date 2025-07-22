@@ -242,7 +242,9 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
         const response = await fetch('/api/services');
         if (!response.ok) throw new Error('Failed to fetch services');
         const data = await response.json();
+        console.log('Services API response:', data);
         setServices(data.services);
+        console.log('Set services to:', data.services);
         setError(null);
       } catch (err) {
         console.error('Error fetching services:', err);
@@ -254,6 +256,13 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
 
     fetchServices();
   }, []);
+
+  // Debug services state changes
+  useEffect(() => {
+    console.log('Services state changed:', services);
+    console.log('Non-residential services:', services?.nonResidential);
+    console.log('Residential services:', services?.residential);
+  }, [services]);
 
   // Pre-fill form if clientId is present in URL
   useEffect(() => {
@@ -1267,41 +1276,49 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                         animate={{ opacity: 1, x: 0 }}
                         className="text-center mb-8"
                       >
-                        <h2 className="text-3xl font-bold text-gray-900 mb-2">Which services are needed?</h2>
-                        <p className="text-lg text-gray-600">Select all that apply for this client.</p>
+                        <h2 className="text-3xl font-bold text-gray-900 mb-2">Service Selection</h2>
+                        <p className="text-lg text-gray-600">Choose the services your client needs</p>
                       </motion.div>
-                        
+                      
                       <div className="max-w-4xl mx-auto space-y-6">
                         {loading ? (
-                          <div className="space-y-6">
-                          <div className="space-y-2">
-                              <Skeleton className="h-5 w-40" />
-                              <Skeleton className="h-14 w-full rounded-xl" />
-                            </div>
-                            <div className="space-y-2">
-                              <Skeleton className="h-5 w-40" />
-                              <Skeleton className="h-14 w-full rounded-xl" />
-                            </div>
+                          <div className="text-center py-12">
+                            <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-500 mx-auto mb-4"></div>
+                            <p className="text-gray-600">Loading available services...</p>
                           </div>
                         ) : error ? (
-                          <div className="text-red-600 text-center py-4">
-                            {error}
+                          <div className="text-center py-12">
+                            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <AlertCircle className="h-6 w-6 text-red-500" />
+                            </div>
+                            <p className="text-red-600 mb-4">{error}</p>
+                            <Button onClick={() => window.location.reload()}>Try Again</Button>
                           </div>
                         ) : (
                           <div className="space-y-6">
+                            {/* Debug info */}
+                            <div className="bg-gray-100 p-4 rounded-lg">
+                              <h3 className="font-bold mb-2">Debug Info:</h3>
+                              <p>Non-residential services count: {services?.nonResidential?.length || 0}</p>
+                              <p>Residential services count: {services?.residential?.length || 0}</p>
+                              <p>Loading: {loading ? 'Yes' : 'No'}</p>
+                              <p>Error: {error || 'None'}</p>
+                            </div>
+                            
                             {/* Non-Residential Services */}
                             <div className="space-y-2">
                               <Label className={`text-base font-medium ${
-                                formData.selectedServices.some(s => services.residential.includes(s)) 
+                                formData.selectedServices.some(s => services?.residential?.includes(s)) 
                                   ? "text-gray-400" 
                                   : "text-gray-900"
                               }`}>
                                 Non-Residential Services
-                            </Label>
+                              </Label>
                             <Select 
-                                value={formData.selectedServices.find(s => services.nonResidential.includes(s)) || ""}
-                                disabled={formData.selectedServices.some(s => services.residential.includes(s))}
+                                value={formData.selectedServices.find(s => services?.nonResidential?.includes(s)) || ""}
+                                disabled={formData.selectedServices.some(s => services?.residential?.includes(s))}
                                 onValueChange={(value) => {
+                                  console.log('Non-residential service selected:', value);
                                   // Remove any existing services and add the new non-residential one
                                   if (value) {
                                     handleInputChange('selectedServices', [value]);
@@ -1309,37 +1326,40 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                                     handleInputChange('selectedServices', []);
                                   }
                                 }}
+                                onOpenChange={(open) => {
+                                  console.log('Non-residential dropdown open state:', open);
+                                }}
                               >
-                                                                <SelectTrigger className={`group h-16 text-lg border-2 rounded-2xl transition-all duration-300 shadow-sm ${
-                                  formData.selectedServices.some(s => services.residential.includes(s))
+                                <SelectTrigger className={`group h-16 text-lg border-2 rounded-2xl transition-all duration-300 shadow-sm ${
+                                  formData.selectedServices.some(s => services?.residential?.includes(s))
                                     ? "bg-gray-100 border-gray-200 cursor-not-allowed opacity-50"
                                     : "bg-gradient-to-r from-white to-gray-50 border-gray-200 hover:border-primary-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 hover:shadow-lg focus:shadow-xl backdrop-blur-sm"
                                 }`}>
-                                                                      <div className="flex items-center w-full">
-                                      <div className={`flex items-center justify-center w-12 h-12 rounded-xl mr-4 transition-all duration-300 ${
-                                        formData.selectedServices.some(s => services.residential.includes(s))
-                                          ? "bg-gray-200"
-                                          : "bg-gradient-to-br from-primary/10 to-secondary/10 group-hover:from-primary/20 group-hover:to-secondary/20"
-                                      }`}>
-                                        <svg className={`w-5 h-5 transition-transform duration-300 ${
-                                          formData.selectedServices.some(s => services.residential.includes(s))
-                                            ? "text-gray-400"
-                                            : "text-primary group-hover:scale-110"
-                                        }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                        </svg>
-                                      </div>
+                                  <div className="flex items-center w-full">
+                                    <div className={`flex items-center justify-center w-12 h-12 rounded-xl mr-4 transition-all duration-300 ${
+                                      formData.selectedServices.some(s => services?.residential?.includes(s))
+                                        ? "bg-gray-200"
+                                        : "bg-gradient-to-br from-primary/10 to-secondary/10 group-hover:from-primary/20 group-hover:to-secondary/20"
+                                    }`}>
+                                      <svg className={`w-5 h-5 transition-transform duration-300 ${
+                                        formData.selectedServices.some(s => services?.residential?.includes(s))
+                                          ? "text-gray-400"
+                                          : "text-primary group-hover:scale-110"
+                                      }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                      </svg>
+                                    </div>
                                     <div className="flex-1 text-left">
                                       <SelectValue placeholder="Select a non-residential service..." />
                                     </div>
                                   </div>
                                 </SelectTrigger>
                                 <SelectContent className="z-50 max-h-60 overflow-y-auto bg-white/95 backdrop-blur-xl border-2 border-gray-200/50 rounded-2xl shadow-2xl ring-1 ring-black/5">
-                              {services.nonResidential.map((service) => (
+                              {services?.nonResidential?.map((service) => (
                                 <SelectItem key={service} value={service} className="text-base py-3 hover:bg-gray-50 focus:bg-gray-50 cursor-pointer">
                                     {service}
                                   </SelectItem>
-                                ))}
+                                )) || []}
                               </SelectContent>
                             </Select>
                           </div>
@@ -1347,16 +1367,17 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                             {/* Residential Services */}
                           <div className="space-y-2">
                               <Label className={`text-base font-medium ${
-                                formData.selectedServices.some(s => services.nonResidential.includes(s)) 
+                                formData.selectedServices.some(s => services?.nonResidential?.includes(s)) 
                                   ? "text-gray-400" 
                                   : "text-gray-900"
                               }`}>
                                 Residential Services
                               </Label>
                             <Select
-                                value={formData.selectedServices.find(s => services.residential.includes(s)) || ""}
-                                disabled={formData.selectedServices.some(s => services.nonResidential.includes(s))}
+                                value={formData.selectedServices.find(s => services?.residential?.includes(s)) || ""}
+                                disabled={formData.selectedServices.some(s => services?.nonResidential?.includes(s))}
                                 onValueChange={(value) => {
+                                  console.log('Residential service selected:', value);
                                   // Remove any existing services and add the new residential one
                                   if (value) {
                                     handleInputChange('selectedServices', [value]);
@@ -1364,37 +1385,40 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                                     handleInputChange('selectedServices', []);
                                   }
                                 }}
+                                onOpenChange={(open) => {
+                                  console.log('Residential dropdown open state:', open);
+                                }}
                               >
-                                                                <SelectTrigger className={`group h-16 text-lg border-2 rounded-2xl transition-all duration-300 shadow-sm ${
-                                  formData.selectedServices.some(s => services.nonResidential.includes(s))
+                                <SelectTrigger className={`group h-16 text-lg border-2 rounded-2xl transition-all duration-300 shadow-sm ${
+                                  formData.selectedServices.some(s => services?.nonResidential?.includes(s))
                                     ? "bg-gray-100 border-gray-200 cursor-not-allowed opacity-50"
                                     : "bg-gradient-to-r from-white to-gray-50 border-gray-200 hover:border-primary-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 hover:shadow-lg focus:shadow-xl backdrop-blur-sm"
                                 }`}>
-                                                                      <div className="flex items-center w-full">
-                                      <div className={`flex items-center justify-center w-12 h-12 rounded-xl mr-4 transition-all duration-300 ${
-                                        formData.selectedServices.some(s => services.nonResidential.includes(s))
-                                          ? "bg-gray-200"
-                                          : "bg-gradient-to-br from-primary/10 to-secondary/10 group-hover:from-primary/20 group-hover:to-secondary/20"
-                                      }`}>
-                                        <svg className={`w-5 h-5 transition-transform duration-300 ${
-                                          formData.selectedServices.some(s => services.nonResidential.includes(s))
-                                            ? "text-gray-400"
-                                            : "text-primary group-hover:scale-110"
-                                        }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                                        </svg>
-                                      </div>
+                                  <div className="flex items-center w-full">
+                                    <div className={`flex items-center justify-center w-12 h-12 rounded-xl mr-4 transition-all duration-300 ${
+                                      formData.selectedServices.some(s => services?.nonResidential?.includes(s))
+                                        ? "bg-gray-200"
+                                        : "bg-gradient-to-br from-primary/10 to-secondary/10 group-hover:from-primary/20 group-hover:to-secondary/20"
+                                    }`}>
+                                      <svg className={`w-5 h-5 transition-transform duration-300 ${
+                                        formData.selectedServices.some(s => services?.nonResidential?.includes(s))
+                                          ? "text-gray-400"
+                                          : "text-primary group-hover:scale-110"
+                                      }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                      </svg>
+                                    </div>
                                     <div className="flex-1 text-left">
                                       <SelectValue placeholder="Select a residential service..." />
                                     </div>
                                   </div>
                                 </SelectTrigger>
                                 <SelectContent className="z-50 max-h-60 overflow-y-auto bg-white/95 backdrop-blur-xl border-2 border-gray-200/50 rounded-2xl shadow-2xl ring-1 ring-black/5">
-                              {services.residential.map((service) => (
+                              {services?.residential?.map((service) => (
                                 <SelectItem key={service} value={service} className="text-base py-3 hover:bg-gray-50 focus:bg-gray-50 cursor-pointer">
                                   {service}
                                 </SelectItem>
-                              ))}
+                              )) || []}
                               </SelectContent>
                             </Select>
                           </div>

@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button";
 import { EnhancedButton } from "@/components/ui/enhanced-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from '@/components/ui/badge';
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { 
   ArrowLeft, 
   Eye, 
@@ -33,7 +31,15 @@ import {
   Star,
   Edit,
   Info,
-  Send
+  Send,
+  Languages,
+  Accessibility,
+  Heart,
+  FileText,
+  CheckCircle,
+  XCircle,
+  Save,
+  Loader2
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -47,6 +53,11 @@ import type { Client, ClientStatus, RelationshipEvent } from '@/types';
 import { useClientReferrals } from '@/hooks/use-client-referrals';
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function ClientDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -57,11 +68,40 @@ export default function ClientDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showId, setShowId] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const { referrals: activeReferrals, loading: referralsLoading, refreshReferrals: refreshActiveReferrals } = useClientReferrals(id as string, 'active');
   const { referrals: completedReferrals, loading: completedLoading } = useClientReferrals(id as string, 'completed');
   const { referrals: allReferrals, loading: allReferralsLoading, refreshReferrals: refreshAllReferrals } = useClientReferrals(id as string, 'all');
   const [relationshipEvents, setRelationshipEvents] = useState<RelationshipEvent[]>([]);
   const { toast } = useToast();
+
+  // Form data for editing
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    dateOfBirth: '',
+    sex: '' as 'male' | 'female' | 'non-binary' | 'prefer-not-to-say' | 'other' | '',
+    email: '',
+    phone: '',
+    preferredContactMethod: 'email' as 'email' | 'phone' | 'both',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    insuranceProvider: '',
+    insuranceNumber: '',
+    pmiNumber: '',
+    waiverType: '',
+    primaryLanguage: 'English',
+    needsTranslator: false,
+    historyOfViolence: false,
+    mobilityStatus: '' as 'ambulatory' | 'wheelchair-bound' | 'bed-bound' | 'other' | '',
+    livingSituation: '' as 'alone' | 'with-family' | 'group-setting' | 'other' | '',
+    primaryDiagnosis: '',
+    culturalConsiderations: '',
+    additionalNotes: '',
+  });
 
   useEffect(() => {
     async function fetchClient() {
@@ -161,8 +201,6 @@ export default function ClientDetailsPage() {
     }
   };
 
-
-
   const clientName = client ? `${client.firstName || ''} ${client.lastName || ''}`.trim() : '';
   const clientInitials = client ? 
     `${client.firstName?.charAt(0) || ''}${client.lastName?.charAt(0) || ''}`.trim().toUpperCase() : 
@@ -172,6 +210,179 @@ export default function ClientDetailsPage() {
   const renderTruncatedId = (id: string) => {
     if (!id) return null;
     return `${id.slice(0, 4)}...${id.slice(-4)}`;
+  };
+
+  // Helper functions for displaying data
+  const getSexLabel = (sex?: string) => {
+    const sexLabels = {
+      male: 'Male',
+      female: 'Female',
+      'non-binary': 'Non-binary',
+      'prefer-not-to-say': 'Prefer not to say',
+      other: 'Other'
+    };
+    return sexLabels[sex as keyof typeof sexLabels] || 'Not specified';
+  };
+
+  const getMobilityLabel = (status?: string) => {
+    const mobilityLabels = {
+      ambulatory: 'Ambulatory',
+      'wheelchair-bound': 'Wheelchair-bound',
+      'bed-bound': 'Bed-bound',
+      other: 'Other'
+    };
+    return mobilityLabels[status as keyof typeof mobilityLabels] || 'Not specified';
+  };
+
+  const getLivingSituationLabel = (situation?: string) => {
+    const situationLabels = {
+      alone: 'Living Alone',
+      'with-family': 'With Family',
+      'group-setting': 'Group Setting',
+      other: 'Other'
+    };
+    return situationLabels[situation as keyof typeof situationLabels] || 'Not specified';
+  };
+
+  const getInsuranceLabel = (type?: string) => {
+    if (!type) return 'No insurance';
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  };
+
+  // Initialize form data when client is loaded
+  useEffect(() => {
+    if (client) {
+      setFormData({
+        firstName: client.firstName || '',
+        lastName: client.lastName || '',
+        dateOfBirth: client.dateOfBirth ? new Date(client.dateOfBirth).toISOString().split('T')[0] : '',
+        sex: client.sex || '',
+        email: client.email || '',
+        phone: client.phone || '',
+        preferredContactMethod: client.preferredContactMethod || 'email',
+        address: typeof client.address === 'string' ? client.address : (client.address?.street || ''),
+        city: client.city || '',
+        state: client.state || '',
+        zipCode: client.zipCode || '',
+        insuranceProvider: client.insuranceProvider || '',
+        insuranceNumber: client.insuranceNumber || '',
+        pmiNumber: client.pmiNumber || '',
+        waiverType: client.waiverType || '',
+        primaryLanguage: client.primaryLanguage || 'English',
+        needsTranslator: client.needsTranslator || false,
+        historyOfViolence: client.historyOfViolence || false,
+        mobilityStatus: client.mobilityStatus || '',
+        livingSituation: client.livingSituation || '',
+        primaryDiagnosis: client.primaryDiagnosis || '',
+        culturalConsiderations: client.culturalConsiderations || '',
+        additionalNotes: client.additionalNotes || '',
+      });
+    }
+  }, [client]);
+
+  // Handle form input changes
+  const handleInputChange = (field: keyof typeof formData, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Handle save
+  const handleSave = async () => {
+    if (!id || !client) return;
+    
+    try {
+      setSaving(true);
+      
+      const clientData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        dateOfBirth: formData.dateOfBirth || null,
+        sex: formData.sex,
+        email: formData.email,
+        phone: formData.phone,
+        preferredContactMethod: formData.preferredContactMethod,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+        insuranceProvider: formData.insuranceProvider,
+        insuranceNumber: formData.insuranceNumber,
+        pmiNumber: formData.pmiNumber,
+        waiverType: formData.waiverType,
+        primaryLanguage: formData.primaryLanguage,
+        needsTranslator: formData.needsTranslator,
+        historyOfViolence: formData.historyOfViolence,
+        mobilityStatus: formData.mobilityStatus,
+        livingSituation: formData.livingSituation,
+        primaryDiagnosis: formData.primaryDiagnosis,
+        culturalConsiderations: formData.culturalConsiderations,
+        additionalNotes: formData.additionalNotes,
+      };
+      
+      const res = await fetch(`/api/clients/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(clientData),
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to update client");
+      }
+      
+      const updatedClient = await res.json();
+      setClient(updatedClient.client);
+      setIsEditing(false);
+      
+      toast({
+        title: "Success",
+        description: "Client information updated successfully",
+      });
+    } catch (err: any) {
+      console.error("Error updating client:", err);
+      toast({
+        title: "Error",
+        description: err.message || "An error occurred while updating the client",
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Handle cancel edit
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    // Reset form data to original client data
+    if (client) {
+      setFormData({
+        firstName: client.firstName || '',
+        lastName: client.lastName || '',
+        dateOfBirth: client.dateOfBirth ? new Date(client.dateOfBirth).toISOString().split('T')[0] : '',
+        sex: client.sex || '',
+        email: client.email || '',
+        phone: client.phone || '',
+        preferredContactMethod: client.preferredContactMethod || 'email',
+        address: typeof client.address === 'string' ? client.address : (client.address?.street || ''),
+        city: client.city || '',
+        state: client.state || '',
+        zipCode: client.zipCode || '',
+        insuranceProvider: client.insuranceProvider || '',
+        insuranceNumber: client.insuranceNumber || '',
+        pmiNumber: client.pmiNumber || '',
+        waiverType: client.waiverType || '',
+        primaryLanguage: client.primaryLanguage || 'English',
+        needsTranslator: client.needsTranslator || false,
+        historyOfViolence: client.historyOfViolence || false,
+        mobilityStatus: client.mobilityStatus || '',
+        livingSituation: client.livingSituation || '',
+        primaryDiagnosis: client.primaryDiagnosis || '',
+        culturalConsiderations: client.culturalConsiderations || '',
+        additionalNotes: client.additionalNotes || '',
+      });
+    }
   };
 
   if (loading) {
@@ -199,7 +410,7 @@ export default function ClientDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       {/* Enhanced Top Navigation */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -225,122 +436,325 @@ export default function ClientDetailsPage() {
             
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                asChild
-                className="border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md font-medium"
-              >
-                <Link href={`/case-manager/clients/${id}/edit`}>
-                  <Edit className="h-4 w-4 mr-2 text-gray-600" />
-                  Edit Client
-                </Link>
-              </Button>
-              <Button 
-                size="sm"
-                asChild
-                className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all duration-200 font-medium"
-              >
-                <Link href={`/case-manager/new-referral?clientId=${id}`}>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Create Referral
-                </Link>
-              </Button>
+              {!isEditing ? (
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setIsEditing(true)}
+                    className="border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md font-medium"
+                  >
+                    <Edit className="h-4 w-4 mr-2 text-gray-600" />
+                    Edit Client
+                  </Button>
+                  <Button 
+                    size="sm"
+                    asChild
+                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all duration-200 font-medium"
+                  >
+                    <Link href={`/case-manager/new-referral?clientId=${id}`}>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Create Referral
+                    </Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleCancelEdit}
+                    className="border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md font-medium"
+                  >
+                    <XCircle className="h-4 w-4 mr-2 text-gray-600" />
+                    Cancel
+                  </Button>
+                  <Button 
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all duration-200 font-medium"
+                  >
+                    {saving ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4 mr-2" />
+                    )}
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Enhanced Client Header */}
-        <div className="mb-8">
-          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-            <CardContent className="p-8">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div className="flex items-center gap-6">
-                  <Avatar className="h-24 w-24 rounded-2xl border-4 border-white shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold text-2xl">
-                    <AvatarFallback>{clientInitials}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h1 className="text-4xl font-bold text-gray-900 mb-2">{clientName}</h1>
-                    <div className="flex flex-col sm:flex-row gap-4 text-sm text-gray-600">
-                      {client.email && (
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-blue-500" />
-                          <span className="font-medium">{client.email}</span>
-                        </div>
-                      )}
-                      {client.phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-green-500" />
-                          <span className="font-medium">{client.phone}</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Client ID with enhanced styling */}
-                    <div className="flex items-center gap-3 mt-3">
-                      <span className="text-sm font-medium text-gray-600">Client ID:</span>
-                      <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-1 border">
-                        <code className="text-gray-800 font-mono text-sm">
-                          {showId ? client._id : renderTruncatedId(client._id)}
-                        </code>
-                        <Button variant="ghost" size="icon" onClick={() => setShowId((v) => !v)} className="h-6 w-6">
-                          {showId ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={handleCopyId} className="h-6 w-6">
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                        {copied && <span className="text-green-600 text-xs font-medium">Copied!</span>}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+        <div className="flex gap-8">
+          {/* Left Sidebar - Client Information */}
+          <div className="w-96 flex-shrink-0">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sticky top-24">
+              <div className="text-center mb-6">
+                <Avatar className="h-24 w-24 rounded-2xl border-4 border-white shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold text-2xl mx-auto mb-4">
+                  <AvatarFallback>{clientInitials}</AvatarFallback>
+                </Avatar>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  {isEditing ? `${formData.firstName} ${formData.lastName}`.trim() || 'Enter Name' : clientName}
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  {isEditing ? 'Editing Client Profile' : 'Client Profile & Information'}
+                </p>
                 
-                {/* Status Selector */}
-                <div className="flex flex-col items-end gap-3">
-                  <ClientStatusSelector
-                    clientId={client._id}
-                    initialStatus={client.status || 'UNPLACED_NEW'}
-                    onStatusChange={handleStatusChange}
-                    className="min-w-[200px] bg-white shadow-sm"
-                  />
+                {/* Client ID with enhanced styling */}
+                <div className="flex items-center justify-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border">
+                  <span className="text-sm font-medium text-gray-600">ID:</span>
+                  <code className="text-gray-800 font-mono text-sm">
+                    {showId ? client._id : renderTruncatedId(client._id)}
+                  </code>
+                  <Button variant="ghost" size="icon" onClick={() => setShowId((v) => !v)} className="h-6 w-6">
+                    {showId ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={handleCopyId} className="h-6 w-6">
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                  {copied && <span className="text-green-600 text-xs font-medium">Copied!</span>}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Client Information */}
-          <div className="lg:col-span-1 space-y-6">
+
+              {/* Status Selector */}
+              <div className="mb-6">
+                <ClientStatusSelector
+                  clientId={client._id}
+                  initialStatus={client.status || 'UNPLACED_NEW'}
+                  onStatusChange={handleStatusChange}
+                  className="w-full bg-white shadow-sm"
+                />
+              </div>
+
+              {/* Quick Stats */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <ClipboardList className="h-4 w-4 text-blue-500" />
+                    <span className="text-sm font-medium text-gray-700">Active Referrals</span>
+                  </div>
+                  <Badge className="bg-blue-100 text-blue-800">
+                    {activeReferrals?.length || 0}
+                  </Badge>
+                </div>
+                
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span className="text-sm font-medium text-gray-700">Completed</span>
+                  </div>
+                  <Badge className="bg-green-100 text-green-800">
+                    {completedReferrals?.length || 0}
+                  </Badge>
+                </div>
+                
+                <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-purple-500" />
+                    <span className="text-sm font-medium text-gray-700">Client Since</span>
+                  </div>
+                  <span className="text-sm text-gray-600">
+                    {client.createdAt ? formatSafeDate(client.createdAt) : 'N/A'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-1 space-y-6">
             {/* Basic Information */}
             <Card className="shadow-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <User className="h-5 w-5 text-blue-500" />
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <User className="h-6 w-6 text-blue-500" />
                   Basic Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4">
-                  <div>
-                    <dt className="text-sm font-medium text-gray-600 mb-1">Full Name</dt>
-                    <dd className="text-sm text-gray-900 font-medium">{clientName}</dd>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <dt className="text-sm font-medium text-gray-600 mb-1">Full Name</dt>
+                      {isEditing ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            value={formData.firstName}
+                            onChange={(e) => handleInputChange('firstName', e.target.value)}
+                            placeholder="First Name"
+                            className="text-gray-900"
+                          />
+                          <Input
+                            value={formData.lastName}
+                            onChange={(e) => handleInputChange('lastName', e.target.value)}
+                            placeholder="Last Name"
+                            className="text-gray-900"
+                          />
+                        </div>
+                      ) : (
+                        <dd className="text-lg text-gray-900 font-semibold">{clientName}</dd>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <dt className="text-sm font-medium text-gray-600 mb-1">Date of Birth</dt>
+                      {isEditing ? (
+                        <Input
+                          type="date"
+                          value={formData.dateOfBirth}
+                          onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+                          className="text-gray-900"
+                        />
+                      ) : (
+                        <dd className="text-gray-900 font-medium">
+                          {client.dateOfBirth ? formatSafeDate(client.dateOfBirth) : 'Not provided'}
+                        </dd>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <dt className="text-sm font-medium text-gray-600 mb-1">Sex</dt>
+                      {isEditing ? (
+                        <Select value={formData.sex} onValueChange={(value) => handleInputChange('sex', value)}>
+                          <SelectTrigger className="text-gray-900">
+                            <SelectValue placeholder="Select sex" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="male">Male</SelectItem>
+                            <SelectItem value="female">Female</SelectItem>
+                            <SelectItem value="non-binary">Non-binary</SelectItem>
+                            <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <dd className="text-gray-900 font-medium">{getSexLabel(client.sex)}</dd>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <dt className="text-sm font-medium text-gray-600 mb-1">Preferred Contact</dt>
+                      {isEditing ? (
+                        <Select value={formData.preferredContactMethod} onValueChange={(value) => handleInputChange('preferredContactMethod', value)}>
+                          <SelectTrigger className="text-gray-900">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="email">Email</SelectItem>
+                            <SelectItem value="phone">Phone</SelectItem>
+                            <SelectItem value="both">Both</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <dd className="text-gray-900 font-medium capitalize">
+                          {client.preferredContactMethod || 'Email'}
+                        </dd>
+                      )}
+                    </div>
                   </div>
                   
-                  <div>
-                    <dt className="text-sm font-medium text-gray-600 mb-1">Date of Birth</dt>
-                    <dd className="text-sm text-gray-900 font-medium">
-                      {client.dateOfBirth ? formatSafeDate(client.dateOfBirth) : 'Not provided'}
-                    </dd>
-                  </div>
-                  
-                  <div>
-                    <dt className="text-sm font-medium text-gray-600 mb-1">Preferred Contact</dt>
-                    <dd className="text-sm text-gray-900 font-medium">
-                      {client.preferredContactMethod || 'email'}
-                    </dd>
+                  <div className="space-y-4">
+                    <div>
+                      <dt className="text-sm font-medium text-gray-600 mb-1">Primary Language</dt>
+                      {isEditing ? (
+                        <div className="space-y-2">
+                          <Input
+                            value={formData.primaryLanguage}
+                            onChange={(e) => handleInputChange('primaryLanguage', e.target.value)}
+                            placeholder="Primary Language"
+                            className="text-gray-900"
+                          />
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="needsTranslator"
+                              checked={formData.needsTranslator}
+                              onCheckedChange={(checked) => handleInputChange('needsTranslator', checked)}
+                            />
+                            <Label htmlFor="needsTranslator" className="text-sm">Needs translator</Label>
+                          </div>
+                        </div>
+                      ) : (
+                        <dd className="text-gray-900 font-medium flex items-center gap-2">
+                          <Languages className="h-4 w-4 text-orange-500" />
+                          {client.primaryLanguage || 'English'}
+                          {client.needsTranslator && (
+                            <Badge className="bg-orange-100 text-orange-800 text-xs">
+                              Needs Translator
+                            </Badge>
+                          )}
+                        </dd>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <dt className="text-sm font-medium text-gray-600 mb-1">Mobility Status</dt>
+                      {isEditing ? (
+                        <Select value={formData.mobilityStatus} onValueChange={(value) => handleInputChange('mobilityStatus', value)}>
+                          <SelectTrigger className="text-gray-900">
+                            <SelectValue placeholder="Select mobility status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ambulatory">Ambulatory</SelectItem>
+                            <SelectItem value="wheelchair-bound">Wheelchair-bound</SelectItem>
+                            <SelectItem value="bed-bound">Bed-bound</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <dd className="text-gray-900 font-medium flex items-center gap-2">
+                          <Accessibility className="h-4 w-4 text-teal-500" />
+                          {getMobilityLabel(client.mobilityStatus)}
+                        </dd>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <dt className="text-sm font-medium text-gray-600 mb-1">Living Situation</dt>
+                      {isEditing ? (
+                        <Select value={formData.livingSituation} onValueChange={(value) => handleInputChange('livingSituation', value)}>
+                          <SelectTrigger className="text-gray-900">
+                            <SelectValue placeholder="Select living situation" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="alone">Living Alone</SelectItem>
+                            <SelectItem value="with-family">With Family</SelectItem>
+                            <SelectItem value="group-setting">Group Setting</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <dd className="text-gray-900 font-medium flex items-center gap-2">
+                          <Home className="h-4 w-4 text-pink-500" />
+                          {getLivingSituationLabel(client.livingSituation)}
+                        </dd>
+                      )}
+                    </div>
+                    
+                    {isEditing ? (
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="historyOfViolence"
+                          checked={formData.historyOfViolence}
+                          onCheckedChange={(checked) => handleInputChange('historyOfViolence', checked)}
+                        />
+                        <Label htmlFor="historyOfViolence" className="text-sm">History of violence</Label>
+                      </div>
+                    ) : (
+                      client.historyOfViolence && (
+                        <div>
+                          <dt className="text-sm font-medium text-gray-600 mb-1">Safety Note</dt>
+                          <dd className="text-gray-900 font-medium flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4 text-red-500" />
+                            History of violence - special considerations needed
+                          </dd>
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -349,79 +763,245 @@ export default function ClientDetailsPage() {
             {/* Contact Information */}
             <Card className="shadow-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Phone className="h-5 w-5 text-green-500" />
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Phone className="h-6 w-6 text-green-500" />
                   Contact Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4">
-                  {client.email && (
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
                     <div>
-                      <dt className="text-sm font-medium text-gray-600 mb-1">Email</dt>
-                      <dd className="text-sm text-gray-900 font-medium">{client.email}</dd>
+                      <dt className="text-sm font-medium text-gray-600 mb-1">Email Address</dt>
+                      {isEditing ? (
+                        <Input
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => handleInputChange('email', e.target.value)}
+                          placeholder="Email address"
+                          className="text-gray-900"
+                        />
+                      ) : (
+                        <dd className="text-gray-900 font-medium flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-blue-500" />
+                          {client.email || 'No email'}
+                        </dd>
+                      )}
                     </div>
-                  )}
+                    
+                    <div>
+                      <dt className="text-sm font-medium text-gray-600 mb-1">Phone Number</dt>
+                      {isEditing ? (
+                        <Input
+                          type="tel"
+                          value={formData.phone}
+                          onChange={(e) => handleInputChange('phone', e.target.value)}
+                          placeholder="Phone number"
+                          className="text-gray-900"
+                        />
+                      ) : (
+                        <dd className="text-gray-900 font-medium flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-green-500" />
+                          {client.phone}
+                        </dd>
+                      )}
+                    </div>
+                  </div>
                   
-                  {client.phone && (
+                  <div className="space-y-4">
                     <div>
-                      <dt className="text-sm font-medium text-gray-600 mb-1">Phone</dt>
-                      <dd className="text-sm text-gray-900 font-medium">{client.phone}</dd>
+                      <dt className="text-sm font-medium text-gray-600 mb-1">Address</dt>
+                      {isEditing ? (
+                        <div className="space-y-2">
+                          <Input
+                            value={formData.address}
+                            onChange={(e) => handleInputChange('address', e.target.value)}
+                            placeholder="Street address"
+                            className="text-gray-900"
+                          />
+                          <div className="grid grid-cols-3 gap-2">
+                            <Input
+                              value={formData.city}
+                              onChange={(e) => handleInputChange('city', e.target.value)}
+                              placeholder="City"
+                              className="text-gray-900"
+                            />
+                            <Input
+                              value={formData.state}
+                              onChange={(e) => handleInputChange('state', e.target.value)}
+                              placeholder="State"
+                              className="text-gray-900"
+                            />
+                            <Input
+                              value={formData.zipCode}
+                              onChange={(e) => handleInputChange('zipCode', e.target.value)}
+                              placeholder="ZIP"
+                              className="text-gray-900"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <dd className="text-gray-900 font-medium flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-red-500" />
+                          <div>
+                            {typeof client.address === 'string' ? client.address : client.address?.street || 'N/A'}
+                            {client.city && client.state && (
+                              <div className="text-sm text-gray-600">
+                                {client.city}, {client.state} {client.zipCode}
+                              </div>
+                            )}
+                          </div>
+                        </dd>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Address Information */}
+            {/* Insurance Information */}
             <Card className="shadow-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <MapPin className="h-5 w-5 text-red-500" />
-                  Address Information
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Shield className="h-6 w-6 text-emerald-500" />
+                  Insurance Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4">
-                                     {client.address && (
-                     <div>
-                       <dt className="text-sm font-medium text-gray-600 mb-1">Street Address</dt>
-                       <dd className="text-sm text-gray-900 font-medium">
-                         {typeof client.address === 'string' ? client.address : client.address.street || 'N/A'}
-                       </dd>
-                     </div>
-                   )}
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    {client.city && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-600 mb-1">City</dt>
-                        <dd className="text-sm text-gray-900 font-medium">{client.city}</dd>
-                      </div>
-                    )}
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <dt className="text-sm font-medium text-gray-600 mb-1">Insurance Provider</dt>
+                      {isEditing ? (
+                        <Input
+                          value={formData.insuranceProvider}
+                          onChange={(e) => handleInputChange('insuranceProvider', e.target.value)}
+                          placeholder="Insurance provider"
+                          className="text-gray-900"
+                        />
+                      ) : (
+                        <dd className="text-gray-900 font-medium">
+                          {client.insurance?.provider || client.insuranceProvider || 'Not specified'}
+                        </dd>
+                      )}
+                    </div>
                     
-                    {client.state && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-600 mb-1">State</dt>
-                        <dd className="text-sm text-gray-900 font-medium">{client.state}</dd>
-                      </div>
-                    )}
+                    <div>
+                      <dt className="text-sm font-medium text-gray-600 mb-1">Insurance Number</dt>
+                      {isEditing ? (
+                        <Input
+                          value={formData.insuranceNumber}
+                          onChange={(e) => handleInputChange('insuranceNumber', e.target.value)}
+                          placeholder="Insurance number"
+                          className="text-gray-900"
+                        />
+                      ) : (
+                        <dd className="text-gray-900 font-medium">
+                          {client.insurance?.number || client.insuranceNumber || 'Not specified'}
+                        </dd>
+                      )}
+                    </div>
                   </div>
                   
-                  {client.zipCode && (
+                  <div className="space-y-4">
                     <div>
-                      <dt className="text-sm font-medium text-gray-600 mb-1">ZIP Code</dt>
-                      <dd className="text-sm text-gray-900 font-medium">{client.zipCode}</dd>
+                      <dt className="text-sm font-medium text-gray-600 mb-1">PMI Number</dt>
+                      {isEditing ? (
+                        <Input
+                          value={formData.pmiNumber}
+                          onChange={(e) => handleInputChange('pmiNumber', e.target.value)}
+                          placeholder="PMI number"
+                          className="text-gray-900"
+                        />
+                      ) : (
+                        <dd className="text-gray-900 font-medium">
+                          {client.pmiNumber || 'Not specified'}
+                        </dd>
+                      )}
                     </div>
-                  )}
+                    
+                    <div>
+                      <dt className="text-sm font-medium text-gray-600 mb-1">Waiver Type</dt>
+                      {isEditing ? (
+                        <Input
+                          value={formData.waiverType}
+                          onChange={(e) => handleInputChange('waiverType', e.target.value)}
+                          placeholder="Waiver type"
+                          className="text-gray-900"
+                        />
+                      ) : (
+                        <dd className="text-gray-900 font-medium">
+                          {client.waiverType || 'Not specified'}
+                        </dd>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-          </div>
-          
-          {/* Right Column: Referrals and Services */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* All Referrals - Enhanced */}
+
+            {/* Medical & Additional Information */}
+            <Card className="shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Heart className="h-6 w-6 text-red-500" />
+                  Medical & Additional Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div>
+                    <dt className="text-sm font-medium text-gray-600 mb-1">Primary Diagnosis</dt>
+                    {isEditing ? (
+                      <Textarea
+                        value={formData.primaryDiagnosis}
+                        onChange={(e) => handleInputChange('primaryDiagnosis', e.target.value)}
+                        placeholder="Primary diagnosis"
+                        className="text-gray-900 min-h-[80px]"
+                      />
+                    ) : (
+                      <dd className="text-gray-900 font-medium">
+                        {client.primaryDiagnosis || 'Not specified'}
+                      </dd>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <dt className="text-sm font-medium text-gray-600 mb-1">Cultural Considerations</dt>
+                    {isEditing ? (
+                      <Textarea
+                        value={formData.culturalConsiderations}
+                        onChange={(e) => handleInputChange('culturalConsiderations', e.target.value)}
+                        placeholder="Cultural considerations"
+                        className="text-gray-900 min-h-[80px]"
+                      />
+                    ) : (
+                      <dd className="text-gray-900 font-medium">
+                        {client.culturalConsiderations || 'Not specified'}
+                      </dd>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <dt className="text-sm font-medium text-gray-600 mb-1">Additional Notes</dt>
+                    {isEditing ? (
+                      <Textarea
+                        value={formData.additionalNotes}
+                        onChange={(e) => handleInputChange('additionalNotes', e.target.value)}
+                        placeholder="Additional notes"
+                        className="text-gray-900 min-h-[100px]"
+                      />
+                    ) : (
+                      <dd className="text-gray-900 font-medium whitespace-pre-wrap">
+                        {client.additionalNotes || 'No additional notes'}
+                      </dd>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Referrals Section */}
             <Card className="shadow-sm">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">

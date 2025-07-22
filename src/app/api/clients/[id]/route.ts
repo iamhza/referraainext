@@ -152,13 +152,13 @@ export async function PATCH(
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
     
-    // Check permissions - only the assigned case manager or admin can update
+    // Check permissions - case managers can update any client, admins can update any client
     const userRole = session.user.user_metadata?.role;
     const userId = session.user.id;
     
     const canUpdate = 
       userRole === 'admin' || 
-      (userRole === 'case_manager' && existingClient.caseManagerId === userId);
+      userRole === 'case_manager';
     
     if (!canUpdate) {
       const context = getRequestContext(req, session);
@@ -182,19 +182,32 @@ export async function PATCH(
       data.county
     );
 
-    // Prepare update data - make sure we don't override critical fields
+    // Prepare update data - include all the new fields from the form
     const updateData = {
       firstName: data.firstName,
       lastName: data.lastName,
       dateOfBirth: data.dateOfBirth,
+      sex: data.sex,
       email: data.email,
       phone: data.phone,
+      preferredContactMethod: data.preferredContactMethod,
       address: data.address,
       city: data.city,
       state: data.state,
       zipCode: data.zipCode,
       county: data.county,
-      preferredContactMethod: data.preferredContactMethod,
+      insuranceProvider: data.insuranceProvider,
+      insuranceNumber: data.insuranceNumber,
+      pmiNumber: data.pmiNumber,
+      waiverType: data.waiverType,
+      primaryLanguage: data.primaryLanguage,
+      needsTranslator: data.needsTranslator,
+      historyOfViolence: data.historyOfViolence,
+      mobilityStatus: data.mobilityStatus,
+      livingSituation: data.livingSituation,
+      primaryDiagnosis: data.primaryDiagnosis,
+      culturalConsiderations: data.culturalConsiderations,
+      additionalNotes: data.additionalNotes,
       insurance: data.insurance,
       profileComplete,
       updatedAt: new Date().toISOString()

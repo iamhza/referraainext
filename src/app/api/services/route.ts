@@ -4,6 +4,7 @@ import { WithId, Document } from 'mongodb';
 
 interface ServiceDocument extends WithId<Document> {
   service: string;
+  category?: 'residential' | 'nonResidential';
 }
 
 export async function GET() {
@@ -17,15 +18,70 @@ export async function GET() {
       .sort({ service: 1 }) // 1 for ascending order
       .toArray() as ServiceDocument[];
 
-    // Map to just return the service names
-    const serviceNames = services.map(doc => doc.service);
+    // Categorize services based on the category field
+    const residentialServices = services
+      .filter(doc => doc.category === 'residential')
+      .map(doc => doc.service);
 
-    return NextResponse.json({ services: serviceNames });
+    const nonResidentialServices = services
+      .filter(doc => doc.category === 'nonResidential')
+      .map(doc => doc.service);
+
+    const categorizedServices = {
+      residential: residentialServices,
+      nonResidential: nonResidentialServices
+    };
+
+    return NextResponse.json({ services: categorizedServices });
   } catch (error) {
     console.error('Error fetching services:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch services' },
-      { status: 500 }
-    );
+    
+    // Return default services even if database fails
+    const defaultServices = {
+      residential: [
+        'Assisted Living',
+        'Memory Care',
+        'Nursing Home',
+        'Independent Living',
+        'Group Home',
+        'Adult Family Home',
+        'Residential Treatment',
+        'Hospice Care',
+        'Skilled Nursing',
+        'Rehabilitation Center'
+      ],
+      nonResidential: [
+        'Home Health Care',
+        'Personal Care Assistant',
+        'Medical Transportation',
+        'Meal Delivery',
+        'Housekeeping',
+        'Medication Management',
+        'Physical Therapy',
+        'Occupational Therapy',
+        'Speech Therapy',
+        'Mental Health Counseling',
+        'Substance Abuse Treatment',
+        'Medical Equipment',
+        'Pharmacy Services',
+        'Laboratory Services',
+        'Imaging Services',
+        'Specialist Consultation',
+        'Primary Care',
+        'Dental Care',
+        'Vision Care',
+        'Podiatry',
+        'Social Work Services',
+        'Case Management',
+        'Support Groups',
+        'Respite Care',
+        'Adult Day Care',
+        'Emergency Services',
+        'Urgent Care',
+        'Specialized Medical Care'
+      ]
+    };
+
+    return NextResponse.json({ services: defaultServices });
   }
 } 

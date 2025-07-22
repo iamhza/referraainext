@@ -25,8 +25,12 @@ export interface Client {
   firstName: string;
   lastName: string;
   dateOfBirth: string;
+  sex?: 'male' | 'female' | 'non-binary' | 'prefer-not-to-say' | 'other';
   email?: string;
   phone: string;
+  preferredContactMethod: 'email' | 'phone' | 'both';
+  
+  // Address Information
   address: string | {
     street?: string;
     city?: string;
@@ -37,7 +41,29 @@ export interface Client {
   state: string;
   zipCode: string;
   county?: string;
-  preferredContactMethod: string;
+  
+  // Insurance Information
+  insurance?: {
+    type: 'medicaid' | 'medicare' | 'private' | 'none';
+    provider?: string;
+    number?: string;
+  };
+  insuranceProvider?: string;
+  insuranceNumber?: string;
+  pmiNumber?: string;
+  waiverType?: string;
+  
+  // Additional Information
+  primaryLanguage?: string;
+  needsTranslator?: boolean;
+  historyOfViolence?: boolean;
+  mobilityStatus?: 'ambulatory' | 'wheelchair-bound' | 'bed-bound' | 'other';
+  livingSituation?: 'alone' | 'with-family' | 'group-setting' | 'other';
+  primaryDiagnosis?: string;
+  culturalConsiderations?: string;
+  additionalNotes?: string;
+  
+  // Status and tracking
   status?: ClientStatus;
   
   // Provider relationship fields
@@ -48,11 +74,6 @@ export interface Client {
   // Profile completion tracking
   profileComplete?: boolean;
   
-  insurance?: {
-    type: string;
-    provider?: string;
-    number?: string;
-  };
   tasks?: Array<{
     _id: string;
     title: string;

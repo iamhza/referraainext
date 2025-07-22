@@ -523,20 +523,59 @@ export default function CaseManagerDashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <p className="text-sm text-gray-600 font-normal mb-4 leading-5">
-                    Create new referrals, add clients, or access your workspace for active collaborations.
-                  </p>
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    className="w-full border-purple-200 text-purple-600 hover:bg-purple-50"
-                    asChild
-                  >
-                    <Link href="/case-manager/new-referral">
-                      <Plus className="h-4 w-4 mr-2" />
-                      New Referral
-                    </Link>
-                  </Button>
+                  <div className="space-y-3">
+                    {/* New Referral */}
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-purple-200 text-purple-600 hover:bg-purple-50 justify-start"
+                      asChild
+                    >
+                      <Link href="/case-manager/new-referral">
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Referral
+                      </Link>
+                    </Button>
+                    
+                    {/* Add New Client */}
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-blue-200 text-blue-600 hover:bg-blue-50 justify-start"
+                      asChild
+                    >
+                      <Link href="/case-manager/clients/new">
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Add New Client
+                      </Link>
+                    </Button>
+                    
+                    {/* View Active Workspaces */}
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-green-200 text-green-600 hover:bg-green-50 justify-start"
+                      asChild
+                    >
+                      <Link href="/case-manager/referrals?filter=in_progress">
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Active Workspaces
+                      </Link>
+                    </Button>
+                    
+                    {/* Provider Search */}
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-orange-200 text-orange-600 hover:bg-orange-50 justify-start"
+                      asChild
+                    >
+                      <Link href="/case-manager/matched-providers">
+                        <Search className="h-4 w-4 mr-2" />
+                        Find Providers
+                      </Link>
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 

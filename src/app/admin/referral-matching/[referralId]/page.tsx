@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,12 +11,25 @@ import Link from 'next/link';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { BackButton } from '@/components/ui/BackButton';
 
+interface Provider {
+  id: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  bio?: string;
+  specialties?: string;
+  status: string;
+}
+
 export default function ReferralMatching({ params }: { params: { referralId: string } }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
   const [filterDistance, setFilterDistance] = useState(true);
   const [filterInsurance, setFilterInsurance] = useState(true);
   const [filterAvailability, setFilterAvailability] = useState(true);
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(true);
 
   // Mock referral data
   const referral = {
@@ -42,35 +55,30 @@ export default function ReferralMatching({ params }: { params: { referralId: str
     notes: "Client is looking for services to help maintain independence in the community. Has previously had ARMHS services but provider left the field. Prefers female provider if possible."
   };
 
-  // Mock provider data
-  const providers = [
-    {
-      id: 'provider1',
-      name: 'Minnesota Care Center',
-      description: 'Comprehensive mental health clinic with specialized services for adults and adolescents',
-      matchScore: 96,
-      availability: 'high',
-      waitTime: '1-2 days',
-      address: '123 Healthcare Ave, Minneapolis, MN 55401',
-      distance: '3.2 miles',
-      phone: '(612) 555-1234',
-      email: 'intake@mncare.example.com',
-      website: 'www.mncare.example.com',
-      certifications: ['JCAHO Accredited', 'State Certified', 'Insurance Approved'],
-      services: ['Individual Therapy', 'Group Therapy', 'Medication Management', 'Crisis Services'],
-      acceptedInsurance: ['Medicaid', 'Medicare', 'Blue Cross', 'UnitedHealthcare', 'Cigna'],
-      languages: ['English', 'Spanish', 'Hmong', 'Somali'],
-      accessibility: ['Wheelchair Accessible', 'Public Transit Access', 'Interpreter Services'],
-      rating: 4.8,
-      reviews: 124
-    }
-  ];
+  useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        setProvidersLoading(true);
+        const response = await fetch('/api/providers');
+        if (!response.ok) throw new Error('Failed to fetch providers');
+        const data = await response.json();
+        setProviders(data.providers || []);
+      } catch (error) {
+        console.error("Error fetching providers:", error);
+        setProviders([]);
+      } finally {
+        setProvidersLoading(false);
+      }
+    };
+
+    fetchProviders();
+  }, []);
 
   // Filter providers based on search
   const filteredProviders = providers.filter(provider => 
     searchTerm === '' || 
-    provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    provider.description.toLowerCase().includes(searchTerm.toLowerCase())
+    provider.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    provider.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const toggleProviderSelection = (providerId: string) => {
@@ -177,43 +185,43 @@ export default function ReferralMatching({ params }: { params: { referralId: str
                 </div>
 
                 {/* Provider List */}
-                {filteredProviders.map((provider) => (
-                  <div key={provider.id} className="border rounded-lg p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
+                {providersLoading ? (
+                  <p>Loading providers...</p>
+                ) : filteredProviders.length === 0 ? (
+                  <p>No providers found matching your criteria.</p>
+                ) : (
+                  filteredProviders.map((provider) => (
+                    <div key={provider.id} className="border rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-lg">{provider.fullName}</h3>
+                            <Badge className="bg-green-100 text-green-800">
+                              Active
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">{provider.email}</p>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            <Badge variant="outline">
+                              Status: {provider.status}
+                            </Badge>
+                          </div>
+                        </div>
                         <div className="flex items-center gap-2">
-                          <h3 className="font-medium text-lg">{provider.name}</h3>
-                          <Badge className="bg-green-100 text-green-800">
-                            {provider.matchScore}% Match
-                          </Badge>
+                          <Button
+                            variant={selectedProviders.includes(provider.id) ? "default" : "outline"}
+                            onClick={() => toggleProviderSelection(provider.id)}
+                          >
+                            {selectedProviders.includes(provider.id) ? "Selected" : "Select"}
+                          </Button>
+                          <Button variant="outline">
+                            View Details
+                          </Button>
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1">{provider.description}</p>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          <Badge variant="outline">
-                            {provider.distance}
-                          </Badge>
-                          <Badge variant="outline">
-                            Wait time: {provider.waitTime}
-                          </Badge>
-                          <Badge variant="outline">
-                            {provider.availability} availability
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant={selectedProviders.includes(provider.id) ? "default" : "outline"}
-                          onClick={() => toggleProviderSelection(provider.id)}
-                        >
-                          {selectedProviders.includes(provider.id) ? "Selected" : "Select"}
-                        </Button>
-                        <Button variant="outline">
-                          View Details
-                        </Button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
 
                 {/* Action Buttons */}
                 {selectedProviders.length > 0 && (

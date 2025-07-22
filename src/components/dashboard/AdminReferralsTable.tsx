@@ -1,709 +1,502 @@
-import React, { useEffect, useState, useRef } from 'react';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import {
   Table,
-  TableHeader,
   TableBody,
-  TableRow,
-  TableHead,
   TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { format } from 'date-fns';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import Link from 'next/link';
-import { MoreHorizontal, Hourglass, UserCheck, CheckCircle, XCircle, AlertCircle, Clock } from 'lucide-react';
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { toast } from '@/hooks/use-toast';
-import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose } from '@/components/ui/drawer';
+import { format, parseISO, formatDistanceToNow } from 'date-fns';
+import { 
+  Search, 
+  Eye, 
+  Clock, 
+  CheckCircle, 
+  AlertCircle, 
+  User, 
+  Building,
+  Calendar,
+  RefreshCw,
+  XCircle,
+  UserCheck,
+  Loader2
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
-interface UIReferral {
+interface Provider {
   id: string;
-  name: string;
-  service: {
+  fullName: string;
+  email: string;
+  displayName?: string;
+  organization?: string;
+}
+
+interface MongoReferral {
+  _id: string;
+  clientInfo: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+  };
+  serviceDetails: {
     type: string;
-    urgency: 'high' | 'medium' | 'low';
+    urgency?: string;
   };
   status: string;
   createdAt: string;
+  updatedAt: string;
+  assignedProvider?: string;
+  caseManagerId?: string;
+  caseManager?: {
+    id: string;
+    name: string;
+    email: string;
+  };
 }
 
-type SortKey = 'id' | 'name' | 'service' | 'status' | 'createdAt';
-type SortDirection = 'asc' | 'desc';
-
-const BRAND_COLOR = '#11acf8fe';
-
-// Add a UIReferralEdit type for local editing, including provider
-type UIReferralEdit = Partial<UIReferral> & { provider?: string };
-
-// Mock provider data
-const mockProviders = [
-  { id: '1', name: 'Wellness Center', lastSeen: '2m ago', responseTime: 12, rating: 4.8 },
-  { id: '2', name: 'Hope Clinic', lastSeen: '10m ago', responseTime: 18, rating: 4.6 },
-  { id: '3', name: 'Bright Futures', lastSeen: '1h ago', responseTime: 25, rating: 4.9 },
-  { id: '4', name: 'Sunrise Health', lastSeen: '5m ago', responseTime: 15, rating: 4.7 },
-  { id: '5', name: 'Pathways', lastSeen: '20m ago', responseTime: 20, rating: 4.5 },
-];
-
-function ReferralDetailsDrawer({ referral, open, onClose }: { referral: UIReferral | null, open: boolean, onClose: () => void }) {
-  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
-
-  const handleProviderToggle = (id: string) => {
-    setSelectedProviders((prev) =>
-      prev.includes(id)
-        ? prev.filter((pid) => pid !== id)
-        : prev.length < 5 ? [...prev, id] : prev
-    );
-  };
-
-  useEffect(() => {
-    if (!open) setSelectedProviders([]);
-  }, [open]);
-
-  if (!referral) return null;
-  return (
-    <Drawer open={open} onClose={onClose}>
-      <DrawerContent className="max-w-lg w-full p-6">
-        <DrawerHeader>
-          <DrawerTitle>Referral Details</DrawerTitle>
-          <DrawerDescription>Review and assign providers</DrawerDescription>
-        </DrawerHeader>
-        <div className="mb-6">
-          <div className="font-semibold text-lg mb-1">{referral.name}</div>
-          <div className="text-sm text-gray-500 mb-2">Service: {referral.service.type}</div>
-          <div className="text-sm text-gray-500 mb-2">Urgency: {referral.service.urgency}</div>
-          <div className="text-sm text-gray-500 mb-2">Status: {referral.status}</div>
-          <div className="text-xs text-gray-400">Created: {format(new Date(referral.createdAt), 'PPpp')}</div>
-        </div>
-        <div className="mb-4">
-          <div className="font-medium mb-2">Assign Providers (1-5)</div>
-          <div className="space-y-2">
-            {mockProviders.map((provider) => (
-              <label key={provider.id} className="flex items-center gap-3 p-2 rounded-lg border hover:bg-blue-50 transition cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedProviders.includes(provider.id)}
-                  onChange={() => handleProviderToggle(provider.id)}
-                  disabled={
-                    !selectedProviders.includes(provider.id) && selectedProviders.length >= 5
-                  }
-                  className="form-checkbox h-5 w-5 text-blue-600"
-                />
-                <div className="flex-1">
-                  <div className="font-semibold">{provider.name}</div>
-                  <div className="text-xs text-gray-500 flex gap-2">
-                    <span>Last seen: {provider.lastSeen}</span>
-                    <span>Response: {provider.responseTime} min</span>
-                    <span>Rating: {provider.rating}</span>
-                  </div>
-                </div>
-              </label>
-            ))}
-          </div>
-          <div className="text-xs text-gray-400 mt-2">Select up to 5 providers to assign.</div>
-        </div>
-        <div className="flex justify-end gap-2 mt-6">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button variant="default" disabled={selectedProviders.length === 0}>Assign Providers</Button>
-        </div>
-      </DrawerContent>
-    </Drawer>
-  );
+interface UIReferral {
+  id: string;
+  clientId: string;
+  clientName: string;
+  serviceType: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  lastUpdate: string;
+  assignedProvider?: string;
+  urgency?: string;
+  caseManagerName?: string;
 }
 
 export function AdminReferralsTable() {
   const [referrals, setReferrals] = useState<UIReferral[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortKey, setSortKey] = useState<SortKey>('createdAt');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [currentPage, setCurrentPage] = useState(1);
-  const PAGE_SIZE = 10;
-  const [showBulkStatusModal, setShowBulkStatusModal] = useState(false);
-  const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
-  const [bulkStatus, setBulkStatus] = useState('under_review');
-  const [bulkCaseManager, setBulkCaseManager] = useState('Sarah Johnson');
-  const [bulkProvider, setBulkProvider] = useState('Wellness Center');
-  const caseManagers = ['Sarah Johnson', 'Alex Kim', 'Priya Patel'];
-  const providers = ['Wellness Center', 'Hope Clinic', 'Bright Futures'];
-  const statusOptions = [
-    { value: 'under_review', label: 'Under Review' },
-    { value: 'provider_selection_required', label: 'Provider Selection Required' },
-    { value: 'in_progress', label: 'In Progress' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'cancelled', label: 'Cancelled' },
-  ];
-  const urgencyOptions = [
-    { value: 'high', label: 'High' },
-    { value: 'medium', label: 'Medium' },
-    { value: 'low', label: 'Low' },
-  ];
-  const serviceOptions = [
-    { value: 'Adult rehabilitative mental health services (ARMHS)', label: 'ARMHS' },
-    { value: 'Case Management', label: 'Case Management' },
-    { value: 'Housing Support', label: 'Housing Support' },
-    { value: 'Other', label: 'Other' },
-  ];
-  const [editingCell, setEditingCell] = useState<{ rowId: string; col: string } | null>(null);
-  const [editValues, setEditValues] = useState<Record<string, UIReferralEdit>>({});
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedReferral, setSelectedReferral] = useState<UIReferral | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(true);
+  const [updating, setUpdating] = useState<{ [key: string]: boolean }>({});
+  const { toast } = useToast();
 
+  // Fetch referrals
   useEffect(() => {
     async function fetchReferrals() {
+      setLoading(true);
       try {
         const response = await fetch('/api/referrals');
-        if (!response.ok) throw new Error('Failed to fetch');
+        if (!response.ok) throw new Error('Failed to fetch referrals');
         const data = await response.json();
-        const mapped: UIReferral[] = data.referrals.map((ref: any) => ({
+        
+        const mappedReferrals: UIReferral[] = data.referrals.map((ref: MongoReferral) => ({
           id: ref._id,
-          name: `${ref.clientInfo?.firstName || ''} ${ref.clientInfo?.lastName || ''}`.trim(),
-          service: {
-            type: ref.serviceDetails?.type || '',
-            urgency: ref.serviceDetails?.urgency || 'medium',
-          },
-          status: ref.status,
+          clientId: ref.clientInfo?._id || '',
+          clientName: `${ref.clientInfo?.firstName || 'Unknown'} ${ref.clientInfo?.lastName || 'Client'}`.trim(),
+          serviceType: ref.serviceDetails?.type || 'Service',
+          status: ref.status || 'unknown',
           createdAt: ref.createdAt,
+          updatedAt: ref.updatedAt,
+          lastUpdate: formatDistanceToNow(parseISO(ref.updatedAt), { addSuffix: true }),
+          assignedProvider: ref.assignedProvider,
+          urgency: ref.serviceDetails?.urgency,
+          caseManagerName: ref.caseManager?.name || 'Unknown',
         }));
-        setReferrals(mapped);
+        
+        setReferrals(mappedReferrals);
       } catch (error) {
-        setReferrals([]);
+        console.error('Error fetching referrals:', error);
+        setError('Failed to load referrals');
       } finally {
         setLoading(false);
       }
     }
+
     fetchReferrals();
   }, []);
 
-  function handleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortKey(key);
-      setSortDirection('asc');
+  // Fetch providers
+  useEffect(() => {
+    async function fetchProviders() {
+      try {
+        console.log('Fetching providers...');
+        const response = await fetch('/api/providers');
+        console.log('Provider API response status:', response.status);
+        if (!response.ok) throw new Error('Failed to fetch providers');
+        const data = await response.json();
+        console.log('Provider API response data:', data);
+        setProviders(data.providers);
+      } catch (error) {
+        console.error('Error fetching providers:', error);
+        setProviders([]);
+      } finally {
+        setProvidersLoading(false);
+      }
     }
-  }
 
-  function getSortedReferrals() {
-    return [...referrals].sort((a, b) => {
-      let aValue: any = a[sortKey];
-      let bValue: any = b[sortKey];
-      if (sortKey === 'service') {
-        aValue = a.service.type;
-        bValue = b.service.type;
-      }
-      if (sortKey === 'createdAt') {
-        aValue = new Date(a.createdAt).getTime();
-        bValue = new Date(b.createdAt).getTime();
-      }
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        if (sortDirection === 'asc') return aValue.localeCompare(bValue);
-        return bValue.localeCompare(aValue);
-      }
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        if (sortDirection === 'asc') return aValue - bValue;
-        return bValue - aValue;
-      }
-      return 0;
-    });
-  }
+    fetchProviders();
+  }, []);
 
-  // Pagination logic
-  const sortedReferrals = getSortedReferrals();
-  const totalPages = Math.ceil(sortedReferrals.length / PAGE_SIZE);
-  const paginatedReferrals = sortedReferrals.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  // Filter referrals based on search
+  const filteredReferrals = referrals.filter((referral) => {
+    const searchLower = search.toLowerCase();
+    return (
+      referral.clientName.toLowerCase().includes(searchLower) ||
+      referral.serviceType.toLowerCase().includes(searchLower) ||
+      referral.status.toLowerCase().includes(searchLower) ||
+      (referral.assignedProvider && getProviderDisplayName(referral.assignedProvider).toLowerCase().includes(searchLower))
+    );
+  });
 
+  // Helper to get provider display name from provider ID
+  const getProviderDisplayName = (providerId: string): string => {
+    if (!providerId || providerId === 'unassigned') return 'Unassigned';
+    const provider = providers.find(p => p.id === providerId);
+    return provider ? (provider.displayName || provider.fullName || provider.email) : 'Unknown Provider';
+  };
+
+  // Helper to get client initials
+  const getInitials = (name: string): string => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
+  // Helper to get status badge
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       'under_review': {
         label: 'Under Review',
-        className: 'bg-gray-50 border border-gray-200 text-gray-700',
-        icon: Hourglass,
+        className: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+        icon: Clock,
       },
       'provider_selection_required': {
         label: 'Provider Selection',
-        className: 'bg-yellow-50 border border-yellow-200 text-yellow-700',
+        className: 'bg-blue-50 text-blue-700 border-blue-200',
         icon: UserCheck,
       },
       'in_progress': {
         label: 'In Progress',
-        className: 'bg-[#e6f7ff] border border-[#b3e5fc] text-[#11acf8fe]',
+        className: 'bg-green-50 text-green-700 border-green-200',
         icon: Clock,
       },
       'completed': {
         label: 'Completed',
-        className: 'bg-green-50 border border-green-200 text-green-700',
+        className: 'bg-green-50 text-green-700 border-green-200',
         icon: CheckCircle,
       },
       'cancelled': {
         label: 'Cancelled',
-        className: 'bg-red-50 border border-red-200 text-red-700',
+        className: 'bg-red-50 text-red-700 border-red-200',
         icon: XCircle,
       },
-    }[status] || {
+    }[status.toLowerCase()] || {
       label: status,
-      className: 'bg-gray-50 border border-gray-200 text-gray-700',
+      className: 'bg-gray-50 text-gray-700 border-gray-200',
       icon: AlertCircle,
     };
+
     const Icon = statusConfig.icon;
     return (
-      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${statusConfig.className}`}>
+      <Badge className={`${statusConfig.className} font-medium px-3 py-1 rounded-full`}>
         <Icon className="h-3 w-3 mr-1" />
         {statusConfig.label}
-      </span>
+      </Badge>
     );
   };
 
-  const getUrgencyBadge = (urgency: 'high' | 'medium' | 'low') => {
-    const urgencyConfig = {
-      high: { label: 'High', className: 'bg-red-100 text-red-700', dot: 'bg-red-500' },
-      medium: { label: 'Medium', className: 'bg-orange-100 text-orange-700', dot: 'bg-orange-400' },
-      low: { label: 'Low', className: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
-    }[urgency];
-    return (
-      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${urgencyConfig.className}`}>
-        <span className={`w-2 h-2 rounded-full ${urgencyConfig.dot}`}></span>
-        {urgencyConfig.label}
-      </span>
-    );
-  };
+  // Update referral (assign provider)
+  const updateReferral = async (referralId: string, assignedProvider: string) => {
+    setUpdating(prev => ({ ...prev, [referralId]: true }));
+    
+    try {
+      console.log('Updating referral:', referralId, 'with provider:', assignedProvider);
+      
+      const response = await fetch(`/api/referrals/${referralId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignedProvider }),
+      });
 
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelected(new Set(paginatedReferrals.map(r => r.id)));
-    } else {
-      setSelected(new Set());
-    }
-  };
-  const handleSelect = (id: string) => {
-    setSelected(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) newSet.delete(id);
-      else newSet.add(id);
-      return newSet;
-    });
-  };
+      console.log('API response status:', response.status);
+      console.log('API response URL:', response.url);
 
-  // Helper to get the value for a cell (from editValues or original)
-  const getCellValue = (referral: UIReferral, col: string) => {
-    const edits = editValues[referral.id] || {};
-    if (col === 'name') return edits.name ?? referral.name;
-    if (col === 'service') return edits.service?.type ?? referral.service.type;
-    if (col === 'urgency') return edits.service?.urgency ?? referral.service.urgency;
-    if (col === 'status') return edits.status ?? referral.status;
-    if (col === 'provider') return edits.provider ?? '';
-    return '';
-  };
-
-  // Add this function to update a referral
-  async function updateReferral(id: string, update: Partial<UIReferral>) {
-    const res = await fetch('/api/referrals', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, ...update }),
-    });
-    if (!res.ok) throw new Error('Failed to update referral');
-    const data = await res.json();
-    return data.referral;
-  }
-
-  // Add this function to delete a referral
-  async function deleteReferral(id: string) {
-    const res = await fetch('/api/referrals', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    });
-    if (!res.ok) throw new Error('Failed to delete referral');
-  }
-
-  // Update handleSave to PATCH for status/provider changes
-  const handleSave = async (referral: UIReferral, col: string, value: any) => {
-    setEditValues(prev => {
-      const prevEdits = prev[referral.id] || {};
-      let newEdits = { ...prevEdits };
-      if (col === 'name') newEdits.name = value;
-      if (col === 'status') newEdits.status = value;
-      if (col === 'provider') (newEdits as any).provider = value; // UI only
-      if (col === 'service') newEdits.service = { ...referral.service, type: value };
-      if (col === 'urgency') newEdits.service = { ...referral.service, urgency: value };
-      return {
-        ...prev,
-        [referral.id]: newEdits,
-      };
-    });
-    setEditingCell(null);
-    // Real PATCH for status/provider
-    if (col === 'status' || col === 'provider') {
-      try {
-        const update: any = {};
-        if (col === 'status') update.status = value;
-        if (col === 'provider') update.assignedProvider = value;
-        const updated = await updateReferral(referral.id, update);
-        setReferrals(refs => refs.map(r => r.id === referral.id ? { ...r, ...update } : r));
-        toast({ title: 'Referral updated', description: `Referral ${col} updated successfully.` });
-      } catch (err) {
-        toast({ title: 'Error', description: `Failed to update referral: ${err}`, variant: 'destructive' });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API error response:', errorText);
+        throw new Error(`Failed to update referral: ${response.status} ${response.statusText}`);
       }
+
+      const responseData = await response.json();
+      console.log('API success response:', responseData);
+
+      // Update local state
+      setReferrals(prev => prev.map(ref => 
+        ref.id === referralId 
+          ? { ...ref, assignedProvider, lastUpdate: 'just now' }
+          : ref
+      ));
+
+      toast({
+        title: 'Success',
+        description: 'Provider assigned successfully',
+      });
+    } catch (error) {
+      console.error('Error updating referral:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to assign provider',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdating(prev => ({ ...prev, [referralId]: false }));
     }
   };
 
-  // Cancel edit
-  const handleCancel = () => setEditingCell(null);
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="p-16 text-center text-gray-500">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          Loading referrals...
+        </div>
+      </div>
+    );
+  }
 
-  // Keyboard handler for Enter/Escape
-  const handleKeyDown = (e: React.KeyboardEvent, referral: UIReferral, col: string, value: any) => {
-    if (e.key === 'Enter') {
-      handleSave(referral, col, value);
-    } else if (e.key === 'Escape') {
-      handleCancel();
-    }
-  };
-
-  // Helper to get service label
-  const getServiceLabel = (value: string) => {
-    const found = serviceOptions.find(opt => opt.value === value);
-    return found ? found.label : value;
-  };
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="p-16 text-center">
+          <AlertCircle className="h-8 w-8 text-red-400 mx-auto mb-4" />
+          <p className="text-red-500">{error}</p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => window.location.reload()}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="rounded-2xl shadow-xl bg-white/90 border border-gray-100 p-0 md:p-4 animate-fade-in relative">
-      {/* Bulk Actions Bar */}
-      {selected.size > 0 && (
-        <div className="fixed left-0 right-0 top-0 z-30 bg-gradient-to-r from-white via-blue-50 to-white border-b border-blue-200 shadow-lg flex items-center justify-between px-8 py-3 animate-fade-in-up" style={{maxWidth: '100vw'}}>
-          <div className="flex items-center gap-4">
-            <span className="font-semibold text-blue-700">{selected.size} selected</span>
-            <Dialog open={showBulkStatusModal} onOpenChange={setShowBulkStatusModal}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="border-blue-400 text-blue-700 hover:bg-blue-100">Change Status</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Change Status (Bulk)</DialogTitle>
-                  <DialogDescription>Select a new status for selected referrals.</DialogDescription>
-                </DialogHeader>
-                <Select value={bulkStatus} onValueChange={setBulkStatus}>
-                  <SelectTrigger className="w-full mt-4">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map(opt => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <DialogFooter className="mt-6">
-                  <Button variant="default" onClick={() => setShowBulkStatusModal(false)}>Confirm</Button>
-                  <Button variant="ghost" onClick={() => setShowBulkStatusModal(false)}>Cancel</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            <Dialog open={showBulkAssignModal} onOpenChange={setShowBulkAssignModal}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="border-blue-400 text-blue-700 hover:bg-blue-100">Assign</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Assign (Bulk)</DialogTitle>
-                  <DialogDescription>Select a case manager and provider for selected referrals.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 mt-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Case Manager</label>
-                    <Select value={bulkCaseManager} onValueChange={setBulkCaseManager}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select case manager" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {caseManagers.map(cm => (
-                          <SelectItem key={cm} value={cm}>{cm}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Provider</label>
-                    <Select value={bulkProvider} onValueChange={setBulkProvider}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select provider" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {providers.map(p => (
-                          <SelectItem key={p} value={p}>{p}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <DialogFooter className="mt-6">
-                  <Button variant="default" onClick={() => setShowBulkAssignModal(false)}>Confirm</Button>
-                  <Button variant="ghost" onClick={() => setShowBulkAssignModal(false)}>Cancel</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            <Button variant="outline" className="border-blue-400 text-blue-700 hover:bg-blue-100">Export</Button>
-          </div>
-          <Button variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
+    <div className="space-y-6">
+      {/* Header with Search */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-900">
+            All Referrals
+            {referrals.length > 0 && (
+              <span className="text-gray-500 font-normal ml-2">({referrals.length} total)</span>
+            )}
+          </h2>
+          <p className="text-gray-600 mt-1">Manage and assign providers to referrals</p>
         </div>
-      )}
-      <div className="overflow-x-auto rounded-2xl">
-        <Table className="min-w-full text-[15px] font-medium">
-          <TableHeader className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-gray-200 shadow-sm">
-            <TableRow>
-              <TableHead className="w-10 px-3">
-                <input
-                  type="checkbox"
-                  aria-label="Select all referrals"
-                  checked={selected.size === paginatedReferrals.length && paginatedReferrals.length > 0}
-                  onChange={handleSelectAll}
-                  className="accent-[${BRAND_COLOR}] rounded border-gray-300 focus:ring-2 focus:ring-[${BRAND_COLOR}]"
-                />
-              </TableHead>
-              <TableHead className="cursor-pointer" onClick={() => handleSort('id')}>
-                Referral ID {sortKey === 'id' && (sortDirection === 'asc' ? '▲' : '▼')}
-              </TableHead>
-              <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>Client Name {sortKey === 'name' && (sortDirection === 'asc' ? '▲' : '▼')}</TableHead>
-              <TableHead className="cursor-pointer" onClick={() => handleSort('service')}>Service {sortKey === 'service' && (sortDirection === 'asc' ? '▲' : '▼')}</TableHead>
-              <TableHead>Urgency</TableHead>
-              <TableHead className="cursor-pointer" onClick={() => handleSort('status')}>Status {sortKey === 'status' && (sortDirection === 'asc' ? '▲' : '▼')}</TableHead>
-              <TableHead className="text-center">Provider</TableHead>
-              <TableHead className="cursor-pointer" onClick={() => handleSort('createdAt')}>Created At {sortKey === 'createdAt' && (sortDirection === 'asc' ? '▲' : '▼')}</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-lg text-muted-foreground">Loading referrals...</TableCell>
-              </TableRow>
-            ) : paginatedReferrals.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">No referrals found</TableCell>
-              </TableRow>
-            ) : (
-              paginatedReferrals.map((referral) => {
-                return (
-                  <TableRow
-                    key={referral.id}
-                    className="transition-all duration-200 hover:bg-gradient-to-r hover:from-[#f0faff] hover:to-[#e6f7ff] hover:shadow-lg group"
+      </div>
+
+      {/* Search */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            type="text"
+            placeholder="Search referrals by client, service, or provider..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10 rounded-xl shadow-sm border-gray-200 focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+        {filteredReferrals.length === 0 ? (
+          <div className="p-16 text-center">
+            <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500">
+              {search ? 'No referrals found matching your search.' : 'No referrals found.'}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table className="w-full">
+              <TableHeader>
+                <TableRow className="border-b border-gray-200">
+                  <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">
+                    Client
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">
+                    Service Type
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">
+                    Status
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">
+                    Assigned Provider
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">
+                    Case Manager
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">
+                    Created
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-left">
+                    Last Update
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-gray-500 uppercase tracking-wider px-6 py-3 text-right">
+                    Actions
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredReferrals.map((referral, index) => (
+                  <TableRow 
+                    key={referral.id} 
+                    className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                      index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
+                    }`}
                   >
-                    <TableCell className="w-10 px-3">
-                      <input
-                        type="checkbox"
-                        aria-label={`Select referral ${referral.id}`}
-                        checked={selected.has(referral.id)}
-                        onChange={() => handleSelect(referral.id)}
-                        className="accent-[${BRAND_COLOR}] rounded border-gray-300 focus:ring-2 focus:ring-[${BRAND_COLOR}]"
-                      />
+                    {/* Client */}
+                    <TableCell className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-medium text-blue-700">
+                            {getInitials(referral.clientName)}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900">{referral.clientName}</div>
+                          <div className="text-sm text-gray-500">
+                            ID: {referral.clientId ? referral.clientId.slice(-8) : 'N/A'}
+                          </div>
+                        </div>
+                      </div>
                     </TableCell>
-                    {/* Referral ID */}
-                    <TableCell className="text-gray-600 font-mono text-xs select-all">
-                      {referral.id}
+
+                    {/* Service Type */}
+                    <TableCell className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <Building className="h-4 w-4 text-gray-400" />
+                        <span className="text-gray-900">{referral.serviceType}</span>
+                        {referral.urgency === 'high' && (
+                          <Badge className="bg-red-50 text-red-700 border-red-200 text-xs">
+                            Urgent
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
-                    {/* Client Name */}
-                    <TableCell
-                      className={
-                        editingCell?.rowId === referral.id && editingCell.col === 'name'
-                          ? 'bg-blue-50 ring-2 ring-blue-300'
-                          : 'text-gray-800 cursor-pointer'
-                      }
-                      onClick={() => setEditingCell({ rowId: referral.id, col: 'name' })}
-                    >
-                      {editingCell?.rowId === referral.id && editingCell.col === 'name' ? (
-                        <input
-                          ref={inputRef}
-                          className="h-8 text-sm font-medium px-2 py-1 rounded border border-blue-300 focus:ring-2 focus:ring-blue-400"
-                          defaultValue={getCellValue(referral, 'name')}
-                          onBlur={e => handleSave(referral, 'name', e.target.value)}
-                          onKeyDown={e => handleKeyDown(e, referral, 'name', (e.target as HTMLInputElement).value)}
-                          autoFocus
-                        />
-                      ) : (
-                        getCellValue(referral, 'name')
-                      )}
-                    </TableCell>
-                    {/* Service */}
-                    <TableCell
-                      className={
-                        editingCell?.rowId === referral.id && editingCell.col === 'service'
-                          ? 'bg-blue-50 ring-2 ring-blue-300'
-                          : 'text-gray-700 cursor-pointer'
-                      }
-                      onClick={() => setEditingCell({ rowId: referral.id, col: 'service' })}
-                    >
-                      {editingCell?.rowId === referral.id && editingCell.col === 'service' ? (
-                        <Select
-                          value={getCellValue(referral, 'service')}
-                          onValueChange={val => handleSave(referral, 'service', val)}
-                        >
-                          <SelectTrigger className="h-8 text-sm font-medium px-3 py-1 rounded-full border border-gray-200 bg-white shadow-sm focus:ring-2 focus:ring-[${BRAND_COLOR}] focus:border-[${BRAND_COLOR}] transition-colors">
-                            <SelectValue placeholder="Select service" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white shadow-lg rounded-md border border-gray-200 py-1">
-                            {serviceOptions.map(opt => (
-                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-50 text-gray-700 border border-gray-200">
-                          {getServiceLabel(getCellValue(referral, 'service'))}
-                        </span>
-                      )}
-                    </TableCell>
-                    {/* Urgency */}
-                    <TableCell
-                      className={
-                        editingCell?.rowId === referral.id && editingCell.col === 'urgency'
-                          ? 'bg-blue-50 ring-2 ring-blue-300'
-                          : 'cursor-pointer'
-                      }
-                      onClick={() => setEditingCell({ rowId: referral.id, col: 'urgency' })}
-                    >
-                      {editingCell?.rowId === referral.id && editingCell.col === 'urgency' ? (
-                        <Select
-                          value={getCellValue(referral, 'urgency')}
-                          onValueChange={val => handleSave(referral, 'urgency', val)}
-                        >
-                          <SelectTrigger className="h-8 text-sm font-medium px-3 py-1 rounded-full border border-gray-200 bg-white shadow-sm focus:ring-2 focus:ring-[${BRAND_COLOR}] focus:border-[${BRAND_COLOR}] transition-colors">
-                            <SelectValue placeholder="Select urgency" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white shadow-lg rounded-md border border-gray-200 py-1">
-                            {urgencyOptions.map(opt => (
-                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        getUrgencyBadge(getCellValue(referral, 'urgency') as 'high' | 'medium' | 'low')
-                      )}
-                    </TableCell>
+
                     {/* Status */}
-                    <TableCell
-                      className={
-                        editingCell?.rowId === referral.id && editingCell.col === 'status'
-                          ? 'bg-blue-50 ring-2 ring-blue-300'
-                          : 'cursor-pointer'
-                      }
-                      onClick={() => setEditingCell({ rowId: referral.id, col: 'status' })}
-                    >
-                      {editingCell?.rowId === referral.id && editingCell.col === 'status' ? (
-                        <Select
-                          value={getCellValue(referral, 'status')}
-                          onValueChange={val => handleSave(referral, 'status', val)}
-                        >
-                          <SelectTrigger className="h-8 text-sm font-medium px-3 py-1 rounded-full border border-gray-200 bg-white shadow-sm focus:ring-2 focus:ring-[${BRAND_COLOR}] focus:border-[${BRAND_COLOR}] transition-colors">
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white shadow-lg rounded-md border border-gray-200 py-1">
-                            {statusOptions.map(opt => (
-                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        getStatusBadge(getCellValue(referral, 'status'))
-                      )}
+                    <TableCell className="px-6 py-4">
+                      {getStatusBadge(referral.status)}
                     </TableCell>
-                    {/* Provider */}
-                    <TableCell
-                      className={
-                        editingCell?.rowId === referral.id && editingCell.col === 'provider'
-                          ? 'bg-blue-50 ring-2 ring-blue-300'
-                          : 'text-center cursor-pointer min-w-[180px]'
-                      }
-                      onClick={() => setEditingCell({ rowId: referral.id, col: 'provider' })}
-                    >
-                      {editingCell?.rowId === referral.id && editingCell.col === 'provider' ? (
-                        <Select
-                          value={getCellValue(referral, 'provider')}
-                          onValueChange={val => handleSave(referral, 'provider', val)}
-                        >
-                          <SelectTrigger className="h-8 text-sm font-medium px-3 py-1 rounded-full border border-gray-200 bg-white shadow-sm focus:ring-2 focus:ring-[${BRAND_COLOR}] focus:border-[${BRAND_COLOR}] transition-colors">
-                            <SelectValue placeholder="Assign provider" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white shadow-lg rounded-md border border-gray-200 py-1">
-                            {providers.map(p => (
-                              <SelectItem key={p} value={p}>{p}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <span className={
-                          getCellValue(referral, 'provider')
-                            ? 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors'
-                            : 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-400 border border-gray-200 hover:bg-gray-200 transition-colors'
-                        }>
-                          {getCellValue(referral, 'provider') || 'Unassigned'}
-                        </span>
-                      )}
-                    </TableCell>
-                    {/* Created At */}
-                    <TableCell className="text-gray-500">
-                      {format(new Date(referral.createdAt), 'MMM d, yyyy')}
-                    </TableCell>
-                    {/* Actions */}
-                    <TableCell className="flex gap-2 items-center">
-                      <Button asChild size="sm" variant="outline" className="border-[${BRAND_COLOR}] text-[${BRAND_COLOR}] hover:bg-[${BRAND_COLOR}] hover:text-white transition-colors">
-                        <Link href={`/admin/referrals/${referral.id}`}>View</Link>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={async () => {
-                          if (window.confirm('Are you sure you want to delete this referral?')) {
-                            try {
-                              await deleteReferral(referral.id);
-                              setReferrals(refs => refs.filter(r => r.id !== referral.id));
-                              toast({ title: 'Referral deleted' });
-                            } catch (err) {
-                              toast({ title: 'Error', description: `Failed to delete referral: ${err}`, variant: 'destructive' });
-                            }
-                          }
+
+                    {/* Assigned Provider */}
+                    <TableCell className="px-6 py-4">
+                      <Select
+                        value={referral.assignedProvider || 'unassigned'}
+                        onValueChange={(value) => {
+                          const newProvider = value === 'unassigned' ? '' : value;
+                          updateReferral(referral.id, newProvider);
                         }}
+                        disabled={updating[referral.id] || providersLoading}
                       >
-                        Delete
+                        <SelectTrigger className="w-48">
+                          <SelectValue>
+                            {updating[referral.id] ? (
+                              <div className="flex items-center gap-2">
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                Updating...
+                              </div>
+                            ) : providersLoading ? (
+                              'Loading...'
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-gray-400" />
+                                {getProviderDisplayName(referral.assignedProvider || '')}
+                              </div>
+                            )}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-gray-400" />
+                              Unassigned
+                            </div>
+                          </SelectItem>
+                          {providers.map((provider) => (
+                            <SelectItem key={provider.id} value={provider.id}>
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-gray-400" />
+                                {provider.displayName || provider.fullName || provider.email}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+
+                    {/* Case Manager */}
+                    <TableCell className="px-6 py-4">
+                      <span className="text-gray-900">{referral.caseManagerName}</span>
+                    </TableCell>
+
+                    {/* Created */}
+                    <TableCell className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-gray-400" />
+                        <span className="text-gray-900">
+                          {format(parseISO(referral.createdAt), 'MMM d, yyyy')}
+                        </span>
+                      </div>
+                    </TableCell>
+
+                    {/* Last Update */}
+                    <TableCell className="px-6 py-4">
+                      <span className="text-gray-500">{referral.lastUpdate}</span>
+                    </TableCell>
+
+                    {/* Actions */}
+                    <TableCell className="px-6 py-4 text-right">
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link href={`/admin/referrals/${referral.id}`}>
+                          <Eye className="h-4 w-4" />
+                        </Link>
                       </Button>
                     </TableCell>
                   </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
+        {/* Table footer with record count */}
+        {filteredReferrals.length > 0 && (
+          <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-500">
+                {filteredReferrals.length} record{filteredReferrals.length !== 1 ? 's' : ''}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-      {/* Pagination Controls */}
-      <div className="flex justify-between items-center mt-4 px-2">
-        <div className="text-sm text-gray-500">
-          Showing {(currentPage - 1) * PAGE_SIZE + 1}
-          -{Math.min(currentPage * PAGE_SIZE, sortedReferrals.length)} of {sortedReferrals.length}
-        </div>
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            className="border-gray-300"
-          >
-            Previous
-          </Button>
-          <span className="text-gray-700 font-medium">
-            Page {currentPage} of {totalPages}
-          </span>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            className="border-gray-300"
-          >
-            Next
-          </Button>
-        </div>
-      </div>
-      <ReferralDetailsDrawer referral={selectedReferral} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </div>
   );
 } 

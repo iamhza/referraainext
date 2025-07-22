@@ -226,60 +226,6 @@ export async function POST(req: Request) {
   }
 }
 
-export async function PATCH(req: Request) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  
-  try {
-    const { id, ...update } = await req.json();
-    
-    if (!id) {
-      return NextResponse.json({ error: 'Missing referral ID' }, { status: 400 });
-    }
-    
-    const client = await clientPromise;
-    const db = client.db('referradb');
-    
-    // Get the existing referral to check permissions
-    const existingReferral = await db.collection(COLLECTION).findOne({ _id: new ObjectId(id) });
-    
-    if (!existingReferral) {
-      return NextResponse.json({ error: 'Referral not found' }, { status: 404 });
-    }
-    
-    // Check permissions based on role
-    const userRole = session.user.user_metadata?.role;
-    const userId = session.user.id;
-    
-    const canUpdate = 
-      userRole === 'admin' || 
-      (userRole === 'case_manager' && existingReferral.caseManagerId === userId) ||
-      (userRole === 'provider' && existingReferral.providerId === userId);
-    
-    if (!canUpdate) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
-    
-    // Update the referral
-    const result = await db.collection(COLLECTION).findOneAndUpdate(
-      { _id: new ObjectId(id) },
-      { $set: { ...update, updatedAt: new Date().toISOString() } },
-      { returnDocument: 'after' }
-    );
-    
-    if (!result || !result.value) {
-      return NextResponse.json({ error: 'Referral not found or failed to update' }, { status: 404 });
-      }
-    
-    return NextResponse.json({ success: true, referral: result.value });
-  } catch (error) {
-    console.error('Error updating referral:', error);
-    return NextResponse.json({ error: 'Failed to update referral' }, { status: 500 });
-  }
-}
-
 export async function DELETE(request: Request) {
   try {
     const cookieStore = cookies();
