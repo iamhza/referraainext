@@ -210,11 +210,11 @@ export default function ProviderDashboard() {
                         </div>
                       ) : referrals.length > 0 ? (
                         <div className="space-y-4">
-                          {referrals.map((referral) => (
-                            <div key={referral.id} className="border border-gray-200 rounded-lg p-4">
+                          {referrals.map((referral, index) => (
+                            <div key={referral.id || `referral-${index}`} className="border border-gray-200 rounded-lg p-4">
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <h4 className="font-medium">Referral #{referral.id.slice(-6)}</h4>
+                                  <h4 className="font-medium">Referral #{referral.id?.slice(-6) || 'N/A'}</h4>
                                   <p className="text-sm text-gray-600">Status: {referral.status}</p>
                                 </div>
                                 <Badge>{referral.status}</Badge>

@@ -16,11 +16,13 @@ import {
   LogOut,
   Menu,
   X,
-  Plus
+  Plus,
+  UserCheck,
+  Building
 } from 'lucide-react'
 
-// Navigation items for sidebar
-const navigationItems = [
+// Navigation items for case managers
+const caseManagerNavItems = [
   {
     name: "Dashboard",
     href: "/case-manager",
@@ -47,6 +49,46 @@ const navigationItems = [
   }
 ]
 
+// Navigation items for providers
+const providerNavItems = [
+  {
+    name: "Dashboard",
+    href: "/provider",
+    icon: LayoutDashboard,
+    section: null
+  },
+  {
+    name: "Clients",
+    href: "/provider/clients",
+    icon: Users,
+    section: "REFERRALS"
+  },
+  {
+    name: "Referrals",
+    href: "/provider/referrals",
+    icon: ClipboardList,
+    section: "REFERRALS"
+  },
+  {
+    name: "Profile",
+    href: "/provider/profile",
+    icon: UserCheck,
+    section: "MANAGEMENT"
+  },
+  {
+    name: "Capacity",
+    href: "/provider/capacity",
+    icon: Building,
+    section: "MANAGEMENT"
+  },
+  {
+    name: "Settings",
+    href: "/provider/settings",
+    icon: Settings,
+    section: "MANAGEMENT"
+  }
+]
+
 interface SidebarProps {
   className?: string
 }
@@ -56,10 +98,18 @@ export function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname()
   const { user, signOut } = useAuth()
 
-  const userName = user?.user_metadata?.name ? 
-    user.user_metadata.name.split(' ').map((name: string) => 
-      name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()
-    ).join(' ') : (user?.email?.split('@')[0] || 'Case Manager')
+  // Get user role from user metadata
+  const userRole = user?.user_metadata?.role || 'case_manager'
+  
+  // Select navigation items based on user role
+  const navigationItems = userRole === 'provider' ? providerNavItems : caseManagerNavItems
+
+  const userName = userRole === 'provider' 
+    ? (user?.user_metadata?.organization || user?.email?.split('@')[0] || 'Provider')
+    : (user?.user_metadata?.name ? 
+        user.user_metadata.name.split(' ').map((name: string) => 
+          name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()
+        ).join(' ') : (user?.email?.split('@')[0] || 'Case Manager'))
 
   const groupedNavItems = navigationItems.reduce((acc, item) => {
     const section = item.section || 'default'
@@ -87,7 +137,7 @@ export function Sidebar({ className }: SidebarProps) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center h-16 px-6 border-b border-gray-200">
-            <Link href="/case-manager" className="flex items-center space-x-3">
+            <Link href={userRole === 'provider' ? '/provider' : '/case-manager'} className="flex items-center space-x-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
                 <span className="text-xl font-bold text-blue-600">R</span>
               </div>
@@ -154,7 +204,7 @@ export function Sidebar({ className }: SidebarProps) {
                 <p className="text-sm font-medium text-gray-900 truncate">
                   {userName}
                 </p>
-                <p className="text-xs text-gray-500">Case Manager</p>
+                <p className="text-xs text-gray-500">{userRole === 'provider' ? 'Provider' : 'Case Manager'}</p>
               </div>
             </div>
             <Button
