@@ -1,15 +1,10 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { Providers } from "./providers";
 import { TourProvider } from "@/contexts/TourContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Toaster } from "@/components/ui/toaster";
 import InitDatabase from "./init-db";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-sans",
-});
 
 export const metadata: Metadata = {
   title: "Referra - AI-Powered Referrals",
@@ -23,14 +18,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className="font-suisse antialiased" style={{ fontFamily: 'var(--font-suisse)' }}>
         {/* Initialize MongoDB collections */}
         <InitDatabase />
-        <AuthProvider>
-          <TourProvider>
-            {children}
-          </TourProvider>
-        </AuthProvider>
+        <Providers>
+          <ThemeProvider>
+            <TourProvider>
+              {children}
+            </TourProvider>
+          </ThemeProvider>
+        </Providers>
         <Toaster />
       </body>
     </html>

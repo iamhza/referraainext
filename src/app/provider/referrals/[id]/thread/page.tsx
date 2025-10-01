@@ -4,36 +4,35 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { EnhancedButton } from "@/components/ui/enhanced-button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
 import { 
   ArrowLeft, 
+  Building,
   MessageSquare,
   Clock,
   AlertCircle,
   Send,
+  Plus,
   User,
+  Filter,
   ChevronDown,
   ChevronRight,
   Edit,
   Trash2,
   Save,
   X,
-  Users,
-  Building,
-  CheckCircle,
-  Calendar,
-  FileText,
-  Activity
+  Calendar
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatSafeDate } from '@/lib/date-utils';
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 // Types
@@ -53,13 +52,75 @@ interface Comment {
   replyCount?: number;
 }
 
-// Comment category colors and labels
+// Enhanced category config with colors and actions
 const categoryConfig = {
-  status: { label: 'Status Update', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  request: { label: 'Request', color: 'bg-orange-100 text-orange-800 border-orange-200' },
-  progress: { label: 'Progress Note', color: 'bg-green-100 text-green-800 border-green-200' },
-  issue: { label: 'Issue/Concern', color: 'bg-red-100 text-red-800 border-red-200' },
-  admin: { label: 'Administrative', color: 'bg-gray-100 text-gray-800 border-gray-200' }
+  status: { 
+    label: 'Status Update', 
+    color: 'bg-blue-50 text-blue-700 border-blue-200', 
+    dot: 'bg-blue-500',
+    icon: '📋'
+  },
+  request: { 
+    label: 'Request', 
+    color: 'bg-amber-50 text-amber-700 border-amber-200', 
+    dot: 'bg-amber-500',
+    icon: '❓'
+  },
+  progress: { 
+    label: 'Progress', 
+    color: 'bg-emerald-50 text-emerald-700 border-emerald-200', 
+    dot: 'bg-emerald-500',
+    icon: '📈'
+  },
+  issue: { 
+    label: 'Issue', 
+    color: 'bg-red-50 text-red-700 border-red-200', 
+    dot: 'bg-red-500',
+    icon: '⚠️'
+  },
+  admin: { 
+    label: 'Admin', 
+    color: 'bg-gray-50 text-gray-700 border-gray-200', 
+    dot: 'bg-gray-500',
+    icon: '⚙️'
+  },
+  // Legacy category mappings for backward compatibility
+  status_update: { 
+    label: 'Status Update', 
+    color: 'bg-blue-50 text-blue-700 border-blue-200', 
+    dot: 'bg-blue-500',
+    icon: '📋'
+  },
+  document_request: { 
+    label: 'Document Request', 
+    color: 'bg-amber-50 text-amber-700 border-amber-200', 
+    dot: 'bg-amber-500',
+    icon: '📄'
+  },
+  service_coordination: { 
+    label: 'Service Coordination', 
+    color: 'bg-emerald-50 text-emerald-700 border-emerald-200', 
+    dot: 'bg-emerald-500',
+    icon: '🤝'
+  },
+  follow_up_required: { 
+    label: 'Follow-up Required', 
+    color: 'bg-orange-50 text-orange-700 border-orange-200', 
+    dot: 'bg-orange-500',
+    icon: '🔔'
+  },
+  incident: { 
+    label: 'Incident', 
+    color: 'bg-red-50 text-red-700 border-red-200', 
+    dot: 'bg-red-500',
+    icon: '🚨'
+  },
+  general: { 
+    label: 'General', 
+    color: 'bg-gray-50 text-gray-700 border-gray-200', 
+    dot: 'bg-gray-500',
+    icon: '💬'
+  }
 };
 
 const priorityConfig = {
@@ -68,7 +129,15 @@ const priorityConfig = {
   urgent: { color: 'border-l-red-500' }
 };
 
-export default function ProviderCareThreadPage() {
+// Helper function to get category config with fallback
+const getCategoryConfig = (category: string | undefined) => {
+  if (!category || !categoryConfig[category as keyof typeof categoryConfig]) {
+    return categoryConfig.general; // Default fallback
+  }
+  return categoryConfig[category as keyof typeof categoryConfig];
+};
+
+export default function ProviderThreadPage() {
   const params = useParams<{ id: string }>();
   const referralId = params?.id;
   const router = useRouter();
@@ -81,6 +150,7 @@ export default function ProviderCareThreadPage() {
   const [commentCategory, setCommentCategory] = useState<string>('status');
   const [commentPriority, setCommentPriority] = useState<string>('normal');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState('');
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
@@ -88,9 +158,8 @@ export default function ProviderCareThreadPage() {
   const [editContent, setEditContent] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [editPriority, setEditPriority] = useState('');
-  const [currentUserId, setCurrentUserId] = useState<string>('');
 
-  // Fetch referral and comments data
+  // Fetch data
   useEffect(() => {
     async function fetchData() {
       if (!referralId) return;
@@ -103,7 +172,7 @@ export default function ProviderCareThreadPage() {
         const referralData = await referralRes.json();
         setReferral(referralData.referral);
 
-        // Fetch comments for this referral
+        // Fetch comments
         const commentsRes = await fetch(`/api/referrals/${referralId}/comments`);
         if (!commentsRes.ok) throw new Error('Failed to fetch comments');
         const commentsData = await commentsRes.json();
@@ -113,14 +182,14 @@ export default function ProviderCareThreadPage() {
         const userRes = await fetch('/api/users/me');
         if (userRes.ok) {
           const userData = await userRes.json();
-          setCurrentUserId(userData.user?._id || '');
+          setCurrentUserId(userData.user?.id || '');
         }
         
       } catch (error) {
         console.error('Error fetching data:', error);
         toast({
           title: "Error",
-          description: "Failed to load care thread data",
+          description: "Failed to load thread data",
           variant: "destructive"
         });
       } finally {
@@ -156,27 +225,26 @@ export default function ProviderCareThreadPage() {
 
       if (!response.ok) throw new Error('Failed to add comment');
 
-      // Refresh comments
+      // Refresh the comments
       const commentsRes = await fetch(`/api/referrals/${referralId}/comments`);
       if (commentsRes.ok) {
         const commentsData = await commentsRes.json();
         setComments(commentsData.comments || []);
       }
 
-      // Reset form
       setNewComment('');
       setCommentCategory('status');
       setCommentPriority('normal');
-
+      
       toast({
         title: "Success",
-        description: "Message added to care thread"
+        description: "Comment added successfully"
       });
     } catch (error) {
       console.error('Error adding comment:', error);
       toast({
         title: "Error",
-        description: "Failed to add message",
+        description: "Failed to add comment",
         variant: "destructive"
       });
     } finally {
@@ -184,8 +252,67 @@ export default function ProviderCareThreadPage() {
     }
   };
 
-  // Handle edit comment
-  const handleEditComment = async (commentId: string) => {
+  // Reply to comment
+  const handleSubmitReply = async (parentId: string) => {
+    if (!replyContent.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a reply",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/referrals/${referralId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: replyContent,
+          parentId: parentId,
+          category: 'general',
+          priority: 'normal'
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to add reply');
+
+      // Refresh comments
+      const commentsRes = await fetch(`/api/referrals/${referralId}/comments`);
+      if (commentsRes.ok) {
+        const commentsData = await commentsRes.json();
+        setComments(commentsData.comments || []);
+      }
+      
+      setReplyContent('');
+      setReplyingTo(null);
+      
+      toast({
+        title: "Success",
+        description: "Reply added successfully"
+      });
+    } catch (error) {
+      console.error('Error adding reply:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add reply",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Edit comment functions
+  const startEditingComment = (comment: Comment) => {
+    setEditingComment(comment._id);
+    setEditContent(comment.content);
+    setEditCategory(comment.category);
+    setEditPriority(comment.priority);
+  };
+
+  const handleUpdateComment = async (commentId: string) => {
     if (!editContent.trim()) {
       toast({
         title: "Error",
@@ -195,6 +322,7 @@ export default function ProviderCareThreadPage() {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const response = await fetch(`/api/referrals/${referralId}/comments`, {
         method: 'PUT',
@@ -207,7 +335,7 @@ export default function ProviderCareThreadPage() {
         })
       });
 
-      if (!response.ok) throw new Error('Failed to edit comment');
+      if (!response.ok) throw new Error('Failed to update comment');
 
       // Refresh comments
       const commentsRes = await fetch(`/api/referrals/${referralId}/comments`);
@@ -215,29 +343,30 @@ export default function ProviderCareThreadPage() {
         const commentsData = await commentsRes.json();
         setComments(commentsData.comments || []);
       }
-
-      // Reset editing state
+      
       setEditingComment(null);
       setEditContent('');
       setEditCategory('');
       setEditPriority('');
-
+      
       toast({
         title: "Success",
-        description: "Message updated successfully"
+        description: "Comment updated successfully"
       });
     } catch (error) {
-      console.error('Error editing comment:', error);
+      console.error('Error updating comment:', error);
       toast({
         title: "Error",
-        description: "Failed to update message",
+        description: "Failed to update comment",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Handle delete comment
   const handleDeleteComment = async (commentId: string) => {
+    setIsSubmitting(true);
     try {
       const response = await fetch(`/api/referrals/${referralId}/comments`, {
         method: 'DELETE',
@@ -253,84 +382,20 @@ export default function ProviderCareThreadPage() {
         const commentsData = await commentsRes.json();
         setComments(commentsData.comments || []);
       }
-
+      
       toast({
         title: "Success",
-        description: "Message deleted successfully"
+        description: "Comment deleted successfully"
       });
     } catch (error) {
       console.error('Error deleting comment:', error);
       toast({
         title: "Error",
-        description: "Failed to delete message",
+        description: "Failed to delete comment",
         variant: "destructive"
       });
-    }
-  };
-
-  // Start editing a comment
-  const startEditingComment = (comment: Comment) => {
-    setEditingComment(comment._id);
-    setEditContent(comment.content);
-    setEditCategory(comment.category);
-    setEditPriority(comment.priority);
-  };
-
-  // Cancel editing
-  const cancelEditing = () => {
-    setEditingComment(null);
-    setEditContent('');
-    setEditCategory('');
-    setEditPriority('');
-  };
-
-  // Handle submit reply
-  const handleSubmitReply = async (parentCommentId: string) => {
-    if (!replyContent.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a reply",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/referrals/${referralId}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: replyContent,
-          category: 'admin', // Default for replies
-          priority: 'normal',
-          parentId: parentCommentId
-        })
-      });
-
-      if (!response.ok) throw new Error('Failed to add reply');
-
-      // Refresh comments
-      const commentsRes = await fetch(`/api/referrals/${referralId}/comments`);
-      if (commentsRes.ok) {
-        const commentsData = await commentsRes.json();
-        setComments(commentsData.comments || []);
-      }
-
-      // Reset reply state
-      setReplyingTo(null);
-      setReplyContent('');
-
-      toast({
-        title: "Success",
-        description: "Reply added successfully"
-      });
-    } catch (error) {
-      console.error('Error adding reply:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add reply",
-        variant: "destructive"
-      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -350,22 +415,37 @@ export default function ProviderCareThreadPage() {
     const commentMap = new Map<string, Comment>();
     const rootComments: Comment[] = [];
 
-    // First pass: create map and initialize replies arrays
+    // First pass: create map and initialize replies array
     comments.forEach(comment => {
       commentMap.set(comment._id, { ...comment, replies: [] });
     });
 
     // Second pass: build thread structure
     comments.forEach(comment => {
+      const processedComment = commentMap.get(comment._id)!;
+      
       if (comment.parentId && commentMap.has(comment.parentId)) {
+        // This is a reply, add to parent's replies
         const parent = commentMap.get(comment.parentId)!;
-        parent.replies!.push(commentMap.get(comment._id)!);
+        parent.replies!.push(processedComment);
+        parent.replyCount = (parent.replyCount || 0) + 1;
       } else {
-        rootComments.push(commentMap.get(comment._id)!);
+        // This is a root comment
+        rootComments.push(processedComment);
       }
     });
 
-    return rootComments.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    // Sort root comments by date (newest first)
+    rootComments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
+    // Sort replies within each thread by date (oldest first for conversation flow)
+    rootComments.forEach(comment => {
+      if (comment.replies && comment.replies.length > 0) {
+        comment.replies.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      }
+    });
+
+    return rootComments;
   };
 
   // Render a single comment with threading
@@ -375,6 +455,7 @@ export default function ProviderCareThreadPage() {
     const isReplying = replyingTo === comment._id;
     const isEditing = editingComment === comment._id;
     const canEditDelete = currentUserId === comment.authorId;
+    const isProvider = comment.authorType === 'provider';
 
     return (
       <div key={comment._id} className={cn("", level > 0 && "ml-8 border-l-2 border-gray-100 pl-4")}>
@@ -388,7 +469,7 @@ export default function ProviderCareThreadPage() {
             <div className="flex items-center gap-2">
               <Avatar className="h-6 w-6">
                 <AvatarFallback className="text-xs">
-                  {comment.authorType === 'provider' ? 'P' : 'CM'}
+                  {isProvider ? 'P' : 'CM'}
                 </AvatarFallback>
               </Avatar>
               <span className="font-medium text-sm text-gray-900">
@@ -396,9 +477,9 @@ export default function ProviderCareThreadPage() {
               </span>
               <Badge 
                 variant="outline" 
-                className={cn("text-xs", categoryConfig[comment.category].color)}
+                className={cn("text-xs", getCategoryConfig(comment.category).color)}
               >
-                {categoryConfig[comment.category].label}
+                {getCategoryConfig(comment.category).label}
               </Badge>
               {comment.priority !== 'normal' && (
                 <Badge variant="outline" className="text-xs capitalize">
@@ -411,36 +492,41 @@ export default function ProviderCareThreadPage() {
                 </Badge>
               )}
             </div>
-            
-            <div className="flex items-center gap-1 text-xs text-gray-500">
-              <span>{formatSafeDate(comment.createdAt, 'MMM d, h:mm a')}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">
+                {formatSafeDate(comment.createdAt, 'MMM d, h:mm a')}
+              </span>
               {canEditDelete && !isEditing && (
-                <div className="flex gap-1 ml-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
+                <div className="flex items-center gap-1">
+                  <button
                     onClick={() => startEditingComment(comment)}
+                    className="text-gray-400 hover:text-blue-600 transition-colors"
+                    title="Edit comment"
                   >
                     <Edit className="h-3 w-3" />
-                  </Button>
+                  </button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-red-600 hover:text-red-700">
+                      <button
+                        className="text-gray-400 hover:text-red-600 transition-colors"
+                        title="Delete comment"
+                      >
                         <Trash2 className="h-3 w-3" />
-                      </Button>
+                      </button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Message</AlertDialogTitle>
+                        <AlertDialogTitle>Delete Comment</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Are you sure you want to delete this message? This action cannot be undone.
+                          Are you sure you want to delete this comment? This action cannot be undone.
+                          {hasReplies && " You cannot delete a comment that has replies."}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction 
+                        <AlertDialogAction
                           onClick={() => handleDeleteComment(comment._id)}
+                          disabled={hasReplies}
                           className="bg-red-600 hover:bg-red-700"
                         >
                           Delete
@@ -453,21 +539,23 @@ export default function ProviderCareThreadPage() {
             </div>
           </div>
 
+          {/* Comment Content - Editable or Display */}
           {isEditing ? (
-            <div className="space-y-3">
+            <div className="space-y-3 mb-3">
               <Textarea
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
-                className="min-h-[80px] resize-none"
-                placeholder="Edit your message..."
+                placeholder="Edit your comment..."
+                rows={3}
+                className="resize-none"
               />
               <div className="flex items-center gap-2">
                 <Select value={editCategory} onValueChange={setEditCategory}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-32">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(categoryConfig).map(([key, config]) => (
+                    {Object.entries(categoryConfig).slice(0, 5).map(([key, config]) => (
                       <SelectItem key={key} value={key}>
                         {config.label}
                       </SelectItem>
@@ -475,7 +563,7 @@ export default function ProviderCareThreadPage() {
                   </SelectContent>
                 </Select>
                 <Select value={editPriority} onValueChange={setEditPriority}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-24">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -484,76 +572,99 @@ export default function ProviderCareThreadPage() {
                     <SelectItem value="urgent">Urgent</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button size="sm" onClick={() => handleEditComment(comment._id)}>
-                  <Save className="h-4 w-4 mr-1" />
-                  Save
+                <div className="flex gap-2 ml-auto">
+                  <Button
+                    size="sm"
+                    onClick={() => handleUpdateComment(comment._id)}
+                    disabled={isSubmitting}
+                  >
+                    <Save className="h-3 w-3 mr-1" />
+                    Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setEditingComment(null);
+                      setEditContent('');
+                      setEditCategory('');
+                      setEditPriority('');
+                    }}
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-700 mb-3 whitespace-pre-wrap">
+              {comment.content}
+            </div>
+          )}
+
+          {/* Thread Actions */}
+          {!isEditing && (
+            <div className="flex items-center gap-3 text-xs">
+              <button
+                onClick={() => setReplyingTo(isReplying ? null : comment._id)}
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Reply
+              </button>
+              
+              {hasReplies && (
+                <button
+                  onClick={() => toggleThread(comment._id)}
+                  className="text-gray-600 hover:text-gray-800 font-medium flex items-center gap-1"
+                >
+                  {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  {comment.replyCount} {comment.replyCount === 1 ? 'reply' : 'replies'}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Reply Form */}
+          {isReplying && !isEditing && (
+            <div className="mt-3 space-y-2">
+              <Textarea
+                value={replyContent}
+                onChange={(e) => setReplyContent(e.target.value)}
+                placeholder="Write a reply..."
+                rows={2}
+                className="resize-none text-sm"
+              />
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => handleSubmitReply(comment._id)}
+                  disabled={isSubmitting || !replyContent.trim()}
+                >
+                  <Send className="h-3 w-3 mr-1" />
+                  Send Reply
                 </Button>
-                <Button size="sm" variant="outline" onClick={cancelEditing}>
-                  <X className="h-4 w-4 mr-1" />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setReplyingTo(null);
+                    setReplyContent('');
+                  }}
+                >
                   Cancel
                 </Button>
               </div>
             </div>
-          ) : (
-            <>
-              <p className="text-sm text-gray-800 mb-2 whitespace-pre-wrap">{comment.content}</p>
-              
-              <div className="flex items-center gap-3 text-xs">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  onClick={() => setReplyingTo(isReplying ? null : comment._id)}
-                >
-                  <MessageSquare className="h-3 w-3 mr-1" />
-                  Reply
-                </Button>
-                
-                {hasReplies && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={() => toggleThread(comment._id)}
-                  >
-                    {isExpanded ? (
-                      <ChevronDown className="h-3 w-3 mr-1" />
-                    ) : (
-                      <ChevronRight className="h-3 w-3 mr-1" />
-                    )}
-                    {comment.replies!.length} {comment.replies!.length === 1 ? 'reply' : 'replies'}
-                  </Button>
-                )}
-              </div>
-            </>
           )}
         </div>
-
-        {/* Reply Form */}
-        {isReplying && (
-          <div className="ml-8 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <Textarea
-              value={replyContent}
-              onChange={(e) => setReplyContent(e.target.value)}
-              className="mb-2 min-h-[60px] resize-none"
-              placeholder="Write a reply..."
-            />
-            <div className="flex gap-2">
-              <Button size="sm" onClick={() => handleSubmitReply(comment._id)}>
-                <Send className="h-4 w-4 mr-1" />
-                Reply
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setReplyingTo(null)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        )}
 
         {/* Nested Replies */}
         {hasReplies && isExpanded && (
           <div className="space-y-2">
-            {comment.replies!.map((reply) => renderComment(reply, level + 1))}
+            {comment.replies!.map((reply) => 
+              renderComment(reply, level + 1)
+            )}
           </div>
         )}
       </div>
@@ -562,212 +673,99 @@ export default function ProviderCareThreadPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex justify-center items-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-blue-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-blue-500"></div>
       </div>
     );
   }
 
   const clientName = referral ? `${referral.clientInfo?.firstName || ''} ${referral.clientInfo?.lastName || ''}`.trim() : '';
-  const clientInitials = referral ? `${referral.clientInfo?.firstName?.[0] || ''}${referral.clientInfo?.lastName?.[0] || ''}`.toUpperCase() : '??';
-  const serviceType = referral?.serviceDetails?.type || 'Service';
-  const caseManagerName = referral?.caseManager?.name || 'Case Manager';
-  const status = referral?.status || 'under_review';
+  const serviceType = referral?.serviceDetails?.type || '';
   const threadedComments = processCommentsIntoThreads(comments);
 
-  // Status configuration for progress and display
-  const getStatusConfig = (status: string) => {
-    const configs: Record<string, any> = {
-      under_review: {
-        icon: Clock,
-        color: 'amber',
-        label: 'Under Review',
-        description: 'Awaiting admin review',
-        progressValue: 25
-      },
-      provider_selection_required: {
-        icon: Building,
-        color: 'blue',
-        label: 'Select Provider',
-        description: 'Case manager needs to select a provider',
-        progressValue: 50
-      },
-      provider_accepted: {
-        icon: CheckCircle,
-        color: 'green',
-        label: 'Provider Accepted',
-        description: 'Provider has accepted the referral',
-        progressValue: 75
-      },
-      in_progress: {
-        icon: Activity,
-        color: 'green',
-        label: 'In Progress',
-        description: 'Service is currently being provided',
-        progressValue: 85
-      },
-      completed: {
-        icon: CheckCircle,
-        color: 'green',
-        label: 'Completed',
-        description: 'Service has been completed',
-        progressValue: 100
-      },
-      cancelled: {
-        icon: AlertCircle,
-        color: 'red',
-        label: 'Cancelled',
-        description: 'This referral has been cancelled',
-        progressValue: 100
-      }
-    };
-    return configs[status] || configs.under_review;
-  };
-
-  const statusConfig = getStatusConfig(status);
-  const StatusIcon = statusConfig.icon;
-
-  const getInitials = (name: string) => {
-    if (!name) return '??';
-    return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-indigo-50/20">
-      {/* Enhanced Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" asChild className="gap-1 hover:bg-gray-100">
+              <Button variant="ghost" asChild className="gap-1">
                 <Link href={`/provider/referrals/${referralId}`}>
                   <ArrowLeft className="h-4 w-4" />
                   Back to Referral
                 </Link>
               </Button>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">Referral Workspace</h1>
-                <p className="text-sm text-gray-600">{clientName} • {serviceType}</p>
+                <h1 className="text-xl font-semibold text-gray-900">Care Coordination</h1>
+                <p className="text-sm text-gray-600">{clientName} - {serviceType}</p>
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Badge 
-                className={cn(
-                  "px-3 py-1 text-sm font-medium flex items-center gap-1.5 rounded-full",
-                  statusConfig.color === 'amber' && "bg-amber-100 text-amber-800 border-amber-200",
-                  statusConfig.color === 'green' && "bg-green-100 text-green-800 border-green-200",
-                  statusConfig.color === 'blue' && "bg-blue-100 text-blue-800 border-blue-200",
-                  statusConfig.color === 'red' && "bg-red-100 text-red-800 border-red-200"
-                )}
-              >
-                <StatusIcon className="h-3.5 w-3.5" />
-                {statusConfig.label}
-              </Badge>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-6">
-          {/* Enhanced Referral Context Panel */}
-          <Card className="shadow-sm overflow-hidden">
-            <div className="border-b border-gray-100 bg-gray-50">
-              <div className="flex justify-between items-center px-6 py-4">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-12 w-12 rounded-lg border-2 border-white shadow-sm bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-medium">
-                    <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
-                      {clientInitials}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Communications Feed */}
+          <div className="lg:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10 bg-purple-100">
+                    <AvatarFallback className="text-purple-600 font-medium">
+                      <MessageSquare className="h-5 w-5" />
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">{clientName}</h2>
-                    <p className="text-sm text-gray-600">{serviceType} Referral</p>
+                    <div className="text-lg">Provider Thread</div>
+                    <CardDescription>
+                      {threadedComments.length} thread{threadedComments.length !== 1 ? 's' : ''}
+                    </CardDescription>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-500">Created</p>
-                  <p className="text-sm font-medium">
-                    {referral?.createdAt 
-                      ? formatSafeDate(referral.createdAt, 'MMM d, yyyy') 
-                      : 'Unknown'}
-                  </p>
-                </div>
-              </div>
+                </CardTitle>
+              </CardHeader>
               
-              <div className="px-6 pb-4">
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>Progress</span>
-                  <span>{statusConfig.progressValue}%</span>
-                </div>
-                <Progress value={statusConfig.progressValue} className="h-2" />
-                <p className="text-xs text-gray-600 mt-1">{statusConfig.description}</p>
-              </div>
-            </div>
-            
-            {/* Quick details section */}
-            <div className="px-6 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Case Manager</h3>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-7 w-7">
-                      <AvatarFallback className="bg-blue-100 text-blue-700 text-xs">
-                        {getInitials(caseManagerName)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium">{caseManagerName}</span>
+              <CardContent>
+                {threadedComments.length > 0 ? (
+                  <div className="space-y-3">
+                    {threadedComments.map((comment) => 
+                      renderComment(comment, 0)
+                    )}
                   </div>
-                </div>
-                
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Provider (You)</h3>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-7 w-7">
-                      <AvatarFallback className="bg-indigo-100 text-indigo-700 text-xs">
-                        <User className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium">You</span>
+                ) : (
+                  <div className="text-center py-4 text-gray-500 text-sm">
+                    No comments yet for this referral
                   </div>
-                </div>
-              </div>
-            </div>
-          </Card>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-          {/* New Message Form */}
-          <Card className="shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                Send Message
-              </CardTitle>
-              <CardDescription>
-                Communicate with the case manager about this referral
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                className="min-h-[100px] resize-none"
-                placeholder="Share an update, ask a question, or provide information..."
-              />
-              
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium">Category:</label>
+          {/* Sidebar - Add Comment Form */}
+          <div className="lg:col-span-1">
+            <Card className="sticky top-24">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="h-5 w-5 text-blue-500" />
+                  Add Comment
+                </CardTitle>
+                <CardDescription>
+                  Send an update to the case manager
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Category */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                    Category
+                  </label>
                   <Select value={commentCategory} onValueChange={setCommentCategory}>
-                    <SelectTrigger className="w-48">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(categoryConfig).map(([key, config]) => (
+                      {Object.entries(categoryConfig).slice(0, 5).map(([key, config]) => (
                         <SelectItem key={key} value={key}>
                           {config.label}
                         </SelectItem>
@@ -775,11 +773,14 @@ export default function ProviderCareThreadPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium">Priority:</label>
+
+                {/* Priority */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                    Priority
+                  </label>
                   <Select value={commentPriority} onValueChange={setCommentPriority}>
-                    <SelectTrigger className="w-32">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -789,53 +790,45 @@ export default function ProviderCareThreadPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
-                <Button 
+
+                {/* Comment Text */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                    Message
+                  </label>
+                  <Textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Enter your message..."
+                    rows={4}
+                    className="resize-none"
+                  />
+                </div>
+
+                {/* Submit Button */}
+                <EnhancedButton
+                  variant="gradient"
                   onClick={handleSubmitComment}
                   disabled={isSubmitting || !newComment.trim()}
-                  className="ml-auto"
+                  className="w-full"
                 >
-                  <Send className="h-4 w-4 mr-2" />
-                  {isSubmitting ? 'Sending...' : 'Send Message'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Care Thread Messages */}
-          <Card className="shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                Communication History
-                {threadedComments.length > 0 && (
-                  <Badge variant="outline" className="ml-2">
-                    {comments.length} message{comments.length !== 1 ? 's' : ''}
-                  </Badge>
-                )}
-              </CardTitle>
-              <CardDescription>
-                All messages and updates for this referral
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {threadedComments.length > 0 ? (
-                <div className="space-y-4">
-                  {threadedComments.map((comment) => renderComment(comment))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No messages yet</h3>
-                  <p className="text-gray-600 mb-4">
-                    Start the conversation by sending the first message in this care thread.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Send Comment
+                    </>
+                  )}
+                </EnhancedButton>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
   );
-} 
+}

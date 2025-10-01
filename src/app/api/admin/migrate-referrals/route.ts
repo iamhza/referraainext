@@ -1,7 +1,6 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
+import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
 import { ObjectId } from 'mongodb';
 
 export async function POST(req: Request) {
@@ -13,8 +12,8 @@ export async function POST(req: Request) {
     { cookies: { get(name: string) { return cookieStore.get(name)?.value; } } }
   );
   
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session || session.user.user_metadata?.role !== 'admin') {
+  const { data: { session } } = await supabase.auth.getAuthenticatedUser();
+  if (!user || user.role !== 'platform_admin') {
     return NextResponse.json({ error: 'Unauthorized. Admin access required.' }, { status: 401 });
   }
   

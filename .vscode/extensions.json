@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "bradlc.vscode-tailwindcss",
+    "stylelint.vscode-stylelint",
+    "ms-vscode.vscode-css-peek",
+    "pranaygp.vscode-css-peek",
+    "zignd.html-css-class-completion"
+  ]
+}

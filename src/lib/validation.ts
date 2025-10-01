@@ -6,11 +6,10 @@ export function sanitizeString(input: any): string {
     throw new Error('Input must be a string');
   }
   
-  // Remove potential XSS and injection attempts
+  // Remove potential XSS and injection attempts while preserving normal punctuation
   return input
     .trim()
     .replace(/[<>]/g, '') // Remove HTML tags
-    .replace(/['"]/g, '') // Remove quotes that could break queries
     .replace(/\$\w+/g, '') // Remove MongoDB operators
     .slice(0, 1000); // Limit length
 }
@@ -134,14 +133,21 @@ export function validateClientData(data: any): any {
 export function validateCommentData(data: any): any {
   validateRequiredFields(data, ['content']);
   
+  const validCategories = [
+    'status_update', 'document_request', 'service_coordination', 
+    'follow_up_required', 'incident', 'general', 'status', 
+    'request', 'progress', 'issue', 'admin'
+  ];
+  
   return {
     content: sanitizeString(data.content),
     category: data.category ? 
-      validateEnum(data.category, ['status', 'request', 'progress', 'issue', 'admin'], 'category') : 'admin',
+      validateEnum(data.category, validCategories, 'category') : 'general',
     priority: data.priority ? 
       validateEnum(data.priority, ['normal', 'important', 'urgent'], 'priority') : 'normal',
     metadata: data.metadata && typeof data.metadata === 'object' ? data.metadata : {},
     parentId: data.parentId ? validateObjectId(data.parentId).toString() : null,
+    isInternal: typeof data.isInternal === 'boolean' ? data.isInternal : false,
   };
 }
 
@@ -163,7 +169,7 @@ export function validateReferralData(data: any): any {
       type: sanitizeString(data.serviceDetails.type),
       description: data.serviceDetails.description ? sanitizeString(data.serviceDetails.description) : undefined,
       urgency: data.serviceDetails.urgency ? 
-        validateEnum(data.serviceDetails.urgency, ['low', 'medium', 'high', 'urgent'], 'urgency') : 'medium',
+        validateEnum(data.serviceDetails.urgency, ['low', 'medium', 'high'], 'urgency') : 'medium',
     },
     notes: data.notes ? sanitizeString(data.notes) : undefined,
   };

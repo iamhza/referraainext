@@ -1,0 +1,6 @@
+firstName,lastName,dateOfBirth,status,phone,email,city,state,currentProvider,caseManagerEmail
+Zakaria,Suleman,1111-01-01,ACTIVE_STABLE,12,zakaria.suleman@provider.com,St. Paul,MN,TestProvider Healthcare,mika.mika@casemanager.com
+Hamza,Hi,4445-01-05,ACTIVE_STABLE,555-0123,hamza.hi@provider.com,Minneapolis,MN,TestProvider Healthcare,mika.mika@casemanager.com
+Iqra,Hassan,2000-12-08,ACTIVE_STABLE,555-0456,iqra.hassan@provider.com,Minneapolis,MN,TestProvider Healthcare,mika.mika@casemanager.com
+Hamza,Suleman,2025-05-17,ACTIVE_STABLE,555-0789,hamza.suleman@provider.com,Minneapolis,MN,TestProvider Healthcare,mika.mika@casemanager.com
+johnny,cash,2015-12-28,ACTIVE_STABLE,555-0321,johnny.cash@provider.com,Nashville,TN,TestProvider Healthcare,mika.mika@casemanager.com

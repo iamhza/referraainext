@@ -18,14 +18,21 @@ const config: Config = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["var(--font-suisse)", "Suisse Intl", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+        suisse: ["var(--font-suisse)", "Suisse Intl", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
+        background: brandColors.background,
         foreground: "hsl(var(--foreground))",
         primary: brandColors.primary,
         secondary: brandColors.secondary,
+        accent: brandColors.accent,
+        seasalt: brandColors.seasalt,
+        sidebar: brandColors.sidebar,
         success: brandColors.success,
         warning: brandColors.warning,
         error: brandColors.error,
@@ -43,6 +50,7 @@ const config: Config = {
         "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
         "bounce-subtle": "bounce-subtle 2s ease-in-out infinite",
         "scale-up": "scale-up 0.3s ease-out forwards",
+        "shimmer": "shimmer 2s linear infinite",
       },
       keyframes: {
         "accordion-down": {
@@ -88,6 +96,10 @@ const config: Config = {
         "scale-up": {
           "0%": { transform: "scale(0.95)", opacity: "0" },
           "100%": { transform: "scale(1)", opacity: "1" },
+        },
+        "shimmer": {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
         },
       },
       boxShadow: {

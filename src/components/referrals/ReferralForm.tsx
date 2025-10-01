@@ -8,13 +8,13 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
-import { ArrowRight, ArrowLeft, CalendarIcon, Loader2, Sparkles, CheckCircle2, AlertCircle, Bot, ChevronRight, MessageSquare, Clock, Star } from 'lucide-react';
+import { ArrowRight, ArrowLeft, CalendarIcon, Loader2, Sparkles, CheckCircle2, AlertCircle, Bot, ChevronRight, MessageSquare, Clock, Star, FileText, User, Phone } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,6 +24,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import confetti from 'canvas-confetti';
 import { useRouter } from 'next/navigation';
+import { WAIVER_TYPE_OPTIONS, formatWaiverTypeShort } from '@/lib/formatting';
 
 type ServiceType = 'medical' | 'dental' | 'mental_health';
 type UrgencyLevel = 'low' | 'medium' | 'high';
@@ -137,6 +138,9 @@ interface FormData {
 
 interface ReferralFormProps {
   onComplete?: () => void;
+  prefilledClient?: any;
+  draftId?: string;
+  draftData?: any;
 }
 
 interface SubmissionState {
@@ -145,64 +149,64 @@ interface SubmissionState {
   message: string;
 }
 
-export function ReferralForm({ onComplete }: ReferralFormProps) {
-  const [step, setStep] = useState(1);
+export function ReferralForm({ onComplete, prefilledClient, draftId, draftData }: ReferralFormProps) {
+  const [step, setStep] = useState(draftData?.currentStep || 1);
   const [formData, setFormData] = useState<FormData>({
-    // Step 1: Client Details
-    firstName: '',
-    lastName: '',
-    dateOfBirth: '',
-    sex: '',
-    phone: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    insurance: '',
-    pmiNumber: '',
-    waiverType: '',
-    historyOfViolence: false,
+    // Step 1: Client Details - Pre-fill from draft, prefilledClient, or empty
+    firstName: draftData?.formData?.firstName || prefilledClient?.firstName || '',
+    lastName: draftData?.formData?.lastName || prefilledClient?.lastName || '',
+    dateOfBirth: draftData?.formData?.dateOfBirth || prefilledClient?.dateOfBirth || '',
+    sex: draftData?.formData?.sex || prefilledClient?.sex || '',
+    phone: draftData?.formData?.phone || prefilledClient?.phone || '',
+    address: draftData?.formData?.address || prefilledClient?.address?.street || prefilledClient?.address || '',
+    city: draftData?.formData?.city || prefilledClient?.address?.city || prefilledClient?.city || '',
+    state: draftData?.formData?.state || prefilledClient?.address?.state || prefilledClient?.state || '',
+    zipCode: draftData?.formData?.zipCode || prefilledClient?.address?.zipCode || prefilledClient?.zipCode || '',
+    insurance: draftData?.formData?.insurance || prefilledClient?.insurance?.type || prefilledClient?.insurance || '',
+    pmiNumber: draftData?.formData?.pmiNumber || prefilledClient?.pmiNumber || '',
+    waiverType: draftData?.formData?.waiverType || prefilledClient?.waiverType || '',
+    historyOfViolence: draftData?.formData?.historyOfViolence || prefilledClient?.historyOfViolence || false,
     
     // Step 2: Service Selection
-    selectedServices: [],
+    selectedServices: draftData?.formData?.selectedServices || [],
     
     // Step 3: Additional Considerations
-    referralReason: '',
-    genderPreference: '',
-    culturalConsiderations: '',
-    mobilityStatus: '',
-    primaryDiagnosis: '',
-    livingSituation: '',
+    referralReason: draftData?.formData?.referralReason || '',
+    genderPreference: draftData?.formData?.genderPreference || '',
+    culturalConsiderations: draftData?.formData?.culturalConsiderations || prefilledClient?.culturalConsiderations || '',
+    mobilityStatus: draftData?.formData?.mobilityStatus || prefilledClient?.mobilityStatus || '',
+    primaryDiagnosis: draftData?.formData?.primaryDiagnosis || prefilledClient?.primaryDiagnosis || '',
+    livingSituation: draftData?.formData?.livingSituation || prefilledClient?.livingSituation || '',
     
     // Step 4: Service Start Date
-    requestedStartDate: undefined,
+    requestedStartDate: draftData?.formData?.requestedStartDate ? new Date(draftData.formData.requestedStartDate) : undefined,
     
     // Legacy fields for compatibility
-    email: '',
-    preferredContactMethod: 'email',
-    service_type: '',
-    selectedService: '',
-    urgency: 'medium',
+    email: draftData?.formData?.email || prefilledClient?.email || '',
+    preferredContactMethod: draftData?.formData?.preferredContactMethod || prefilledClient?.preferredContactMethod || 'email',
+    service_type: draftData?.formData?.service_type || '',
+    selectedService: draftData?.formData?.selectedService || '',
+    urgency: draftData?.formData?.urgency || 'medium',
     preferredStartDate: undefined,
-    counties: [],
-    insuranceProvider: '',
-    insuranceNumber: '',
-    primaryLanguage: '',
-    needsTranslator: false,
-    preferredGender: 'any',
-    providerType: 'no-preference',
-    insuranceAccepted: [],
-    languages: ['English'],
-    availableTimes: ['Flexible'],
-    emergencyServices: 'no',
-    showAvailableOnly: false,
-    specialRequirements: '',
-    additionalNotes: '',
-    managerName: '',
-    organization: '',
-    notifyEmail: true,
-    notifySMS: false,
-    providerNotes: ''
+    counties: draftData?.formData?.counties || [],
+    insuranceProvider: draftData?.formData?.insuranceProvider || prefilledClient?.insurance?.provider || prefilledClient?.insuranceProvider || '',
+    insuranceNumber: draftData?.formData?.insuranceNumber || prefilledClient?.insurance?.number || prefilledClient?.insuranceId || '',
+    primaryLanguage: draftData?.formData?.primaryLanguage || prefilledClient?.primaryLanguage || '',
+    needsTranslator: draftData?.formData?.needsTranslator || prefilledClient?.needsTranslator || false,
+    preferredGender: draftData?.formData?.preferredGender || 'any',
+    providerType: draftData?.formData?.providerType || 'no-preference',
+    insuranceAccepted: draftData?.formData?.insuranceAccepted || [],
+    languages: draftData?.formData?.languages || ['English'],
+    availableTimes: draftData?.formData?.availableTimes || ['Flexible'],
+    emergencyServices: draftData?.formData?.emergencyServices || 'no',
+    showAvailableOnly: draftData?.formData?.showAvailableOnly || false,
+    specialRequirements: draftData?.formData?.specialRequirements || '',
+    additionalNotes: draftData?.formData?.additionalNotes || '',
+    managerName: draftData?.formData?.managerName || '',
+    organization: draftData?.formData?.organization || '',
+    notifyEmail: draftData?.formData?.notifyEmail ?? true,
+    notifySMS: draftData?.formData?.notifySMS || false,
+    providerNotes: draftData?.formData?.providerNotes || ''
   });
   
   const { toast } = useToast();
@@ -234,7 +238,146 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
   const [clientPrefillLoading, setClientPrefillLoading] = useState(false);
   const [clientPrefillError, setClientPrefillError] = useState<string | null>(null);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isDraftSaving, setIsDraftSaving] = useState(false);
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(() => {
+    const initialId = draftId || null;
+    console.log('📝 Initializing currentDraftId:', initialId);
+    return initialId;
+  });
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const router = useRouter();
+
+  // Auto-save functionality
+  const autoSaveDraft = async () => {
+    if (isDraftSaving || autoSaveStatus === 'saving') return;
+    
+    // Only auto-save if there's meaningful content
+    const hasContent = formData.firstName || formData.lastName || formData.selectedServices.length > 0 || formData.referralReason;
+    if (!hasContent) return;
+    
+    console.log('🔄 Auto-save starting - currentDraftId:', currentDraftId);
+    setAutoSaveStatus('saving');
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const clientIdFromUrl = urlParams.get('clientId');
+      
+      if (currentDraftId) {
+        // Update existing draft
+        const response = await fetch(`/api/referrals/drafts/${currentDraftId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            formData,
+            step,
+          }),
+        });
+        
+        if (!response.ok) throw new Error('Failed to auto-save draft');
+        
+        console.log('🔄 Auto-save updated existing draft:', currentDraftId);
+      } else {
+        // Create new draft
+        const response = await fetch('/api/referrals/drafts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            formData,
+            clientId: clientIdFromUrl,
+            step,
+          }),
+        });
+        
+        if (!response.ok) throw new Error('Failed to auto-save draft');
+        
+        const data = await response.json();
+        console.log('🔄 Auto-save created new draft:', data.draftId, '- Setting currentDraftId');
+        setCurrentDraftId(data.draftId);
+      }
+      
+      setAutoSaveStatus('saved');
+      setLastAutoSave(new Date());
+      
+      // Reset to idle after 3 seconds
+      setTimeout(() => setAutoSaveStatus('idle'), 3000);
+    } catch (error) {
+      console.error('Auto-save error:', error);
+      setAutoSaveStatus('error');
+      setTimeout(() => setAutoSaveStatus('idle'), 5000);
+    }
+  };
+
+  // Auto-save every 30 seconds when form data changes
+  useEffect(() => {
+    const autoSaveInterval = setInterval(() => {
+      autoSaveDraft();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(autoSaveInterval);
+  }, [formData, step, currentDraftId]);
+
+  // Function to save draft
+  const saveDraft = async () => {
+    if (isDraftSaving) return;
+    
+    console.log('💾 Manual save starting - currentDraftId:', currentDraftId);
+    setIsDraftSaving(true);
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const clientIdFromUrl = urlParams.get('clientId');
+      
+      if (currentDraftId) {
+        // Update existing draft
+        const response = await fetch(`/api/referrals/drafts/${currentDraftId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            formData,
+            step,
+          }),
+        });
+        
+        if (!response.ok) throw new Error('Failed to update draft');
+        
+        console.log('🔄 Manual save updated existing draft:', currentDraftId);
+        toast({
+          title: "Draft Updated",
+          description: "Your referral draft has been updated successfully.",
+        });
+      } else {
+        // Create new draft
+        const response = await fetch('/api/referrals/drafts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            formData,
+            clientId: clientIdFromUrl,
+            step,
+          }),
+        });
+        
+        if (!response.ok) throw new Error('Failed to save draft');
+        
+        const data = await response.json();
+        console.log('💾 Manual save created new draft:', data.draftId, '- Setting currentDraftId');
+        setCurrentDraftId(data.draftId);
+        
+        toast({
+          title: "Draft Saved",
+          description: "Your referral has been saved as a draft. You can continue later from the drafts page.",
+        });
+      }
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save draft. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDraftSaving(false);
+    }
+  };
 
   useEffect(() => {
     async function fetchServices() {
@@ -282,6 +425,7 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
             firstName: c.firstName || '',
             lastName: c.lastName || '',
             dateOfBirth: c.dateOfBirth || '',
+            sex: c.sex || '',
             email: c.email || '',
             phone: c.phone || '',
             address: c.address?.street || c.address || '',
@@ -289,9 +433,18 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
             state: c.address?.state || c.state || '',
             zipCode: c.address?.zipCode || c.zipCode || '',
             preferredContactMethod: c.preferredContactMethod || 'email',
-            insurance: c.insurance?.type || '',
-            insuranceProvider: c.insurance?.provider || '',
-            insuranceNumber: c.insurance?.number || '',
+            insurance: c.insurance?.type || c.insurance || '',
+            insuranceProvider: c.insurance?.provider || c.insuranceProvider || '',
+            insuranceNumber: c.insurance?.number || c.insuranceId || '',
+            pmiNumber: c.pmiNumber || '',
+            waiverType: c.waiverType || '',
+            historyOfViolence: c.historyOfViolence || false,
+            mobilityStatus: c.mobilityStatus || '',
+            primaryDiagnosis: c.primaryDiagnosis || '',
+            livingSituation: c.livingSituation || '',
+            primaryLanguage: c.primaryLanguage || '',
+            needsTranslator: c.needsTranslator || false,
+            culturalConsiderations: c.culturalConsiderations || '',
           }));
         })
         .catch((err) => {
@@ -492,8 +645,52 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
         <div className="absolute bottom-20 right-32 w-16 h-16 bg-secondary-500/8 rounded-full"></div>
       </div>
       
-      <div className="w-full max-w-7xl mx-auto px-6 py-8 relative z-10">
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-gray-100 p-8 md:p-12">
+      <div className="w-full max-w-6xl mx-auto px-6 py-8 relative z-10">
+        {/* Page Header */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <h1 className="text-4xl font-bold text-gray-900">{draftData ? "Resume Draft Referral" : "New Referral"}</h1>
+            {/* Auto-save Status Indicator */}
+            {currentDraftId && (
+              <div className="flex items-center gap-2 text-sm">
+                {autoSaveStatus === 'saving' && (
+                  <div className="flex items-center text-blue-600">
+                    <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                    <span>Saving...</span>
+                  </div>
+                )}
+                {autoSaveStatus === 'saved' && (
+                  <div className="flex items-center text-green-600">
+                    <CheckCircle2 className="w-4 h-4 mr-1" />
+                    <span>Saved</span>
+                  </div>
+                )}
+                {autoSaveStatus === 'error' && (
+                  <div className="flex items-center text-red-600">
+                    <AlertCircle className="w-4 h-4 mr-1" />
+                    <span>Save failed</span>
+                  </div>
+                )}
+                {autoSaveStatus === 'idle' && lastAutoSave && (
+                  <div className="flex items-center text-gray-500">
+                    <Clock className="w-4 h-4 mr-1" />
+                    <span>Last saved {formatDistanceToNow(lastAutoSave, { addSuffix: true })}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <p className="text-lg text-gray-600">
+            {draftData ? "Continue working on your saved referral" : "Fill in client info → service details → requirements"} 
+            <span className="text-sm text-gray-500">(3 min)</span>
+          </p>
+        </div>
+
+        {/* Main Content Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Form Column (3/4 width) */}
+          <div className="lg:col-span-3">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-8">
         {clientPrefillLoading && (
           <div className="mb-6 p-4 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 flex items-center gap-2">
             <Loader2 className="animate-spin h-5 w-5" />
@@ -561,9 +758,25 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                               }`}
                             >
                               {step > 1 ? (
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
+                                <motion.svg 
+                                  className="w-4 h-4" 
+                                  fill="none" 
+                                  stroke="currentColor" 
+                                  viewBox="0 0 24 24"
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                                >
+                                  <motion.path 
+                                    strokeLinecap="round" 
+                                    strokeLinejoin="round" 
+                                    strokeWidth={2} 
+                                    d="M5 13l4 4L19 7"
+                                    initial={{ pathLength: 0 }}
+                                    animate={{ pathLength: 1 }}
+                                    transition={{ delay: 0.3, duration: 0.5 }}
+                                  />
+                                </motion.svg>
                               ) : (
                                 "1"
                               )}
@@ -617,9 +830,25 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                               }`}
                             >
                               {step > 2 ? (
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
+                                <motion.svg 
+                                  className="w-4 h-4" 
+                                  fill="none" 
+                                  stroke="currentColor" 
+                                  viewBox="0 0 24 24"
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                                >
+                                  <motion.path 
+                                    strokeLinecap="round" 
+                                    strokeLinejoin="round" 
+                                    strokeWidth={2} 
+                                    d="M5 13l4 4L19 7"
+                                    initial={{ pathLength: 0 }}
+                                    animate={{ pathLength: 1 }}
+                                    transition={{ delay: 0.3, duration: 0.5 }}
+                                  />
+                                </motion.svg>
                               ) : (
                                 "2"
                               )}
@@ -795,16 +1024,25 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                       exit={{ opacity: 0, y: -20 }}
                       className="space-y-8"
                     >
-                      <motion.div 
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="text-center mb-8"
-                      >
-                        <h2 className="text-3xl font-bold text-gray-900 mb-2">Let's start with your client's information</h2>
-                        <p className="text-lg text-gray-600">This helps us understand their basic details before matching them with a provider.</p>
-                      </motion.div>
+                                            {/* Pre-filled Client Banner */}
+                      {prefilledClient && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mb-6"
+                        >
+                          <div className="inline-flex items-center px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
+                            <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="text-green-800 font-medium">
+                              Client information pre-filled for {prefilledClient.firstName} {prefilledClient.lastName}
+                            </span>
+                          </div>
+                        </motion.div>
+                      )}
                         
-                      <div className="max-w-4xl mx-auto space-y-6">
+                      <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2">
                             <Label htmlFor="firstName" className="text-base font-medium text-gray-900">
@@ -827,6 +1065,10 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                                 required
                               />
                             </div>
+                            <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                              <FileText className="w-3 h-3" />
+                              Client's legal first name
+                            </p>
                           </div>
 
                           <div className="space-y-2">
@@ -850,6 +1092,10 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                                 required
                               />
                             </div>
+                            <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                              <FileText className="w-3 h-3" />
+                              Client's legal last name
+                            </p>
                           </div>
                           </div>
 
@@ -876,6 +1122,7 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                                 required
                               />
                             </div>
+                            <p className="text-xs text-gray-500 mt-1">📅 Required for age verification</p>
                           </div>
 
                           <div className="space-y-2">
@@ -906,6 +1153,10 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                               <SelectItem value="other" className="h-14 text-lg px-4 py-3 font-medium text-gray-900 hover:bg-gradient-to-r hover:from-primary/5 hover:to-secondary/5 focus:bg-gradient-to-r focus:from-primary/10 focus:to-secondary/10 cursor-pointer transition-all duration-200 rounded-xl mx-2 my-1">Other</SelectItem>
                             </SelectContent>
                           </Select>
+                          <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                            <User className="w-3 h-3" />
+                            Optional, used for provider matching preferences
+                          </p>
                           </div>
 
                           <div className="space-y-2">
@@ -930,12 +1181,17 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                                 required
                               />
                             </div>
+                            <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                              <Phone className="w-3 h-3" />
+                              Primary contact number for scheduling
+                            </p>
                           </div>
 
                         <div className="space-y-4">
                           <Label className="text-base font-medium text-gray-900">
                             Mailing Address
                           </Label>
+                          <p className="text-xs text-gray-500">🏠 Where we can send important documents</p>
                           
                           <div className="space-y-3">
                             <div className="relative group">
@@ -1188,19 +1444,22 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                                   </svg>
                                 </div>
                                 <div className="flex-1 text-left">
-                                  <SelectValue placeholder="Select waiver type" />
+                                  <div className="text-lg font-medium text-gray-900">
+                                    {formData.waiverType ? formatWaiverTypeShort(formData.waiverType) : "Select waiver type"}
+                                  </div>
                                 </div>
                               </div>
                             </SelectTrigger>
                             <SelectContent className="z-50 max-h-96 overflow-y-auto bg-white/95 backdrop-blur-xl border-2 border-gray-200/50 rounded-2xl shadow-2xl ring-1 ring-black/5">
-                              <SelectItem value="non-waiver" className="h-12 text-lg hover:bg-gray-50 focus:bg-gray-50 cursor-pointer">Non Waiver</SelectItem>
-                              <SelectItem value="pending-waiver" className="h-12 text-lg hover:bg-gray-50 focus:bg-gray-50 cursor-pointer">Pending Waiver</SelectItem>
-                              <SelectItem value="alternative-care" className="h-12 text-lg hover:bg-gray-50 focus:bg-gray-50 cursor-pointer">Alternative Care</SelectItem>
-                              <SelectItem value="bi" className="h-12 text-lg hover:bg-gray-50 focus:bg-gray-50 cursor-pointer">Brain Injury (BI) Waiver</SelectItem>
-                              <SelectItem value="cac" className="h-12 text-lg hover:bg-gray-50 focus:bg-gray-50 cursor-pointer">Community Alternative Care (CAC) Waiver</SelectItem>
-                              <SelectItem value="cadi" className="h-12 text-lg hover:bg-gray-50 focus:bg-gray-50 cursor-pointer">Community Access for Disability Inclusion (CADI) Waiver</SelectItem>
-                              <SelectItem value="dd" className="h-12 text-lg hover:bg-gray-50 focus:bg-gray-50 cursor-pointer">Developmental Disabilities (DD) Waiver</SelectItem>
-                              <SelectItem value="ew" className="h-12 text-lg hover:bg-gray-50 focus:bg-gray-50 cursor-pointer">Elderly Waiver (EW)</SelectItem>
+                              {WAIVER_TYPE_OPTIONS.map(option => (
+                                <SelectItem 
+                                  key={option.value} 
+                                  value={option.value} 
+                                  className="h-12 text-lg hover:bg-gray-50 focus:bg-gray-50 cursor-pointer"
+                                >
+                                  {option.label}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -1451,6 +1710,41 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                           </div>
                         </div>
                             )}
+
+                            {/* Urgency Level */}
+                            <div className="space-y-2">
+                              <Label className="text-base font-medium text-gray-900">
+                                Urgency Level
+                              </Label>
+                              <RadioGroup 
+                                value={formData.urgency}
+                                onValueChange={(value: typeof formData.urgency) => 
+                                  setFormData({...formData, urgency: value})}
+                                className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2"
+                              >
+                                <div className="flex items-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                                  <RadioGroupItem value="low" id="urgency-low" />
+                                  <Label htmlFor="urgency-low" className="cursor-pointer">
+                                    <div className="font-medium">Low Priority</div>
+                                    <div className="text-sm text-gray-500">Routine care, no immediate timeline</div>
+                                  </Label>
+                                </div>
+                                <div className="flex items-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                                  <RadioGroupItem value="medium" id="urgency-medium" />
+                                  <Label htmlFor="urgency-medium" className="cursor-pointer">
+                                    <div className="font-medium">Medium Priority</div>
+                                    <div className="text-sm text-gray-500">Standard timeline, within weeks</div>
+                                  </Label>
+                                </div>
+                                <div className="flex items-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                                  <RadioGroupItem value="high" id="urgency-high" />
+                                  <Label htmlFor="urgency-high" className="cursor-pointer">
+                                    <div className="font-medium">High Priority</div>
+                                    <div className="text-sm text-gray-500">Urgent care needed, immediate attention</div>
+                                  </Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1938,7 +2232,7 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
 
                 {/* Navigation */}
                 <motion.div 
-                  className="flex justify-between pt-6"
+                  className="flex justify-between items-center pt-6"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
@@ -1956,11 +2250,33 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                   ) : (
                     <div></div>
                   )}
-                  
-                  <Button 
-                    type="submit"
-                    className="group h-12 px-8 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-medium transition-all duration-200 shadow-sm hover:shadow-md"
-                  >
+
+                  {/* Right side buttons */}
+                  <div className="flex items-center gap-3">
+                    {/* Save & Continue Later Button */}
+                    <Button 
+                      type="button"
+                      variant="ghost"
+                      onClick={saveDraft}
+                      disabled={isDraftSaving}
+                      className="h-12 px-6 text-gray-600 hover:text-gray-800 font-medium disabled:opacity-50"
+                    >
+                      {isDraftSaving ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          💾 {currentDraftId ? 'Update Draft' : 'Save Draft'}
+                        </>
+                      )}
+                    </Button>
+                    
+                    <Button 
+                      type="submit"
+                      className="group h-12 px-8 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                    >
                     {step === totalSteps ? (
                       <>
                         Submit Referral
@@ -1973,6 +2289,7 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
                       </>
                     )}
                   </Button>
+                  </div>
                 </motion.div>
               </form>
             </div>
@@ -2096,6 +2413,85 @@ export function ReferralForm({ onComplete }: ReferralFormProps) {
             </motion.div>
           )}
         </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Sticky Summary Column (1/4 width) */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-8">
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Referral Snapshot</h3>
+                
+                {/* Client Info */}
+                <div className="space-y-3 mb-6">
+                  <div className="text-sm">
+                    <span className="text-gray-500">Client:</span>
+                    <div className="font-medium text-gray-900">
+                      {formData.firstName || formData.lastName 
+                        ? `${formData.firstName} ${formData.lastName}`.trim()
+                        : 'Not specified'}
+                    </div>
+                  </div>
+                  
+                  {formData.dateOfBirth && (
+                    <div className="text-sm">
+                      <span className="text-gray-500">DOB:</span>
+                      <div className="font-medium text-gray-900">{formData.dateOfBirth}</div>
+                    </div>
+                  )}
+                  
+                  {formData.phone && (
+                    <div className="text-sm">
+                      <span className="text-gray-500">Phone:</span>
+                      <div className="font-medium text-gray-900">{formData.phone}</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Services */}
+                <div className="space-y-3 mb-6">
+                  <div className="text-sm">
+                    <span className="text-gray-500">Services:</span>
+                    <div className="font-medium text-gray-900">
+                      {formData.selectedServices.length > 0 
+                        ? formData.selectedServices.join(', ')
+                        : 'None selected'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Urgency */}
+                {formData.urgency && (
+                  <div className="space-y-3 mb-6">
+                    <div className="text-sm">
+                      <span className="text-gray-500">Priority:</span>
+                      <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        formData.urgency === 'high' ? 'bg-red-100 text-red-700' :
+                        formData.urgency === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-green-100 text-green-700'
+                      }`}>
+                        {formData.urgency.charAt(0).toUpperCase() + formData.urgency.slice(1)}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Progress */}
+                <div className="border-t border-gray-200 pt-4">
+                  <div className="text-sm text-gray-500 mb-2">Progress</div>
+                  <div className="flex items-center space-x-2">
+                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${(step / 3) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-500">{step}/3</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </motion.div>

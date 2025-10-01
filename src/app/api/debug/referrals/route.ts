@@ -1,8 +1,7 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
 
+import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
 export async function GET() {
   try {
     const cookieStore = cookies();
@@ -17,7 +16,7 @@ export async function GET() {
         },
       }
     );
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getAuthenticatedUser();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -46,8 +45,8 @@ export async function GET() {
       success: true,
       totalReferrals: referrals.length,
       debugInfo,
-      currentUserId: session.user.id,
-      userRole: session.user.user_metadata?.role
+      currentUserId: user.id,
+      userRole: user.role
     });
   } catch (error) {
     console.error('Debug error:', error);

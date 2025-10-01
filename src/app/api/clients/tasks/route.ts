@@ -1,7 +1,6 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
+import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
 import clientPromise from '@/lib/mongodb';
 
 // GET: Fetch all tasks for a client
@@ -19,7 +18,7 @@ export async function GET(request: Request) {
         },
       }
     );
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getAuthenticatedUser();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -55,7 +54,7 @@ export async function POST(request: Request) {
         },
       }
     );
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getAuthenticatedUser();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -100,7 +99,7 @@ export async function PATCH(request: Request) {
         },
       }
     );
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getAuthenticatedUser();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -115,7 +114,7 @@ export async function PATCH(request: Request) {
       {
         $set: {
           'tasks.$.completed': completed,
-          'tasks.$.completedBy': completed ? session.user.id : null,
+          'tasks.$.completedBy': completed ? user.id : null,
           'tasks.$.completedAt': completed ? new Date().toISOString() : null,
         },
       } as any

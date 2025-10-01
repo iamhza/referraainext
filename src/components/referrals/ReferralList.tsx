@@ -55,13 +55,25 @@ export function ReferralList({ referrals, onReferralDeleted }: ReferralListProps
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'under_review':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'matched':
-        return 'bg-green-100 text-green-800';
-      case 'in_progress':
+      case 'draft':
+        return 'bg-gray-100 text-gray-800';
+      case 'submitted':
         return 'bg-blue-100 text-blue-800';
+      case 'matched':
+        return 'bg-purple-100 text-purple-800';
+      case 'sent_to_provider':
+        return 'bg-blue-100 text-blue-800';
+      case 'accepted':
+        return 'bg-green-100 text-green-800';
+      case 'active':
+        return 'bg-green-100 text-green-800';
       case 'completed':
+        return 'bg-gray-100 text-gray-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      case 'expired':
         return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';

@@ -2,31 +2,62 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { useAuth } from '@/contexts/AuthContext'
+import { useTheme } from '@/contexts/ThemeContext'
 import {
   LayoutDashboard,
+  LayoutGrid,
   ClipboardList,
   FileText,
   Users,
   Settings,
   LogOut,
-  Menu,
   X,
-  Plus,
+  Menu,
   UserCheck,
-  Building
+  Building,
+  Shield,
+  Activity,
+  BarChart3,
+  Database,
+  Send,
+  Wrench,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  TrendingUp,
+  MessageSquare,
+  Globe,
+  Bell,
+  Home,
+  CheckSquare,
+  Inbox,
+  BarChart,
+  Folder,
+  UserPlus
 } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 
-// Navigation items for case managers
+// Navigation items for case managers (relevant to your app)
 const caseManagerNavItems = [
   {
-    name: "Dashboard",
+    name: "Home",
     href: "/case-manager",
-    icon: LayoutDashboard,
+    icon: Home,
+    section: null
+  },
+  {
+    name: "My Tasks",
+    href: "/case-manager/tasks",
+    icon: CheckSquare,
+    section: null
+  },
+  {
+    name: "Workspace",
+    href: "/case-manager/workspace",
+    icon: Send,
     section: null
   },
   {
@@ -36,10 +67,16 @@ const caseManagerNavItems = [
     section: "REFERRALS"
   },
   {
-    name: "New referral",
-    href: "/case-manager/new-referral",
-    icon: Plus,
+    name: "Referrals",
+    href: "/case-manager/referrals",
+    icon: FileText,
     section: "REFERRALS"
+  },
+  {
+    name: "Analytics",
+    href: "/case-manager/analytics",
+    icon: BarChart,
+    section: "INSIGHTS"
   },
   {
     name: "Settings",
@@ -54,32 +91,32 @@ const providerNavItems = [
   {
     name: "Dashboard",
     href: "/provider",
-    icon: LayoutDashboard,
+    icon: LayoutGrid,
     section: null
   },
   {
-    name: "Clients",
+    name: "My Clients",
     href: "/provider/clients",
     icon: Users,
-    section: "REFERRALS"
+    section: null
   },
   {
     name: "Referrals",
     href: "/provider/referrals",
-    icon: ClipboardList,
-    section: "REFERRALS"
+    icon: FileText,
+    section: null
   },
   {
-    name: "Profile",
-    href: "/provider/profile",
-    icon: UserCheck,
-    section: "MANAGEMENT"
+    name: "Network",
+    href: "/provider/network",
+    icon: Globe,
+    section: null
   },
   {
-    name: "Capacity",
-    href: "/provider/capacity",
-    icon: Building,
-    section: "MANAGEMENT"
+    name: "Notifications",
+    href: "/provider/notifications",
+    icon: Bell,
+    section: null
   },
   {
     name: "Settings",
@@ -89,38 +126,194 @@ const providerNavItems = [
   }
 ]
 
+// Navigation items for supervisors
+const supervisorNavItems = [
+  {
+    name: "Dashboard",
+    href: "/supervisor",
+    icon: Home,
+    section: null
+  },
+  {
+    name: "Team Members",
+    href: "/supervisor/team",
+    icon: Users,
+    section: "TEAM"
+  },
+  {
+    name: "Client Management",
+    href: "/supervisor/clients",
+    icon: UserCheck,
+    section: "TEAM"
+  },
+  {
+    name: "Invite Case Managers",
+    href: "/supervisor/invite",
+    icon: UserPlus,
+    section: "TEAM"
+  },
+  {
+    name: "Client Assignments",
+    href: "/supervisor/assignments",
+    icon: ClipboardList,
+    section: "TEAM"
+  },
+  {
+    name: "Team Analytics",
+    href: "/supervisor/analytics",
+    icon: BarChart3,
+    section: "INSIGHTS"
+  },
+  {
+    name: "Settings",
+    href: "/supervisor/settings",
+    icon: Settings,
+    section: "MANAGEMENT"
+  }
+]
+
+// Navigation items for org admins
+const orgAdminNavItems = [
+  {
+    name: "Dashboard",
+    href: "/org-admin",
+    icon: Home,
+    section: null
+  },
+  {
+    name: "Clients",
+    href: "/org-admin/clients",
+    icon: UserCheck,
+    section: "ORGANIZATION"
+  },
+  {
+    name: "Users",
+    href: "/org-admin/users",
+    icon: Users,
+    section: "ORGANIZATION"
+  },
+  {
+    name: "Teams",
+    href: "/org-admin/teams",
+    icon: Building,
+    section: "ORGANIZATION"
+  },
+  {
+    name: "Invitations",
+    href: "/org-admin/invitations",
+    icon: UserPlus,
+    section: "ORGANIZATION"
+  },
+  {
+    name: "Analytics",
+    href: "/org-admin/analytics",
+    icon: BarChart3,
+    section: "INSIGHTS"
+  },
+  {
+    name: "Settings",
+    href: "/org-admin/settings",
+    icon: Settings,
+    section: "MANAGEMENT"
+  },
+  {
+    name: "Audit Logs",
+    href: "/org-admin/audit",
+    icon: Shield,
+    section: "MANAGEMENT"
+  }
+]
+
+// Navigation items for admins
+const adminNavItems = [
+  {
+    name: "Dashboard",
+    href: "/admin",
+    icon: LayoutGrid,
+    section: null
+  },
+  {
+    name: "Users",
+    href: "/admin/users",
+    icon: Users,
+    section: null
+  },
+  {
+    name: "Referrals",
+    href: "/admin/referrals",
+    icon: FileText,
+    section: null
+  },
+  {
+    name: "Providers",
+    href: "/admin/providers",
+    icon: Building,
+    section: null
+  },
+  {
+    name: "Analytics",
+    href: "/admin/analytics",
+    icon: BarChart3,
+    section: null
+  },
+  {
+    name: "Activity",
+    href: "/admin/activity",
+    icon: Activity,
+    section: null
+  },
+  {
+    name: "Settings",
+    href: "/admin/settings",
+    icon: Settings,
+    section: "MANAGEMENT"
+  }
+]
+
 interface SidebarProps {
-  className?: string
+  className?: string;
+  isMobileOpen?: boolean;
+  setIsMobileOpen?: (open: boolean) => void;
 }
 
-export function Sidebar({ className }: SidebarProps) {
-  const [isMobileOpen, setIsMobileOpen] = useState(false)
+export function Sidebar({ className, isMobileOpen: externalIsMobileOpen, setIsMobileOpen: externalSetIsMobileOpen }: SidebarProps) {
+  const [internalIsMobileOpen, setInternalIsMobileOpen] = useState(false);
+  
+  // Use external state if provided, otherwise use internal state
+  const isMobileOpen = externalIsMobileOpen !== undefined ? externalIsMobileOpen : internalIsMobileOpen;
+  const setIsMobileOpen = externalSetIsMobileOpen || setInternalIsMobileOpen;
   const pathname = usePathname()
+  const router = useRouter()
+  const { theme } = useTheme()
   const { user, signOut } = useAuth()
 
   // Get user role from user metadata
   const userRole = user?.user_metadata?.role || 'case_manager'
   
   // Select navigation items based on user role
-  const navigationItems = userRole === 'provider' ? providerNavItems : caseManagerNavItems
+  const navItems = userRole === 'admin' || userRole === 'platform_admin' 
+    ? adminNavItems 
+    : userRole === 'supervisor'
+    ? supervisorNavItems
+    : userRole === 'org_admin'
+    ? orgAdminNavItems
+    : userRole === 'provider' 
+    ? providerNavItems 
+    : caseManagerNavItems
 
-  const userName = userRole === 'provider' 
-    ? (user?.user_metadata?.organization || user?.email?.split('@')[0] || 'Provider')
-    : (user?.user_metadata?.name ? 
-        user.user_metadata.name.split(' ').map((name: string) => 
-          name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()
-        ).join(' ') : (user?.email?.split('@')[0] || 'Case Manager'))
-
-  const groupedNavItems = navigationItems.reduce((acc, item) => {
+  // Group navigation items by section
+  const groupedNavItems = navItems.reduce((acc, item) => {
     const section = item.section || 'default'
-    if (!acc[section]) acc[section] = []
+    if (!acc[section]) {
+      acc[section] = []
+    }
     acc[section].push(item)
     return acc
-  }, {} as Record<string, typeof navigationItems>)
+  }, {} as Record<string, typeof navItems>)
 
   return (
     <>
-      {/* Mobile overlay */}
+      {/* Mobile backdrop */}
       {isMobileOpen && (
         <div 
           className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden" 
@@ -130,56 +323,58 @@ export function Sidebar({ className }: SidebarProps) {
 
       {/* Sidebar */}
       <div className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0",
+        "fixed inset-y-0 left-0 z-50 w-56 backdrop-blur-sm border-r transform transition-all duration-300 ease-in-out lg:translate-x-0",
+        theme === 'dark' 
+          ? "bg-[#2E2E30] border-gray-600/30" 
+          : "bg-[#F7F7F7] border-gray-200/30",
         isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         className
       )}>
         <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center h-16 px-6 border-b border-gray-200">
-            <Link href={userRole === 'provider' ? '/provider' : '/case-manager'} className="flex items-center space-x-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
-                <span className="text-xl font-bold text-blue-600">R</span>
-              </div>
-              <img 
-                src="/refrr.png" 
-                alt="referra" 
-                className="h-6 w-auto"
-              />
-            </Link>
-          </div>
+          {/* Top section - just padding for alignment */}
+          <div className="h-12"></div>
 
           {/* Navigation */}
-          <nav id="sidebar-nav" className="flex-1 px-4 py-6 space-y-8 overflow-y-auto">
+          <nav id="sidebar-nav" className="flex-1 px-3 py-6 space-y-6 overflow-y-auto">
             {Object.entries(groupedNavItems).map(([section, items]) => (
               <div key={section}>
                 {section !== 'default' && (
-                  <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                  <h3 className={cn(
+                    "px-3 text-xs font-semibold uppercase tracking-wider mb-3",
+                    theme === 'dark' 
+                      ? "text-gray-400" 
+                      : "text-gray-500"
+                  )}>
                     {section}
                   </h3>
                 )}
                 <div className="space-y-1">
                   {items.map((item) => {
-                    const isActive = pathname === item.href || 
-                      (item.href !== '/case-manager' && pathname?.startsWith(item.href))
                     const Icon = item.icon
-
+                    const isActive = pathname === item.href
+                    
                     return (
                       <Link
                         key={item.name}
                         href={item.href}
                         className={cn(
-                          "group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors",
-                          isActive
-                            ? "bg-blue-50 text-blue-700"
-                            : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                          "group flex items-center px-3 py-2 text-sm transition-colors",
+                          theme === 'dark'
+                            ? isActive
+                              ? "bg-[#3C3C3C] text-white rounded-md font-medium"
+                              : "text-gray-300 hover:bg-[#3C3C3C] hover:text-white rounded-md font-medium"
+                            : isActive
+                              ? "bg-gray-100 text-gray-900 rounded-md font-medium"
+                              : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md font-medium"
                         )}
                         onClick={() => setIsMobileOpen(false)}
                       >
                         <Icon
                           className={cn(
-                            "mr-3 h-5 w-5 flex-shrink-0",
-                            isActive ? "text-blue-700" : "text-gray-500 group-hover:text-gray-700"
+                            "mr-2.5 h-4 w-4 flex-shrink-0",
+                            theme === 'dark'
+                              ? isActive ? "text-white" : "text-gray-400 group-hover:text-white"
+                              : isActive ? "text-gray-700" : "text-gray-500 group-hover:text-gray-700"
                           )}
                         />
                         {item.name}
@@ -190,32 +385,6 @@ export function Sidebar({ className }: SidebarProps) {
               </div>
             ))}
           </nav>
-
-          {/* User section */}
-          <div className="border-t border-gray-200 p-4">
-            <div className="flex items-center space-x-3 mb-3">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-blue-100 text-blue-700 text-sm font-medium">
-                  {user?.user_metadata?.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 
-                   user?.email?.split('@')[0].slice(0, 2).toUpperCase() || 'CM'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {userName}
-                </p>
-                <p className="text-xs text-gray-500">{userRole === 'provider' ? 'Provider' : 'Case Manager'}</p>
-              </div>
-            </div>
-            <Button
-              onClick={signOut}
-              variant="ghost"
-              className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors justify-start"
-            >
-              <LogOut className="mr-3 h-4 w-4" />
-              Sign Out
-            </Button>
-          </div>
         </div>
       </div>
 
@@ -224,12 +393,12 @@ export function Sidebar({ className }: SidebarProps) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setIsMobileOpen(!isMobileOpen)}
+          onClick={() => setIsMobileOpen(true)}
           className="bg-white shadow-md"
         >
-          {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          <Menu className="h-4 w-4" />
         </Button>
       </div>
     </>
   )
-} 
+}

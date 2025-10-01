@@ -1,31 +1,20 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
+import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
 import clientPromise from '@/lib/mongodb';
 import { validateCommentData, validateObjectId, validateRequestSize } from '@/lib/validation';
+import { createSecureMessage, getMessagesForReferral } from '@/lib/secure-messaging';
+import { auditConversationAccess } from '@/lib/hipaa-audit';
 
 // Comment categories for better organization
-type CommentCategory = 'status' | 'request' | 'progress' | 'issue' | 'admin';
+type CommentCategory = 'status' | 'request' | 'progress' | 'issue' | 'platform_admin';
 type CommentPriority = 'normal' | 'important' | 'urgent';
 
 // GET: Fetch all comments for a referral
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    const cookieStore = cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-        },
-      }
-    );
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    const user = await getAuthenticatedUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
@@ -46,11 +35,11 @@ export async function GET(request: Request, { params }: { params: { id: string }
     }
     
     // Check permissions - case manager, assigned provider, or admin can view
-    const userRole = session.user.user_metadata?.role;
-    const userId = session.user.id;
+    const userRole = user.role;
+    const userId = user.id;
     
     const canView = 
-      userRole === 'admin' || 
+      userRole === 'platform_admin' || 
       (userRole === 'case_manager' && referral.caseManagerId === userId) ||
       (userRole === 'provider' && referral.providerId === userId);
     
@@ -58,7 +47,30 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
     
-    return NextResponse.json({ success: true, comments: referral.comments || [] });
+    // Audit log the conversation access
+    await auditConversationAccess(userId, userRole, params.id, referral.clientInfo?._id || 'unknown');
+    
+    // Get secure messages instead of old comments
+    const secureMessages = await getMessagesForReferral(params.id, userId, userRole);
+    
+    // Convert to old comment format for backward compatibility
+    const comments = secureMessages.map(msg => ({
+      _id: msg._id,
+      authorId: msg.authorId,
+      authorName: msg.authorName,
+      authorType: msg.authorType,
+      authorRole: msg.authorType, // backward compatibility
+      content: msg.content,
+      text: msg.content, // backward compatibility
+      category: msg.category,
+      priority: msg.priority,
+      isInternal: msg.isInternal,
+      createdAt: msg.createdAt,
+      status: 'delivered',
+      readBy: msg.readBy
+    }));
+    
+    return NextResponse.json({ success: true, comments });
   } catch (error) {
     console.error('Error fetching comments:', error);
     return NextResponse.json({ error: 'Error fetching comments' }, { status: 500 });
@@ -68,20 +80,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
 // POST: Add a new comment to a referral
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
-    const cookieStore = cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-        },
-      }
-    );
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    const user = await getAuthenticatedUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
@@ -135,11 +135,11 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
     
     // Check permissions - case manager, assigned provider, or admin can comment
-    const userRole = session.user.user_metadata?.role;
-    const userId = session.user.id;
+    const userRole = user.role;
+    const userId = user.id;
     
     const canComment = 
-      userRole === 'admin' || 
+      userRole === 'platform_admin' || 
       (userRole === 'case_manager' && referral.caseManagerId === userId) ||
       (userRole === 'provider' && referral.providerId === userId);
     
@@ -147,11 +147,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
     
-    // Get author name from user metadata or email
-    const authorName = session.user.user_metadata?.name || 
-                      session.user.user_metadata?.full_name || 
-                      session.user.email?.split('@')[0] || 
-                      'Unknown User';
+    // Get author name from user email
+    const authorName = user.email?.split('@')[0] || 'Unknown User';
     
     // Validate parentId if provided (for threading)
     if (commentData.parentId) {
@@ -170,36 +167,46 @@ export async function POST(request: Request, { params }: { params: { id: string 
       }
     }
 
-    // Create enhanced comment object
+    // Use secure messaging system instead of direct database insertion
+    const authorType = userRole === 'platform_admin' ? 'admin' : userRole as 'case_manager' | 'provider';
+    const result = await createSecureMessage({
+      referralId: params.id,
+      clientId: referral.clientInfo?._id || 'unknown',
+      authorId: user.id,
+      authorName,
+      authorType,
+      content: commentData.content,
+      category: commentData.category,
+      priority: commentData.priority,
+      isInternal: commentData.isInternal || false
+    });
+    
+    if (!result.success) {
+      return NextResponse.json({ error: 'Failed to create secure message' }, { status: 500 });
+    }
+    
+    // Create backward-compatible response
     const comment = {
-      _id: new ObjectId(),
-      authorId: session.user.id,
-      authorType: userRole as 'case_manager' | 'provider' | 'admin',
+      _id: result.messageId,
+      authorId: user.id,
+      authorType: userRole as 'case_manager' | 'provider' | 'platform_admin',
       authorName,
       category: commentData.category as CommentCategory,
       content: commentData.content,
       priority: commentData.priority as CommentPriority,
       createdAt: new Date().toISOString(),
       metadata: commentData.metadata,
-      parentId: commentData.parentId || null, // Threading support
-      
-      // Backward compatibility fields
+      parentId: commentData.parentId || null,
+      isInternal: commentData.isInternal || false,
+      status: 'sent' as 'sending' | 'sent' | 'delivered' | 'read' | 'error',
+      readBy: [] as Array<{
+        userId: string;
+        userName: string;
+        readAt: string;
+      }>,
       authorRole: userRole,
       text: commentData.content
     };
-    
-    // Add comment to referral
-    const result = await db.collection('referrals').updateOne(
-      { _id: referralObjectId },
-      { 
-        $push: { comments: comment },
-        $set: { updatedAt: new Date().toISOString() }
-      } as any
-    );
-    
-    if (result.matchedCount === 0) {
-      return NextResponse.json({ error: 'Referral not found' }, { status: 404 });
-    }
     
     return NextResponse.json({ success: true, comment });
   } catch (error) {
@@ -211,20 +218,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
 // PUT: Edit an existing comment
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
-    const cookieStore = cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-        },
-      }
-    );
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    const user = await getAuthenticatedUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -260,11 +255,11 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
 
     // Check permissions - only comment author or admin can edit
-    const userRole = session.user.user_metadata?.role;
-    const userId = session.user.id;
+    const userRole = user.role;
+    const userId = user.id;
     
     const canEdit = 
-      userRole === 'admin' || 
+      userRole === 'platform_admin' || 
       comment.authorId === userId;
     
     if (!canEdit) {
@@ -303,20 +298,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 // DELETE: Delete an existing comment
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
-    const cookieStore = cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-        },
-      }
-    );
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    const user = await getAuthenticatedUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -348,11 +331,11 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     }
 
     // Check permissions - only comment author or admin can delete
-    const userRole = session.user.user_metadata?.role;
-    const userId = session.user.id;
+    const userRole = user.role;
+    const userId = user.id;
     
     const canDelete = 
-      userRole === 'admin' || 
+      userRole === 'platform_admin' || 
       comment.authorId === userId;
     
     if (!canDelete) {

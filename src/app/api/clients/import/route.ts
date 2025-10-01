@@ -1,31 +1,15 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
 import type { ClientStatus } from '@/types';
 
 const COLLECTION = 'clients';
 
-async function getSession() {
-  const cookieStore = cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-      },
-    }
-  );
-  const { data: { session } } = await supabase.auth.getSession();
-  return session;
-}
+
 
 export async function POST(req: Request) {
-  const session = await getSession();
-  if (!session || !['case_manager', 'admin'].includes(session.user.user_metadata?.role)) {
+  const user = await getAuthenticatedUser();
+  if (!user || !['case_manager', 'platform_admin', 'provider'].includes(user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -54,37 +38,76 @@ export async function POST(req: Request) {
     const now = new Date().toISOString();
     
     // Check for existing providers and prepare provider linking
+    // First check MongoDB (legacy)
     const providersCollection = db.collection('providers');
-    const existingProviders = await providersCollection.find({}).toArray();
+    const mongoProviders = await providersCollection.find({}).toArray();
+    
+    // Then check Supabase provider_profiles table (current system)
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          get() { return undefined; }
+        }
+      }
+    );
+    
+    const { data: supabaseProviders } = await supabase
+      .from('provider_profiles')
+      .select('user_id, full_name, organization_name, email');
+    
+    // Combine both sources
+    const existingProviders = [
+      ...mongoProviders,
+      ...(supabaseProviders?.map(p => ({
+        _id: p.user_id,
+        name: p.full_name,
+        organizationName: p.organization_name,
+        email: p.email
+      })) || [])
+    ];
     
     // Prepare clients for insertion with enhanced fields
     const clientsToInsert = validClients.map(clientData => {
-      // Try to link to existing provider
+      // For providers, automatically assign to current provider
+      let currentProvider = clientData.currentProvider || clientData['Current Provider Name'];
       let linkedProvider = null;
-      if (clientData.currentProvider) {
-        linkedProvider = existingProviders.find(provider => 
-          provider.name?.toLowerCase().includes(clientData.currentProvider.toLowerCase()) ||
-          provider.organizationName?.toLowerCase().includes(clientData.currentProvider.toLowerCase())
-        );
+      
+      if (user.role === 'provider') {
+        // When provider is importing, automatically assign to themselves
+        currentProvider = user.id;
+        linkedProvider = { _id: user.id }; // Provider is already onboarded
       }
+      // For case managers, don't try to link providers - this causes false connections
 
       return {
-        firstName: clientData.firstName,
-        lastName: clientData.lastName,
+        firstName: clientData.firstName || clientData['First Name'],
+        lastName: clientData.lastName || clientData['Last Name'],
+        dateOfBirth: clientData.dateOfBirth || clientData['Date of Birth'] || null,
         status: clientData.status || 'UNPLACED_NEW',
-        phone: clientData.phone || null,
-        email: clientData.email || null,
-        address: clientData.address || null,
+        phone: clientData.phone || clientData['Phone'] || null,
+        email: clientData.email || clientData['Email'] || null,
+        address: clientData.address || clientData['Address'] || null,
         city: clientData.city || null,
         state: clientData.state || null,
         zipCode: clientData.zipCode || null,
-        county: clientData.county || null,
-        notes: clientData.notes || null,
+        county: clientData.county || clientData['County'] || null,
+        notes: clientData.notes || clientData['Notes'] || null,
         
-        // Provider information
-        currentProvider: clientData.currentProvider || null,
-        linkedProviderId: linkedProvider?._id || null,
-        providerOnboarded: !!linkedProvider,
+        // Provider information - only set for providers
+        currentProvider: user.role === 'provider' ? (linkedProvider?._id || currentProvider) : null,
+        linkedProviderId: user.role === 'provider' ? (linkedProvider?._id || null) : null,
+        providerOnboarded: user.role === 'provider' ? !!linkedProvider : false,
+        
+        // Store provider org name for case managers (for display/contact purposes only)
+        providerOrgName: user.role === 'case_manager' ? currentProvider : null,
+        
+        // Connection partner information for matching
+        caseManagerEmail: clientData.caseManagerEmail || clientData['Case Manager Email'] || null,
+        caseManagerName: clientData.caseManagerName || clientData['Case Manager Name'] || null,
+        providerContactEmail: clientData.providerContactEmail || clientData['Provider Contact Email'] || null,
+        providerName: clientData.providerName || clientData['Current Provider Name'] || currentProvider,
         
         // Profile completion tracking - comprehensive check for essential fields
         profileComplete: !!(
@@ -98,19 +121,43 @@ export async function POST(req: Request) {
           clientData.county
         ),
         
+        // Role-specific assignment
+        caseManagerId: user.role === 'case_manager' ? user.id : null,
+        
+        // NEW: ServiceConnection fields
+        pmi: clientData.pmi || null,
+        serviceType: clientData.serviceType || null,
+        serviceType1: clientData.serviceType1 || null,
+        
+        // Pending connection fields for ServiceConnection flow
+        hasPendingConnection: clientData.hasPendingConnection || false,
+        pendingConnectionId: clientData.pendingConnectionId || null,
+        
         // Metadata
         createdAt: now,
         updatedAt: now,
-        createdBy: session.user.id,
+        createdBy: user.id,
+        source: 'csv_import',
         
         // Legacy fields for backward compatibility
-        providerName: clientData.currentProvider || clientData.providerName || null,
         placementDate: clientData.placementDate || null
       };
     });
     
+    // Debug logging for provider client creation
+    console.log('📝 Creating clients for role:', user.role);
+    console.log('📝 Clients to insert:', clientsToInsert.map(c => ({
+      firstName: c.firstName,
+      lastName: c.lastName, 
+      currentProvider: c.currentProvider,
+      createdBy: c.createdBy,
+      source: c.source
+    })));
+    
     // Insert clients in bulk
     const result = await db.collection(COLLECTION).insertMany(clientsToInsert);
+    
+    console.log('✅ Clients inserted:', result.insertedCount, 'IDs:', Object.values(result.insertedIds));
     
     // Calculate comprehensive statistics
     const stats = {

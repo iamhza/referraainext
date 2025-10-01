@@ -30,11 +30,16 @@ import {
   HelpCircle,
   Activity,
   PlusCircle,
-  ChevronUp
+  ChevronUp,
+  UserCheck,
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { ReferralStatus, getStatusConfig as getCentralizedStatusConfig } from '@/types/index';
+import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,15 +58,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
-type ReferralStatus = 
-  | 'under_review'
-  | 'provider_selection_required'
-  | 'in_progress'
-  | 'completed'
-  | 'cancelled'
-  | 'pending'
-  | 'accepted'
-  | 'active';
+
 
 interface MongoReferral {
   _id: string;
@@ -84,7 +81,7 @@ interface MongoReferral {
   };
   serviceDetails: {
     type: string;
-    urgency: 'high' | 'medium' | 'low';
+    urgency: string; // Can be any string, will be normalized
     counties: string[];
     additionalNotes: string;
   };
@@ -113,6 +110,8 @@ export function ReferralsList({ providerId, mode = 'case_manager' }: ReferralsLi
   const [urgencyFilter, setUrgencyFilter] = useState<'high' | 'medium' | 'low' | 'all'>('all');
   const [referrals, setReferrals] = useState<MongoReferral[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingReferralId, setDeletingReferralId] = useState<string | null>(null);
+  const { toast } = useToast();
   const [showFilters, setShowFilters] = useState(false);
   
   // Pagination
@@ -147,82 +146,80 @@ export function ReferralsList({ providerId, mode = 'case_manager' }: ReferralsLi
     fetchReferrals();
   }, [providerId]);
 
-  const getStatusConfig = (status: ReferralStatus) => {
-    // Define default config for unknown statuses
-    const defaultConfig = {
-      label: 'Status Unknown',
-      icon: HelpCircle,
-      className: 'bg-gray-50 text-gray-700 border-gray-200',
-      bgColor: 'bg-gray-500',
-      color: 'text-gray-700'
-    };
+  const handleDeleteReferral = async (referralId: string, event: React.MouseEvent) => {
+    event.preventDefault(); // Prevent navigation
+    event.stopPropagation();
+    
+    if (!confirm('Are you sure you want to delete this referral? This action cannot be undone.')) {
+      return;
+    }
 
-    // Map of known status configurations
-    const statusConfigs = {
-      under_review: {
-        label: 'Under Review',
-        icon: Clock,
-        className: 'bg-amber-50 text-amber-700 border-amber-200',
-        bgColor: 'bg-amber-500',
-        color: 'text-amber-700'
-      },
-      provider_selection_required: {
-        label: 'Select Provider',
-        icon: AlertCircle,
-        className: 'bg-blue-50 text-blue-700 border-blue-200',
-        bgColor: 'bg-blue-500',
-        color: 'text-blue-700'
-      },
-      in_progress: {
-        label: 'In Progress',
-        icon: CheckCircle,
-        className: 'bg-green-50 text-green-700 border-green-200',
-        bgColor: 'bg-green-500',
-        color: 'text-green-700'
-      },
-      completed: {
-        label: 'Completed',
-        icon: CheckCircle,
-        className: 'bg-green-50 text-green-700 border-green-200',
-        bgColor: 'bg-green-500',
-        color: 'text-green-700'
-      },
-      cancelled: {
-        label: 'Cancelled',
-        icon: XCircle,
-        className: 'bg-red-50 text-red-700 border-red-200',
-        bgColor: 'bg-red-500',
-        color: 'text-red-700'
-      },
-      // Add mappings for other statuses from your API
-      pending: {
-        label: 'Pending',
-        icon: Clock,
-        className: 'bg-amber-50 text-amber-700 border-amber-200',
-        bgColor: 'bg-amber-500',
-        color: 'text-amber-700'
-      },
-      accepted: {
-        label: 'Accepted',
-        icon: CheckCircle,
-        className: 'bg-green-50 text-green-700 border-green-200',
-        bgColor: 'bg-green-500',
-        color: 'text-green-700'
-      },
-      active: {
-        label: 'Active',
-        icon: Activity,
-        className: 'bg-blue-50 text-blue-700 border-blue-200',
-        bgColor: 'bg-blue-500',
-        color: 'text-blue-700'
+    try {
+      setDeletingReferralId(referralId);
+      
+      const response = await fetch(`/api/referrals/${referralId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete referral');
       }
-    };
 
-    // Return the config for the given status, or the default if not found
-    return statusConfigs[status as keyof typeof statusConfigs] || defaultConfig;
+      // Remove the referral from the local state
+      setReferrals(prev => prev.filter(r => r._id !== referralId));
+      
+      toast({
+        title: "Referral Deleted",
+        description: "The referral has been successfully deleted.",
+      });
+    } catch (error) {
+      console.error('Error deleting referral:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete referral. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingReferralId(null);
+    }
   };
 
-  const getUrgencyBadge = (urgency: 'high' | 'medium' | 'low') => {
+  const getLocalStatusConfig = (status: ReferralStatus) => {
+    const config = getCentralizedStatusConfig(status);
+    
+    const Icon = config.icon || HelpCircle;
+    
+    const colorMap = {
+      amber: 'bg-amber-50 text-amber-700 border-amber-200',
+      blue: 'bg-blue-50 text-blue-700 border-blue-200',
+      green: 'bg-green-50 text-green-700 border-green-200',
+      red: 'bg-red-50 text-red-700 border-red-200',
+      purple: 'bg-purple-50 text-purple-700 border-purple-200',
+      gray: 'bg-gray-50 text-gray-700 border-gray-200'
+    };
+    
+    return {
+      label: config.label,
+      icon: Icon,
+      className: colorMap[config.color as keyof typeof colorMap] || colorMap.gray,
+      bgColor: `bg-${config.color}-500`,
+      color: `text-${config.color}-700`
+    };
+  };
+
+  const normalizeUrgency = (urgency: string): 'high' | 'medium' | 'low' => {
+    const normalized = urgency.toLowerCase();
+    if (normalized === 'high' || normalized === 'urgent' || normalized === 'critical' || normalized === 'emergency' || normalized === 'immediate' || normalized === 'asap' || normalized === 'priority') {
+      return 'high';
+    }
+    if (normalized === 'low' || normalized === 'routine' || normalized === 'non-urgent' || normalized === 'nonurgent' || normalized === 'not urgent' || normalized === 'not-urgent') {
+      return 'low';
+    }
+    return 'medium'; // Default to medium for any unrecognized values
+  };
+
+  const getUrgencyBadge = (urgency: string) => {
+    const normalizedUrgency = normalizeUrgency(urgency);
     const urgencyConfigs = {
       high: {
         label: 'High Priority',
@@ -244,8 +241,7 @@ export function ReferralsList({ providerId, mode = 'case_manager' }: ReferralsLi
       }
     };
 
-    // Default to medium priority if urgency is not recognized
-    const configs = urgencyConfigs[urgency as keyof typeof urgencyConfigs] || urgencyConfigs.medium;
+    const configs = urgencyConfigs[normalizedUrgency];
 
     return (
       <Badge variant="outline" className={cn("flex items-center gap-1.5 rounded-full text-sm", configs.className)}>
@@ -279,8 +275,8 @@ export function ReferralsList({ providerId, mode = 'case_manager' }: ReferralsLi
         case 'urgency':
           const urgencyOrder = { high: 3, medium: 2, low: 1 };
           comparison = 
-            urgencyOrder[a.serviceDetails.urgency as keyof typeof urgencyOrder] - 
-            urgencyOrder[b.serviceDetails.urgency as keyof typeof urgencyOrder];
+            urgencyOrder[normalizeUrgency(a.serviceDetails.urgency)] - 
+            urgencyOrder[normalizeUrgency(b.serviceDetails.urgency)];
           break;
       }
       
@@ -297,7 +293,7 @@ export function ReferralsList({ providerId, mode = 'case_manager' }: ReferralsLi
       referral._id.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || referral.status === statusFilter;
-    const matchesUrgency = urgencyFilter === 'all' || referral.serviceDetails.urgency === urgencyFilter;
+    const matchesUrgency = urgencyFilter === 'all' || normalizeUrgency(referral.serviceDetails.urgency) === urgencyFilter;
     
     return matchesSearch && matchesStatus && matchesUrgency;
   });
@@ -448,10 +444,15 @@ export function ReferralsList({ providerId, mode = 'case_manager' }: ReferralsLi
                   <SelectContent className="rounded-lg">
                     <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="under_review">Under Review</SelectItem>
-                    <SelectItem value="provider_selection_required">Select Provider</SelectItem>
+                    <SelectItem value="provider_selection_required">Provider Selection Required</SelectItem>
+                    <SelectItem value="matched">Matched</SelectItem>
+                    <SelectItem value="pending_confirmation">Pending Confirmation</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
                     <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -558,7 +559,7 @@ export function ReferralsList({ providerId, mode = 'case_manager' }: ReferralsLi
                 {isExpanded && (
                   <div className="divide-y">
                     {clientReferrals.map((referral) => {
-                      const statusConfig = getStatusConfig(referral.status);
+                      const statusConfig = getLocalStatusConfig(referral.status);
                       const StatusIcon = statusConfig.icon;
                       return (
                         <div key={referral._id} className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-4 hover:bg-blue-50/10 transition-all">
@@ -590,7 +591,7 @@ export function ReferralsList({ providerId, mode = 'case_manager' }: ReferralsLi
           })
         ) : (
           currentItems.map((referral) => {
-            const statusConfig = getStatusConfig(referral.status);
+            const statusConfig = getLocalStatusConfig(referral.status);
             const StatusIcon = statusConfig.icon;
             const initials = getClientInitials(referral.clientInfo.firstName, referral.clientInfo.lastName);
             const createdDate = new Date(referral.createdAt);
@@ -607,9 +608,9 @@ export function ReferralsList({ providerId, mode = 'case_manager' }: ReferralsLi
                   <div className="flex items-start gap-4">
                     {/* Avatar */}
                     <div className="hidden sm:block">
-                      <div className={`relative h-16 w-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium text-xl shadow-sm transition-transform duration-200 group-hover:scale-105 ${referral.serviceDetails.urgency === 'high' ? 'ring-2 ring-red-400' : ''}`}>
+                      <div className={`relative h-16 w-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium text-xl shadow-sm transition-transform duration-200 group-hover:scale-105 ${normalizeUrgency(referral.serviceDetails.urgency) === 'high' ? 'ring-2 ring-red-400' : ''}`}>
                         {initials}
-                        {referral.serviceDetails.urgency === 'high' && (
+                        {normalizeUrgency(referral.serviceDetails.urgency) === 'high' && (
                           <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 border-2 border-white animate-pulse"></span>
                         )}
                       </div>
@@ -674,6 +675,45 @@ export function ReferralsList({ providerId, mode = 'case_manager' }: ReferralsLi
                               View Details
                               <ChevronRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                             </Button>
+                            
+                            {mode === 'case_manager' && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 rounded-full hover:bg-gray-100"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                    }}
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                    onClick={(e) => handleDeleteReferral(referral._id, e)}
+                                    disabled={deletingReferralId === referral._id}
+                                  >
+                                    {deletingReferralId === referral._id ? (
+                                      <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Deleting...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete Referral
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -686,11 +726,16 @@ export function ReferralsList({ providerId, mode = 'case_manager' }: ReferralsLi
                   <div 
                     className={cn(
                       "h-full transition-all duration-300",
-                      referral.status === 'under_review' && "w-1/4 bg-amber-500",
-                      referral.status === 'provider_selection_required' && "w-1/2 bg-blue-500",
-                      referral.status === 'in_progress' && "w-3/4 bg-green-500",
+                      referral.status === 'draft' && "w-1/8 bg-gray-500",
+                      referral.status === 'submitted' && "w-2/8 bg-blue-500",
+                      referral.status === 'matched' && "w-4/8 bg-purple-500",
+                      referral.status === 'sent_to_provider' && "w-6/8 bg-blue-500",
+                      referral.status === 'accepted' && "w-7/8 bg-green-500",
+                      referral.status === 'active' && "w-9/10 bg-green-500",
                       referral.status === 'completed' && "w-full bg-green-600",
-                      referral.status === 'cancelled' && "w-full bg-red-500"
+                      referral.status === 'rejected' && "w-full bg-red-500",
+                      referral.status === 'cancelled' && "w-full bg-red-500",
+                      referral.status === 'expired' && "w-full bg-gray-500"
                     )}
                   />
                 </div>

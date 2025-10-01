@@ -16,7 +16,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { BackButton } from '@/components/ui/BackButton';
 import Link from 'next/link';
 
-const BRAND_COLOR = '#11acf8fe';
+const BRAND_COLOR = '#81D8D0'; // Tiffany Blue
 
 const statusConfigs: Record<string, {
   label: string;
@@ -32,7 +32,7 @@ const statusConfigs: Record<string, {
   },
   provider_selection_required: {
     label: 'Provider Selection Required',
-    color: 'orange',
+    color: 'secondary',
     icon: UserCheck,
     description: 'Select a provider for this referral.'
   },
@@ -44,7 +44,7 @@ const statusConfigs: Record<string, {
   },
   completed: {
     label: 'Completed',
-    color: 'blue',
+    color: 'secondary',
     icon: CheckCircle,
     description: 'Service has been completed.'
   },

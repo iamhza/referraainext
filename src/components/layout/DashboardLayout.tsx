@@ -1,7 +1,6 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { Sidebar } from './Sidebar';
 import { cn } from '@/lib/utils';
 
 interface DashboardLayoutProps {
@@ -10,17 +9,18 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50/30">
-      <Sidebar />
-      <main className={cn(
-        "lg:pl-72 min-h-screen",
-        "transition-all duration-300 ease-in-out",
-        "bg-gradient-to-b from-gray-50/50 to-white",
-      )}>
-        <div className="h-full py-8">
-          {children}
-        </div>
-      </main>
+    <div className="min-h-screen bg-background-500">
+      <div className="flex flex-col min-h-screen">
+        <main className={cn(
+          "flex-1",
+          "transition-all duration-300 ease-in-out",
+          "bg-gradient-to-b from-background-100 to-background-500",
+        )}>
+          <div className="h-full">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 } 

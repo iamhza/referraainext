@@ -1,0 +1,21 @@
+{
+  "css.validate": true,
+  "css.lint.unknownAtRules": "ignore",
+  "scss.validate": true,
+  "scss.lint.unknownAtRules": "ignore",
+  "less.validate": true,
+  "less.lint.unknownAtRules": "ignore",
+  "stylelint.validate": ["css", "postcss"],
+  "css.customData": [".vscode/css_custom_data.json"],
+  "emmet.includeLanguages": {
+    "postcss": "css"
+  },
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "editor.quickSuggestions": {
+    "strings": true
+  },
+  "css.completion.completePropertyWithSemicolon": true,
+  "css.completion.triggerPropertyValueCompletion": true
+}

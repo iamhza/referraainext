@@ -1,265 +1,230 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
+import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
 import { ObjectId } from 'mongodb';
-import { validateClientData, validateObjectId, validateRequestSize } from '@/lib/validation';
-import { logger, getRequestContext } from '@/lib/logger';
-import { applyRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
+import { getSecureClient, updateSecureClient, deleteSecureClient } from '@/lib/secure-client';
 
-const COLLECTION = 'clients';
-
-async function getSession() {
-  const cookieStore = cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-      },
-    }
-  );
-  const { data: { session } } = await supabase.auth.getSession();
-  return session;
-}
-
-export async function GET(
-  req: Request,
+export async function DELETE(
+  request: Request,
   { params }: { params: { id: string } }
 ) {
-  // Apply rate limiting
-  const rateLimitResponse = applyRateLimit(req, 'client_read', RATE_LIMITS.read);
-  if (rateLimitResponse) {
-    return rateLimitResponse;
-  }
-
-  const session = await getSession();
-  if (!session || !['case_manager', 'admin', 'provider'].includes(session.user.user_metadata?.role)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
+    console.error('=== DELETE ROUTE HIT ===', params.id);
+    
+    const user = await getAuthenticatedUser();
+  if (!user || !['case_manager', 'platform_admin', 'provider'].includes(user.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const clientId = params.id;
+    if (!clientId) {
+      return NextResponse.json({ error: 'Client ID is required' }, { status: 400 });
+    }
+
     const client = await clientPromise;
     const db = client.db('referradb');
 
-    const id = params.id;
+    // First, get the client to see its structure and check if it exists
+    const clientDoc = await db.collection('clients').findOne({ _id: new ObjectId(clientId) });
+    // HIPAA COMPLIANT: Log only non-PHI identifiers for debugging
+    console.error('CLIENT LOOKUP:', { clientId, found: !!clientDoc, status: clientDoc?.status, role: user.role });
     
-    if (!id) {
-      return NextResponse.json({ error: 'Missing client ID' }, { status: 400 });
+    if (!clientDoc) {
+      return NextResponse.json({ 
+        error: 'Client not found' 
+      }, { status: 404 });
     }
 
-    try {
-      const client = await db.collection(COLLECTION).findOne({ _id: new ObjectId(id) });
+    // Role-based deletion permissions
+    const userRole = user.role;
+    if (userRole === 'provider') {
+      // Providers can only delete clients they created (imported OR manually added), not from referrals
+      const canDelete = (
+        clientDoc.createdBy === user.id && 
+        clientDoc.source !== 'created_from_referral'
+      );
       
-      if (!client) {
-        return NextResponse.json({ error: 'Client not found' }, { status: 404 });
+      if (!canDelete) {
+        const isFromReferral = clientDoc.source === 'created_from_referral';
+        const notOwner = clientDoc.createdBy !== user.id;
+        
+        let errorMessage = 'Cannot delete this client. ';
+        if (isFromReferral) {
+          errorMessage += 'You can only delete clients you imported or added manually, not clients assigned through referrals.';
+        } else if (notOwner) {
+          errorMessage += 'You can only delete clients you created yourself.';
+        } else {
+          errorMessage += 'You do not have permission to delete this client.';
+        }
+        
+        return NextResponse.json({ 
+          error: errorMessage 
+        }, { status: 403 });
       }
-      
-      return NextResponse.json({ client });
-    } catch (error) {
-      return NextResponse.json({ error: 'Invalid client ID' }, { status: 400 });
     }
-  } catch (error) {
+
+    // Check if client has active referrals
+    const activeReferrals = await db.collection('referrals').find({
+      $or: [
+        { 'clientInfo._id': clientId },
+        { 'clientInfo.clientId': clientId },
+        { clientId: clientId }
+      ],
+      status: { $in: ['pending', 'matched', 'confirmed', 'in_progress', 'active'] }
+    }).toArray();
+
+    if (activeReferrals.length > 0) {
+      return NextResponse.json({ 
+        error: 'Cannot delete client with active referrals. Please complete or cancel existing referrals first.' 
+      }, { status: 400 });
+    }
+
+    // Use secure client deletion with HIPAA audit logging
+    const result = await deleteSecureClient(clientId, user.id, user.role);
+
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 500 });
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Client deleted successfully',
+      deletedId: clientId,
+      cleanupDetails: {
+        pendingConnectionsCleaned: result.pendingConnectionsCleaned || 0,
+        referralsCleaned: result.referralsCleaned || 0
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Error deleting client:', error);
+    return NextResponse.json({ error: 'Failed to delete client' }, { status: 500 });
+  }
+}
+
+// GET endpoint for fetching individual client details
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const user = await getAuthenticatedUser();
+  if (!user || !['case_manager', 'platform_admin', 'provider'].includes(user.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const clientId = params.id;
+    if (!clientId) {
+      return NextResponse.json({ error: 'Client ID is required' }, { status: 400 });
+    }
+
+    // Use secure client access with HIPAA audit logging
+    console.log('📖 GET - Fetching client:', clientId);
+    const clientDoc = await getSecureClient(clientId, user.id, user.role);
+    
+    if (!clientDoc) {
+      console.error('❌ GET - Client not found:', clientId);
+      return NextResponse.json({ 
+        error: 'Client not found or you do not have permission to view this client' 
+      }, { status: 404 });
+    }
+
+    console.log('✅ GET - Retrieved client:', {
+      id: clientDoc._id,
+      name: `${clientDoc.firstName} ${clientDoc.lastName}`,
+      dateOfBirth: clientDoc.dateOfBirth,
+      updatedAt: clientDoc.updatedAt,
+      caseManagerId: clientDoc.caseManagerId
+    });
+
+    // Additional role-based access check after decryption
+    console.log('🔐 Permission check:', {
+      userRole: user.role,
+      userId: user.id,
+      clientCaseManagerId: clientDoc.caseManagerId,
+      hasPermission: user.role !== 'case_manager' || clientDoc.caseManagerId === user.id
+    });
+
+    if (user.role === 'case_manager' && clientDoc.caseManagerId !== user.id) {
+      console.error('❌ Permission denied - Case manager ID mismatch:', {
+        expectedUserId: user.id,
+        clientCaseManagerId: clientDoc.caseManagerId
+      });
+      return NextResponse.json({ 
+        error: 'You do not have permission to view this client' 
+      }, { status: 403 });
+    } else if (user.role === 'provider' && clientDoc.currentProvider !== user.id) {
+      return NextResponse.json({ 
+        error: 'You do not have permission to view this client' 
+      }, { status: 403 });
+    }
+
+    return NextResponse.json({ client: clientDoc });
+
+  } catch (error: any) {
     console.error('Error fetching client:', error);
     return NextResponse.json({ error: 'Failed to fetch client' }, { status: 500 });
   }
 }
 
+// PATCH endpoint for updating individual client details
 export async function PATCH(
-  req: Request,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
-  // Apply rate limiting
-  const rateLimitResponse = applyRateLimit(req, 'client_update', RATE_LIMITS.write);
-  if (rateLimitResponse) {
-    return rateLimitResponse;
-  }
-
-  const session = await getSession();
-  if (!session || !['case_manager', 'admin'].includes(session.user.user_metadata?.role)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
-    const id = params.id;
-    if (!id) {
-      return NextResponse.json({ error: 'Missing client ID' }, { status: 400 });
+    const user = await getAuthenticatedUser();
+  if (!user || !['case_manager', 'platform_admin', 'provider'].includes(user.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Validate request size
-    const contentLength = parseInt(req.headers.get('content-length') || '0');
-    try {
-      validateRequestSize(contentLength);
-    } catch (error) {
-      return NextResponse.json({ error: error instanceof Error ? error.message : 'Request too large' }, { status: 413 });
+    const clientId = params.id;
+    if (!clientId) {
+      return NextResponse.json({ error: 'Client ID is required' }, { status: 400 });
     }
 
-    // Read and validate request body
-    let data;
-    try {
-      data = await req.json();
-      console.log('Received update data:', JSON.stringify(data, null, 2));
-    } catch (parseError) {
-      console.error('Error parsing request body:', parseError);
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
-    }
+    const updateData = await request.json();
+    console.log('📝 PATCH - Updating client:', {
+      clientId,
+      updateKeys: Object.keys(updateData),
+      dateOfBirth: updateData.dateOfBirth,
+      firstName: updateData.firstName,
+      lastName: updateData.lastName
+    });
 
-    // Validate and sanitize input data
-    try {
-      data = validateClientData(data);
-    } catch (validationError) {
-      console.error('Input validation error:', validationError);
-      return NextResponse.json({ 
-        error: validationError instanceof Error ? validationError.message : 'Invalid input data' 
-      }, { status: 400 });
-    }
-
-    // Connect to database
-    let db;
-    try {
-      const dbClient = await clientPromise;
-      db = dbClient.db('referradb');
-      console.log('Connected to database');
-    } catch (dbError) {
-      console.error('Database connection error:', dbError);
-      return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
-    }
-    
-    // Validate ObjectId
-    let objectId;
-    try {
-      objectId = validateObjectId(id);
-      console.log('Valid ObjectId:', objectId);
-    } catch (idError) {
-      console.error('Invalid ObjectId:', idError);
-      return NextResponse.json({ error: idError instanceof Error ? idError.message : 'Invalid client ID format' }, { status: 400 });
-    }
-    
-    // Get the existing client to check permissions
-    let existingClient;
-    try {
-      existingClient = await db.collection(COLLECTION).findOne({ _id: objectId });
-      console.log('Found existing client:', existingClient ? 'Yes' : 'No');
-    } catch (findError) {
-      console.error('Error finding client:', findError);
-      return NextResponse.json({ error: 'Error retrieving client' }, { status: 500 });
-    }
-    
+    // Verify the client exists before updating
+    const existingClient = await getSecureClient(clientId, user.id, user.role);
     if (!existingClient) {
+      console.error('❌ PATCH - Client not found:', clientId);
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
     
-    // Check permissions - case managers can update any client, admins can update any client
-    const userRole = session.user.user_metadata?.role;
-    const userId = session.user.id;
-    
-    const canUpdate = 
-      userRole === 'admin' || 
-      userRole === 'case_manager';
-    
-    if (!canUpdate) {
-      const context = getRequestContext(req, session);
-      logger.permissionDenied('Client update permission denied', {
-        ...context,
-        attemptedClientId: id,
-        clientManagerId: existingClient.caseManagerId,
-      });
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
-    
-    // Calculate profile completion
-    const profileComplete = !!(
-      data.firstName && 
-      data.lastName &&
-      data.phone && 
-      data.email && 
-      data.address && 
-      data.city &&
-      data.state &&
-      data.county
-    );
+    console.log('✅ PATCH - Found existing client:', {
+      id: existingClient._id,
+      name: `${existingClient.firstName} ${existingClient.lastName}`
+    });
 
-    // Prepare update data - include all the new fields from the form
-    const updateData = {
-      firstName: data.firstName,
-      lastName: data.lastName,
-      dateOfBirth: data.dateOfBirth,
-      sex: data.sex,
-      email: data.email,
-      phone: data.phone,
-      preferredContactMethod: data.preferredContactMethod,
-      address: data.address,
-      city: data.city,
-      state: data.state,
-      zipCode: data.zipCode,
-      county: data.county,
-      insuranceProvider: data.insuranceProvider,
-      insuranceNumber: data.insuranceNumber,
-      pmiNumber: data.pmiNumber,
-      waiverType: data.waiverType,
-      primaryLanguage: data.primaryLanguage,
-      needsTranslator: data.needsTranslator,
-      historyOfViolence: data.historyOfViolence,
-      mobilityStatus: data.mobilityStatus,
-      livingSituation: data.livingSituation,
-      primaryDiagnosis: data.primaryDiagnosis,
-      culturalConsiderations: data.culturalConsiderations,
-      additionalNotes: data.additionalNotes,
-      insurance: data.insurance,
-      profileComplete,
-      updatedAt: new Date().toISOString()
-    };
+    // Use secure client update with HIPAA audit logging
+    const result = await updateSecureClient(clientId, updateData, user.id, user.role);
     
-    console.log('Prepared update data:', JSON.stringify(updateData, null, 2));
-    
-    // Update the client
-    try {
-      // Use updateOne instead of findOneAndUpdate for simpler operation
-      const result = await db.collection(COLLECTION).updateOne(
-        { _id: objectId },
-        { $set: updateData }
-      );
-      
-      console.log('Update result:', JSON.stringify(result, null, 2));
-      
-      if (result.matchedCount === 0) {
-        return NextResponse.json({ error: 'Client not found during update' }, { status: 404 });
-      }
-      
-      if (result.modifiedCount === 0) {
-        console.log('No changes were made to the client');
-      }
-      
-      // Get the updated client
-      const updatedClient = await db.collection(COLLECTION).findOne({ _id: objectId });
-      
-      return NextResponse.json({ 
-        success: true, 
-        client: updatedClient 
-      });
-    } catch (updateError) {
-      const context = getRequestContext(req, session);
-      logger.databaseError('MongoDB update error', updateError as Error, {
-        ...context,
-        operation: 'client_update',
-        clientId: id,
-      });
-      return NextResponse.json({ 
-        error: 'Database error updating client',
-      }, { status: 500 });
+    if (!result.success) {
+      console.error('❌ Secure client update failed:', result.error);
+      return NextResponse.json({ error: result.error }, { status: 500 });
     }
-  } catch (error) {
-         const context = getRequestContext(req, session);
-     logger.error('Unexpected error in update client API', error as Error, {
-       ...context,
-       operation: 'client_update',
-       clientId: params.id,
-     });
+
+    console.log('✅ Client updated successfully');
+    
+    // Fetch the updated client to return it
+    const updatedClient = await getSecureClient(clientId, user.id, user.role);
+    
     return NextResponse.json({ 
-      error: 'Failed to update client',
-    }, { status: 500 });
+      success: true,
+      message: 'Client updated successfully',
+      client: updatedClient 
+    });
+
+  } catch (error: any) {
+    console.error('Error updating client:', error);
+    return NextResponse.json({ error: 'Failed to update client' }, { status: 500 });
   }
-} 
+}

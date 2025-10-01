@@ -1,31 +1,13 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
+import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
 
 const COLLECTION = 'referrals';
 
-async function getSession() {
-  const cookieStore = cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-      },
-    }
-  );
-  const { data: { session } } = await supabase.auth.getSession();
-  return session;
-}
-
 export async function GET(req: Request) {
-  const session = await getSession();
-  if (!session || !['case_manager', 'admin', 'provider'].includes(session.user.user_metadata?.role)) {
+  const user = await getAuthenticatedUser();
+  if (!user || !['case_manager', 'platform_admin', 'provider', 'platform_admin'].includes(user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   
@@ -77,10 +59,24 @@ export async function GET(req: Request) {
   }
   
   // Filter by role
-  if (session.user.user_metadata?.role === 'case_manager') {
-    query.caseManagerId = session.user.id;
-  } else if (session.user.user_metadata?.role === 'provider') {
-    query.providerId = session.user.id;
+  if (user.role === 'case_manager') {
+    query.caseManagerId = user.id;
+  } else if (user.role === 'provider') {
+    // For providers, show referrals that have been assigned to them AND are in appropriate status
+    // Include 'matched' status so providers can see referrals that admin has assigned but case manager hasn't confirmed yet
+    query.$and = [
+      { 
+        $or: [
+          { providerId: user.id },
+          { assignedProvider: user.id }
+        ]
+      },
+      {
+        status: { 
+          $in: ['confirmed', 'in_progress', 'active', 'accepted', 'completed'] 
+        }
+      }
+    ];
   }
   
   try {
@@ -93,13 +89,15 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const session = await getSession();
-  if (!session || !['case_manager', 'admin'].includes(session.user.user_metadata?.role)) {
+  const user = await getAuthenticatedUser();
+  if (!user || !['case_manager', 'platform_admin', 'platform_admin'].includes(user.role)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   
   try {
     const data = await req.json();
+    
+    // console.log('📥 API RECEIVED REFERRAL DATA:', JSON.stringify(data, null, 2));
     
     if (!data.clientInfo || !data.serviceDetails) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -115,21 +113,21 @@ export async function POST(req: Request) {
       // Try to find by _id first if it's a valid ObjectId
       caseManager = await db.collection('users').findOne({ 
         $or: [
-          { _id: new ObjectId(session.user.id) },
-          { user_id: session.user.id },
-          { id: session.user.id },
-          { auth_id: session.user.id },
-          { email: session.user.email }
+          { _id: new ObjectId(user.id) },
+          { user_id: user.id },
+          { id: user.id },
+          { auth_id: user.id },
+          { email: user.email }
         ]
       });
     } catch (error) {
       // If ObjectId conversion fails, try alternative lookups
       caseManager = await db.collection('users').findOne({ 
         $or: [
-          { user_id: session.user.id },
-          { id: session.user.id },
-          { auth_id: session.user.id },
-          { email: session.user.email }
+          { user_id: user.id },
+          { id: user.id },
+          { auth_id: user.id },
+          { email: user.email }
         ]
       });
     }
@@ -152,7 +150,7 @@ export async function POST(req: Request) {
             ...data.clientInfo,
             createdAt: now,
             updatedAt: now,
-            caseManagerId: session.user.id,
+            caseManagerId: user.id,
             source: 'created_from_referral',
             referralDate: now
           };
@@ -166,7 +164,7 @@ export async function POST(req: Request) {
           ...data.clientInfo,
           createdAt: now,
           updatedAt: now,
-          caseManagerId: session.user.id,
+          caseManagerId: user.id,
           source: 'created_from_referral',
           referralDate: now
         };
@@ -191,7 +189,7 @@ export async function POST(req: Request) {
           ...data.clientInfo,
           createdAt: now,
           updatedAt: now,
-          caseManagerId: session.user.id,
+          caseManagerId: user.id,
           source: 'created_from_referral',
           referralDate: now
         };
@@ -205,17 +203,19 @@ export async function POST(req: Request) {
     
     const referral = {
       ...data,
-      caseManagerId: session.user.id,
+      caseManagerId: user.id,
       caseManager: {
-        id: session.user.id,
-        name: caseManager?.name || session.user.user_metadata?.name || session.user.email,
-        email: caseManager?.email || session.user.email
+        id: user.id,
+        name: caseManager?.name || user.email,
+        email: caseManager?.email || user.email
       },
-      status: 'pending',
+      status: 'submitted',
       createdAt: now,
       updatedAt: now,
       progressPercentage: 0
     };
+    
+    // console.log('💾 SAVING TO DATABASE:', JSON.stringify(referral, null, 2));
     
     const result = await db.collection(COLLECTION).insertOne(referral);
     
@@ -228,44 +228,30 @@ export async function POST(req: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const cookieStore = cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-          set(name: string, value: string, options: any) {
-            cookieStore.set({ name, value, ...options });
-          },
-          remove(name: string, options: any) {
-            cookieStore.set({ name, value: '', ...options });
-          },
-        },
-      }
-    );
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    const user = await getAuthenticatedUser();
+    if (!user || !['case_manager', 'platform_admin', 'platform_admin'].includes(user.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const userRole = session.user.user_metadata?.role;
+    
     const { id } = await request.json();
     if (!id) {
       return NextResponse.json({ error: 'Missing referral id' }, { status: 400 });
     }
+    
     const client = await clientPromise;
     const db = client.db('referradb');
     let filter: any = { _id: new ObjectId(id) };
-    if (userRole !== 'admin') {
+    
+    if (user.role !== 'platform_admin') {
       // Only allow case manager to delete their own referrals
-      filter.caseManagerId = session.user.id;
+      filter.caseManagerId = user.id;
     }
+    
     const result = await db.collection('referrals').deleteOne(filter);
     if (result.deletedCount === 0) {
       return NextResponse.json({ error: 'Referral not found or unauthorized' }, { status: 404 });
     }
+    
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting referral:', error);

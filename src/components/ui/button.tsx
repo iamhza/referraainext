@@ -13,17 +13,19 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
-          "border border-[#11ACF8] text-[#11ACF8] bg-transparent hover:bg-[#11ACF8]/5",
+          "border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-400",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        asana: "text-[13px] font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:border-gray-400",
       },
       size: {
         default: "h-10 px-4 py-2",
         sm: "h-9 rounded-md px-3",
         lg: "h-11 rounded-md px-8",
         icon: "h-10 w-10",
+        asana: "px-3 py-1.5",
       },
     },
     defaultVariants: {

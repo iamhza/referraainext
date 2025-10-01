@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
+import { formatDateForInput } from '@/lib/date-utils';
 import type { Client } from '@/types';
 
 export default function EditClientPage() {
@@ -67,7 +68,7 @@ export default function EditClientPage() {
         setFormData({
           firstName: data.client.firstName || "",
           lastName: data.client.lastName || "",
-          dateOfBirth: data.client.dateOfBirth ? new Date(data.client.dateOfBirth).toISOString().split('T')[0] : "",
+          dateOfBirth: formatDateForInput(data.client.dateOfBirth),
           email: data.client.email || "",
           phone: data.client.phone || "",
           address: typeof data.client.address === 'string' ? data.client.address : (data.client.address?.street || ""),
@@ -121,11 +122,9 @@ export default function EditClientPage() {
         zipCode: formData.zipCode || "",
         county: formData.county || "",
         preferredContactMethod: formData.preferredContactMethod || "email",
-        insurance: {
-          type: formData.insurance?.type || "",
-          provider: formData.insurance?.provider || "",
-          number: formData.insurance?.number || ""
-        }
+        // Map insurance fields to the expected PHI field names
+        insuranceProvider: formData.insurance?.provider || "",
+        insuranceNumber: formData.insurance?.number || ""
       };
       
       console.log("Submitting client data:", clientData);

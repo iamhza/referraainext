@@ -4,412 +4,275 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { ArrowRight, CheckCircle, Users, Shield, Clock, MessageSquare, FileText, Zap, Star, TrendingUp, Target, Calendar, BarChart3, Phone, AlertCircle, Play, Eye } from 'lucide-react';
 import { Container } from '@/components/ui/container';
 import { Logo } from '@/components/ui/Logo';
 
 export default function LandingPage() {
-  const [email, setEmail] = useState("");
   const router = useRouter();
 
-  const handleStartNow = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email) {
-      router.push(`/auth/signup?email=${encodeURIComponent(email)}`);
-    } else {
-      router.push('/auth/signup');
-    }
+  const handleGetStarted = () => {
+    router.push('/auth/signup?type=case-manager');
+  };
+
+  const handleWatchDemo = () => {
+    // Implement demo logic
+    console.log('Watch demo');
   };
 
   const handleSignIn = () => {
     router.push('/auth/signin');
   };
 
-  const handleGetStarted = () => {
-    router.push('/auth/signup');
-  };
-
-  const AnnouncementBanner = () => (
-    <div className="inline-flex items-center gap-2 rounded-full bg-[#0066FF]/10 border border-[#0066FF]/20 px-4 py-1.5 text-sm font-medium text-[#0066FF]">
-      <Badge variant="secondary" className="px-2 py-0.5 text-[11px]">NEW</Badge>
-      <span>Now offering AI-powered provider matching</span>
-      <ArrowRight className="h-3.5 w-3.5" />
-    </div>
-  );
-
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <Container>
+    <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-700 via-30% to-secondary-500 overflow-hidden relative">
+      {/* Advanced Background Effects */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(63,105,178,0.3),rgba(109,205,210,0.1))]" />
+      <div className="absolute inset-0 bg-gradient-to-r from-primary-800/20 via-transparent to-secondary-400/20" />
+      
+      {/* Professional Background Elements */}
+      <div className="absolute inset-0 opacity-[0.02]">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `radial-gradient(circle at 25% 25%, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+          backgroundSize: '50px 50px'
+        }} />
+      </div>
+      <div className="absolute top-20 right-20 w-96 h-96 bg-secondary-400/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-20 left-20 w-80 h-80 bg-primary-400/10 rounded-full blur-3xl" />
+      
+      {/* Header - Ultra Modern */}
+      <header className="absolute top-0 left-0 right-0 z-50 backdrop-blur-md bg-white/5 border-b border-white/10">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="flex justify-between h-16 items-center">
-            <Logo className="h-8 w-auto" />
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={handleSignIn}>
-                Sign In
+            <Logo className="h-8 w-auto transition-transform hover:scale-105 duration-300" />
+            <nav className="hidden md:flex items-center space-x-8">
+              <a href="#product" className="text-white/80 hover:text-white font-medium text-sm tracking-wider uppercase transition-all duration-300 hover:scale-105 relative group">
+                PRODUCT
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-purple-400 to-orange-400 group-hover:w-full transition-all duration-300" />
+              </a>
+              <a href="#solutions" className="text-white/80 hover:text-white font-medium text-sm tracking-wider uppercase transition-all duration-300 hover:scale-105 relative group">
+                SOLUTIONS
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-purple-400 to-orange-400 group-hover:w-full transition-all duration-300" />
+              </a>
+              <a href="#pricing" className="text-white/80 hover:text-white font-medium text-sm tracking-wider uppercase transition-all duration-300 hover:scale-105 relative group">
+                PRICING
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-purple-400 to-orange-400 group-hover:w-full transition-all duration-300" />
+              </a>
+              <a href="#enterprise" className="text-white/80 hover:text-white font-medium text-sm tracking-wider uppercase transition-all duration-300 hover:scale-105 relative group">
+                ENTERPRISE
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-purple-400 to-orange-400 group-hover:w-full transition-all duration-300" />
+              </a>
+            </nav>
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="ghost" 
+                onClick={handleSignIn} 
+                className="text-white/80 hover:text-white hover:bg-white/10 font-medium text-sm px-4 py-2 transition-all duration-300 hover:scale-105"
+              >
+                Login
               </Button>
               <Button 
                 onClick={handleGetStarted}
-                className="bg-[#0066FF] hover:bg-[#0066FF]/90"
+                className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-medium px-6 py-2.5 rounded-xl text-sm transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(34,211,238,0.4)] backdrop-blur-sm"
               >
                 Get Started
               </Button>
             </div>
           </div>
-        </Container>
+        </div>
       </header>
 
-      {/* Hero Section */}
-      <Container>
-        <section className="pt-16 md:pt-32 pb-16">
-          <div className="max-w-3xl mx-auto space-y-8 text-center">
-            <AnnouncementBanner />
-            <h1 className="text-4xl md:text-5xl font-semibold leading-tight text-gray-900">
-              Effortless <span className="bg-gradient-to-r from-[#0066FF] to-[#0066FF]/70 bg-clip-text text-transparent">AI-Powered Referrals</span>
-            </h1>
-            <p className="text-lg md:text-xl text-gray-600">
-              Referra connects case managers with pre-vetted service providers in seconds.
-            </p>
-            <div className="flex flex-col md:flex-row justify-center gap-4">
-              <div className="flex items-center gap-2">
-                <svg className="h-5 w-5 text-[#0066FF]" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>No manual searches</span>
+      {/* Hero Section - Ultra Modern */}
+      <section className="relative min-h-screen flex items-center">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8 max-w-8xl relative z-10">
+          <div className="grid lg:grid-cols-2 gap-24 items-center min-h-[95vh] py-24">
+            
+            {/* Left Side - Hero Content - Expanded Width */}
+            <div className="space-y-12 text-white animate-in fade-in-0 slide-in-from-left-8 duration-1000 max-w-4xl">
+              {/* Tagline - Advanced Typography */}
+              <div className="inline-flex items-center gap-3 bg-gradient-to-r from-white/10 to-white/5 backdrop-blur-xl rounded-full px-5 py-3 text-xs font-semibold tracking-[0.2em] text-white/90 uppercase border border-white/20 shadow-2xl">
+                <div className="w-2 h-2 bg-gradient-to-r from-secondary-400 to-primary-500 rounded-full animate-pulse" />
+                SMART REFERRALS. ORGANIZED CARE. BUILT FOR CASE MANAGERS.
               </div>
-              <div className="flex items-center gap-2">
-                <svg className="h-5 w-5 text-[#0066FF]" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>Qualified referrals</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <svg className="h-5 w-5 text-[#0066FF]" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>Enhanced outcomes</span>
-              </div>
-            </div>
-            <div className="pt-4">
-              <form onSubmit={handleStartNow} className="max-w-md mx-auto">
-                <div className="bg-white rounded-full p-1.5 flex items-center border-2 border-gray-200 focus-within:border-[#0066FF]/50">
-                  <Input
-                    type="email"
-                    placeholder="Email address"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-                  />
-                  <Button 
-                    type="submit" 
-                    className="rounded-full whitespace-nowrap bg-[#0066FF] hover:bg-[#0066FF]/90"
-                  >
-                    Start now
-                  </Button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </section>
-      </Container>
-
-      {/* Features Section */}
-      <section className="py-20 md:py-32 bg-white border-t">
-        <Container>
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-semibold mb-4 text-gray-900">Streamline Your Referral Process</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Our AI-powered platform helps you find the right providers faster, track progress effortlessly, and improve client outcomes.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100">
-              <div className="w-12 h-12 bg-[#0066FF]/10 rounded-xl flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-[#0066FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-gray-900">Smart Matching</h3>
-              <p className="text-gray-600">AI-powered matching algorithm finds the most suitable providers based on client needs.</p>
-            </div>
-            <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100">
-              <div className="w-12 h-12 bg-[#0066FF]/10 rounded-xl flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-[#0066FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-gray-900">Progress Tracking</h3>
-              <p className="text-gray-600">Real-time updates and milestone tracking for every referral in your pipeline.</p>
-            </div>
-            <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100">
-              <div className="w-12 h-12 bg-[#0066FF]/10 rounded-xl flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-[#0066FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-gray-900">Seamless Communication</h3>
-              <p className="text-gray-600">Built-in messaging system keeps everyone in the loop and reduces back-and-forth.</p>
-            </div>
-          </div>
-        </Container>
-      </section>
-
-      {/* Preview App Section */}
-      <section className="py-20 md:py-32 bg-[#F8FAFC] border-t relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white/50"></div>
-        <Container>
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-semibold mb-4 text-gray-900">
-              Powerful Platform for Both Sides
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Whether you're a case manager or service provider, Referra streamlines your workflow and helps you deliver better outcomes.
-            </p>
-          </div>
-          
-          <div className="grid lg:grid-cols-2 gap-16 items-start">
-            {/* Case Manager Side */}
-            <div className="relative">
-              <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#0066FF]/5 rounded-full">
-                  <svg className="w-5 h-5 text-[#0066FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  <span className="text-sm font-medium text-[#0066FF]">For Case Managers</span>
-                </div>
-                <h3 className="text-2xl font-semibold text-gray-900">
-                  Find the Perfect Match in Minutes
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-[#0066FF]/10 flex items-center justify-center mt-1">
-                      <svg className="w-4 h-4 text-[#0066FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900">AI-Powered Matching</h4>
-                      <p className="text-gray-600">Get instant provider recommendations based on client needs and preferences</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-[#0066FF]/10 flex items-center justify-center mt-1">
-                      <svg className="w-4 h-4 text-[#0066FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900">Progress Dashboard</h4>
-                      <p className="text-gray-600">Track all referrals in one place with real-time status updates</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-[#0066FF]/10 flex items-center justify-center mt-1">
-                      <svg className="w-4 h-4 text-[#0066FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900">Outcome Tracking</h4>
-                      <p className="text-gray-600">Measure success with detailed analytics and reporting tools</p>
-                    </div>
-                  </div>
-                </div>
+              
+              {/* Main Headline - Improved Copy & Professional Colors */}
+              <h1 className="text-6xl md:text-7xl lg:text-9xl font-black leading-[0.85] tracking-tighter">
+                <span className="bg-gradient-to-br from-white via-white to-white/90 bg-clip-text text-transparent drop-shadow-2xl">
+                  The Last Referral<br />
+                  Form You'll<br />
+                  Ever Fill Out.
+                </span>
+              </h1>
+              
+              {/* Subhead - Emotional Hook */}
+              <p className="text-2xl md:text-3xl text-white/85 leading-relaxed max-w-3xl font-light tracking-wide">
+                Finally, a platform that connects case managers, providers, and agencies — so 
+                <span className="text-secondary-300 font-medium"> clients get placed faster</span> and 
+                <span className="text-primary-300 font-medium"> nothing slips through the cracks</span>.
+              </p>
+              
+              {/* Executive Angle */}
+              <p className="text-lg text-white/70 font-medium max-w-2xl border-l-2 border-secondary-400/50 pl-4">
+                Track outcomes across all referrals, reduce admin hours, and stay audit-ready.
+              </p>
+              
+              {/* CTAs - Improved Hierarchy */}
+              <div className="flex flex-col sm:flex-row gap-6 pt-8">
                 <Button 
                   onClick={handleGetStarted}
-                  className="w-full bg-[#0066FF] hover:bg-[#0066FF]/90 mt-4"
+                  className="group bg-gradient-to-r from-secondary-500 to-secondary-600 hover:from-secondary-400 hover:to-secondary-500 text-white text-xl px-12 py-5 rounded-2xl font-bold transition-all duration-300 hover:scale-105 hover:shadow-[0_0_50px_rgba(109,205,210,0.4)] relative overflow-hidden shadow-2xl"
                 >
-                  Start Making Referrals
+                  <span className="relative z-10">Get Clients Placed Faster →</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </Button>
-              </div>
-              <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-[#0066FF] rounded-2xl -z-10 opacity-20"></div>
-            </div>
-
-            {/* Provider Side */}
-            <div className="relative">
-              <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#0066FF]/5 rounded-full">
-                  <svg className="w-5 h-5 text-[#0066FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  <span className="text-sm font-medium text-[#0066FF]">For Service Providers</span>
-                </div>
-                <h3 className="text-2xl font-semibold text-gray-900">
-                  Grow Your Practice Efficiently
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-[#0066FF]/10 flex items-center justify-center mt-1">
-                      <svg className="w-4 h-4 text-[#0066FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900">Qualified Referrals</h4>
-                      <p className="text-gray-600">Receive pre-screened referrals that match your expertise and capacity</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-[#0066FF]/10 flex items-center justify-center mt-1">
-                      <svg className="w-4 h-4 text-[#0066FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900">Streamlined Communication</h4>
-                      <p className="text-gray-600">Manage all case manager interactions in one secure platform</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-[#0066FF]/10 flex items-center justify-center mt-1">
-                      <svg className="w-4 h-4 text-[#0066FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900">Practice Growth</h4>
-                      <p className="text-gray-600">Expand your client base while maintaining quality of care</p>
-                    </div>
-                  </div>
-                </div>
                 <Button 
-                  onClick={handleGetStarted}
-                  className="w-full bg-[#0066FF] hover:bg-[#0066FF]/90 mt-4"
+                  variant="outline" 
+                  onClick={handleWatchDemo}
+                  className="group text-white hover:bg-white/10 text-xl px-12 py-5 rounded-2xl font-semibold transition-all duration-300 hover:scale-105 border-2 border-white/30 hover:border-white/50 backdrop-blur-sm"
                 >
-                  Join Our Network
+                  <Play className="w-6 h-6 mr-3 fill-current group-hover:scale-110 transition-transform duration-300" />
+                  See Referra in Action
                 </Button>
               </div>
-              <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-[#0066FF] rounded-2xl -z-10 opacity-20"></div>
-            </div>
-          </div>
-        </Container>
-      </section>
 
-      {/* Testimonials Section */}
-      <section className="py-20 md:py-32 bg-white border-t">
-        <Container>
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-semibold mb-4 text-gray-900">Trusted by Case Managers</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              See what case managers are saying about how Referra has transformed their referral process.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-full bg-[#0066FF]/10 flex items-center justify-center">
-                  <span className="text-[#0066FF] font-semibold">SK</span>
+              {/* Trust Section - Moved Up & Enhanced */}
+              <div className="pt-12 space-y-8">
+                <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
+                  <p className="text-white/60 text-sm uppercase tracking-[0.3em] font-bold mb-4">
+                    TRUSTED BY MINNESOTA'S LEADING HEALTHCARE ORGANIZATIONS
+                  </p>
+                  <div className="flex flex-wrap items-center gap-10">
+                    {['HENNEPIN COUNTY', 'RAMSEY COUNTY', 'DAKOTA COUNTY', 'WASHINGTON COUNTY'].map((county, index) => (
+                      <div 
+                        key={county}
+                        className="text-white/70 font-bold text-base tracking-wider hover:text-white/90 transition-all duration-300 hover:scale-110 cursor-pointer"
+                        style={{animationDelay: `${index * 100}ms`}}
+                      >
+                        {county}
+                      </div>
+                    ))}
                 </div>
-                <div>
-                  <h4 className="font-semibold">Sarah K.</h4>
-                  <p className="text-sm text-gray-600">Healthcare Case Manager</p>
                 </div>
-              </div>
-              <p className="text-gray-600">"Referra has cut my referral processing time in half. The AI matching is incredibly accurate and saves me hours of manual searching."</p>
-            </div>
-            <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-full bg-[#0066FF]/10 flex items-center justify-center">
-                  <span className="text-[#0066FF] font-semibold">MR</span>
-                </div>
-                <div>
-                  <h4 className="font-semibold">Michael R.</h4>
-                  <p className="text-sm text-gray-600">Social Services Director</p>
+                
+                {/* Micro Testimonial */}
+                <div className="bg-gradient-to-r from-white/10 to-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/20">
+                  <p className="text-white/90 text-lg italic mb-3">"Referra cut my referral time in half. It's the only tool I trust for my caseload."</p>
+                  <p className="text-white/60 text-sm font-medium">— Sarah M., Case Manager @ Accord Healthcare</p>
                 </div>
               </div>
-              <p className="text-gray-600">"The tracking features are game-changing. I can see the status of all my referrals at a glance and follow up when needed."</p>
             </div>
-            <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-full bg-[#0066FF]/10 flex items-center justify-center">
-                  <span className="text-[#0066FF] font-semibold">JD</span>
-                </div>
-                <div>
-                  <h4 className="font-semibold">Jessica D.</h4>
-                  <p className="text-sm text-gray-600">Mental Health Coordinator</p>
-                </div>
-              </div>
-              <p className="text-gray-600">"Having all communications in one place has improved our coordination with providers significantly. Great platform!"</p>
-            </div>
-        </div>
-        </Container>
-      </section>
 
-      {/* Modern CTA Section */}
-      <section className="py-24 bg-white border-t relative overflow-hidden">
-        <Container>
-          <div className="relative z-10 max-w-4xl mx-auto">
-            <div className="bg-gradient-to-br from-[#0066FF] to-[#0055DD] rounded-3xl p-1">
-              <div className="bg-white rounded-[23px] p-12 text-center space-y-8">
-                <h2 className="text-3xl md:text-4xl font-semibold bg-gradient-to-r from-[#0066FF] to-[#0055DD] bg-clip-text text-transparent">
-                  Ready to Transform Your Referral Process?
-                </h2>
-                <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                  Join thousands of healthcare professionals already using Referra to streamline their workflow and improve outcomes.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button 
-                    onClick={handleGetStarted}
-                    className="bg-[#0066FF] hover:bg-[#0066FF]/90 text-lg px-8"
-                  >
-                    Get Started Free
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {}}
-                    className="border-[#0066FF] text-[#0066FF] hover:bg-[#0066FF]/5 text-lg px-8"
-                  >
-                    Schedule a Demo
-                  </Button>
+            {/* Right Side - Enhanced Larger Cards */}
+            <div className="relative lg:pl-8 space-y-10 animate-in fade-in-0 slide-in-from-right-8 duration-1000 delay-300">
+              
+              {/* Success Metrics Card - Larger & Outcome-Driven */}
+              <div className="group bg-gradient-to-br from-white/25 via-white/15 to-white/5 backdrop-blur-2xl rounded-3xl p-10 shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-white/20 hover:border-white/40 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_20px_60px_rgba(0,0,0,0.15)] relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-secondary-500/10 via-transparent to-primary-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-8">
+                    <div>
+                      <div className="text-6xl font-black text-white tracking-tight mb-3 bg-gradient-to-br from-white to-white/80 bg-clip-text text-transparent">82%</div>
+                      <div className="text-base text-white/80 flex items-center gap-3 font-medium tracking-wide">
+                        Referrals Complete 
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
+                          <div className="w-2.5 h-2.5 rounded-full bg-white/90 animate-pulse"></div>
+                      </div>
+                      </div>
+                    </div>
+                    <div className="text-sm text-white/60 font-bold tracking-wider bg-white/10 rounded-full px-4 py-2 backdrop-blur-sm border border-white/20">35 / 42</div>
+                  </div>
+                  <div className="mb-6">
+                    <div className="text-white/70 text-sm font-medium mb-3">within 7 days</div>
+                    <div className="w-full bg-gradient-to-r from-white/20 via-white/10 to-white/20 rounded-full h-5 backdrop-blur-sm shadow-inner">
+                      <div className="bg-gradient-to-r from-secondary-400 via-secondary-500 to-primary-400 h-5 rounded-full shadow-lg transition-all duration-1000 ease-out" style={{width: '82%'}}></div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
           </div>
           
-          {/* Decorative Elements */}
-          <div className="absolute top-1/2 left-0 -translate-y-1/2 w-64 h-64 bg-[#0066FF]/5 rounded-full blur-3xl"></div>
-          <div className="absolute top-1/2 right-0 -translate-y-1/2 w-64 h-64 bg-[#0066FF]/5 rounded-full blur-3xl"></div>
-        </Container>
+              {/* Workflow Efficiency Card - Larger & Outcome-Driven */}
+              <div className="group bg-gradient-to-br from-white/25 via-white/15 to-white/5 backdrop-blur-2xl rounded-3xl p-10 shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-white/20 hover:border-white/40 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_20px_60px_rgba(0,0,0,0.15)] relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-transparent to-secondary-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="relative z-10 mb-8">
+                  <div className="text-2xl font-bold text-white mb-3 tracking-tight">One Form. 5 Vetted Providers.</div>
+                  <div className="text-base text-white/80 leading-relaxed font-light">
+                    Clients placed without delays. Track everything in the service feed and collaborate seamlessly with your team.
+                </div>
+              </div>
+              
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <Star className="w-6 h-6 text-amber-400 fill-amber-400 drop-shadow-lg" />
+                    <span className="text-base font-bold text-white tracking-wide">4.8/5</span>
+              </div>
+              
+                  <div className="flex items-center gap-8">
+                    <div className="flex -space-x-4">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full border-3 border-white/30 backdrop-blur-sm shadow-lg transition-transform hover:scale-110"></div>
+                      <div className="w-10 h-10 bg-gradient-to-br from-secondary-400 to-secondary-600 rounded-full border-3 border-white/30 backdrop-blur-sm shadow-lg transition-transform hover:scale-110"></div>
+                      <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full border-3 border-white/30 backdrop-blur-sm shadow-lg transition-transform hover:scale-110"></div>
+                      <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-full border-3 border-white/30 backdrop-blur-sm shadow-lg flex items-center justify-center text-sm text-white font-black transition-transform hover:scale-110">+12</div>
+                    </div>
+                    
+                    <div className="flex items-center gap-5 text-base text-white/70">
+                      <div className="flex items-center gap-2 hover:text-white/90 transition-colors cursor-pointer">
+                        <Eye className="w-5 h-5" />
+                        <span className="font-medium">156</span>
+                  </div>
+                      <div className="flex items-center gap-2 hover:text-white/90 transition-colors cursor-pointer">
+                        <MessageSquare className="w-5 h-5" />
+                        <span className="font-medium">43</span>
+                    </div>
+                      <div className="flex items-center gap-2 hover:text-white/90 transition-colors cursor-pointer">
+                        <FileText className="w-5 h-5" />
+                        <span className="font-medium">8</span>
+                  </div>
+                    </div>
+                  </div>
+                </div>
+          </div>
+          
+              {/* Community Growth Card - Larger & Social Proof */}
+              <div className="group bg-gradient-to-br from-white/25 via-white/15 to-white/5 backdrop-blur-2xl rounded-3xl p-10 shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-white/20 hover:border-white/40 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_20px_60px_rgba(0,0,0,0.15)] relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-transparent to-secondary-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-8">
+                    <div>
+                      <div className="text-2xl font-bold text-white mb-3 tracking-tight">Join 500+ Case Managers</div>
+                      <div className="text-base text-white/80 font-medium">
+                        Already streamlining referrals with Referra
+            </div>
+          </div>
+                    <Button className="bg-gradient-to-r from-secondary-500/80 to-secondary-600/80 hover:from-secondary-400 hover:to-secondary-500 text-white border border-secondary-400/40 hover:border-secondary-400/60 text-base px-8 py-4 rounded-2xl font-bold tracking-wide transition-all duration-300 hover:scale-105 backdrop-blur-sm shadow-lg hover:shadow-secondary-400/25">
+                      JOIN COMMUNITY →
+                    </Button>
+          </div>
+          
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-5">
+                      <div className="flex items-center gap-4 text-base">
+                        <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-secondary-600 rounded-xl flex items-center justify-center shadow-lg backdrop-blur-sm border border-white/20">
+                          <span className="text-white text-sm font-black">R</span>
+                </div>
+                        <span className="font-semibold text-white/90 tracking-wide">Referra Network</span>
+            </div>
+          </div>
+
+                    <div className="flex -space-x-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full border-3 border-white/30 backdrop-blur-sm shadow-lg transition-transform hover:scale-110"></div>
+                      <div className="w-12 h-12 bg-gradient-to-br from-secondary-400 to-secondary-600 rounded-full border-3 border-white/30 backdrop-blur-sm shadow-lg transition-transform hover:scale-110"></div>
+                      <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full border-3 border-white/30 backdrop-blur-sm shadow-lg transition-transform hover:scale-110"></div>
+              </div>
+            </div>
+                </div>
+              </div>
+
+            </div>
+            </div>
+          </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-[#F8FAFC] border-t">
-        <Container>
-          <div className="py-16 grid md:grid-cols-4 gap-8">
-            <div className="space-y-4">
-              <Logo className="h-8 w-auto" />
-              <p className="text-gray-600">AI-Powered Referrals</p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-4">Product</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-gray-600 hover:text-[#0066FF]">Features</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-[#0066FF]">Pricing</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-[#0066FF]">Security</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-4">Company</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-gray-600 hover:text-[#0066FF]">About Us</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-[#0066FF]">Careers</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-[#0066FF]">Contact</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-4">Legal</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-gray-600 hover:text-[#0066FF]">Privacy Policy</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-[#0066FF]">Terms of Service</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t py-8 text-center text-gray-600 text-sm">
-            &copy; 2024 Referra. All rights reserved.
-          </div>
-        </Container>
-      </footer>
     </div>
   );
 }
+

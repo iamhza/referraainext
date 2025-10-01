@@ -1,30 +1,13 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-
+import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
 const COLLECTION = 'clients';
 
-async function getSession() {
-  const cookieStore = cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-      },
-    }
-  );
-  const { data: { session } } = await supabase.auth.getSession();
-  return session;
-}
+
 
 export async function POST(req: Request) {
-  const session = await getSession();
-  if (!session || !['admin', 'case_manager'].includes(session.user.user_metadata?.role)) {
+  const user = await getAuthenticatedUser();
+  if (!user || !['platform_admin', 'case_manager'].includes(user.role)) {
     return NextResponse.json({ error: 'Unauthorized - Admin or Case Manager access required' }, { status: 401 });
   }
 
@@ -48,7 +31,8 @@ export async function POST(req: Request) {
     
     console.log(`Found ${clientsToDelete.length} clients with broken CSV data:`);
     clientsToDelete.forEach(client => {
-      console.log(`- ${client.firstName} ${client.lastName} (${client._id})`);
+      // HIPAA COMPLIANT: Log only non-PHI identifiers
+      console.log(`- Client ID: ${client._id} (status: ${client.status})`);
     });
     
     if (clientsToDelete.length === 0) {

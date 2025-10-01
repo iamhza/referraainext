@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EnhancedButton } from "@/components/ui/enhanced-button";
@@ -16,6 +17,7 @@ import {
   Mail, 
   Phone, 
   Building,
+  Building2,
   MapPin,
   Calendar,
   ClipboardList,
@@ -44,7 +46,8 @@ import {
 
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
-import { formatSafeDate } from '@/lib/date-utils';
+import { formatSafeDate, formatDateForInput } from '@/lib/date-utils';
+import { formatWaiverType, formatWaiverTypeShort, WAIVER_TYPE_OPTIONS } from '@/lib/formatting';
 import Link from "next/link";
 
 import { ClientStatusSelector } from '@/components/clients/ClientStatusSelector';
@@ -60,6 +63,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function ClientDetailsPage() {
+  const { user } = useAuth();
   const params = useParams<{ id: string }>();
   const id = params?.id;
   const router = useRouter();
@@ -89,6 +93,7 @@ export default function ClientDetailsPage() {
     city: '',
     state: '',
     zipCode: '',
+    insurance: '' as 'medicaid' | 'medicare' | 'private' | 'none' | '',
     insuranceProvider: '',
     insuranceNumber: '',
     pmiNumber: '',
@@ -109,7 +114,7 @@ export default function ClientDetailsPage() {
       try {
         if (!id) throw new Error("Missing client ID");
         
-        const res = await fetch(`/api/clients?id=${id}`);
+        const res = await fetch(`/api/clients/${id}`);
         if (!res.ok) {
           const error = await res.json();
           throw new Error(error.error || "Failed to fetch client");
@@ -255,7 +260,7 @@ export default function ClientDetailsPage() {
       setFormData({
         firstName: client.firstName || '',
         lastName: client.lastName || '',
-        dateOfBirth: client.dateOfBirth ? new Date(client.dateOfBirth).toISOString().split('T')[0] : '',
+        dateOfBirth: formatDateForInput(client.dateOfBirth),
         sex: client.sex || '',
         email: client.email || '',
         phone: client.phone || '',
@@ -264,6 +269,7 @@ export default function ClientDetailsPage() {
         city: client.city || '',
         state: client.state || '',
         zipCode: client.zipCode || '',
+        insurance: (typeof client.insurance === 'string' ? client.insurance : client.insurance?.type) || '',
         insuranceProvider: client.insuranceProvider || '',
         insuranceNumber: client.insuranceNumber || '',
         pmiNumber: client.pmiNumber || '',
@@ -360,7 +366,7 @@ export default function ClientDetailsPage() {
       setFormData({
         firstName: client.firstName || '',
         lastName: client.lastName || '',
-        dateOfBirth: client.dateOfBirth ? new Date(client.dateOfBirth).toISOString().split('T')[0] : '',
+        dateOfBirth: formatDateForInput(client.dateOfBirth),
         sex: client.sex || '',
         email: client.email || '',
         phone: client.phone || '',
@@ -369,6 +375,7 @@ export default function ClientDetailsPage() {
         city: client.city || '',
         state: client.state || '',
         zipCode: client.zipCode || '',
+        insurance: (typeof client.insurance === 'string' ? client.insurance : client.insurance?.type) || '',
         insuranceProvider: client.insuranceProvider || '',
         insuranceNumber: client.insuranceNumber || '',
         pmiNumber: client.pmiNumber || '',
@@ -410,9 +417,9 @@ export default function ClientDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-background-500 to-secondary-50">
       {/* Enhanced Top Navigation */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+      <div className="bg-primary-50 border-b border-secondary-300 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Breadcrumb Navigation */}
@@ -493,17 +500,24 @@ export default function ClientDetailsPage() {
         <div className="flex gap-8">
           {/* Left Sidebar - Client Information */}
           <div className="w-96 flex-shrink-0">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sticky top-24">
+            <div className="bg-primary-50 rounded-2xl shadow-sm border border-secondary-300 p-6 sticky top-24">
               <div className="text-center mb-6">
-                <Avatar className="h-24 w-24 rounded-2xl border-4 border-white shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold text-2xl mx-auto mb-4">
+                <Avatar className="h-24 w-24 rounded-2xl border-4 border-white shadow-lg bg-gradient-to-br from-accent-500 to-accent-600 text-white font-bold text-2xl mx-auto mb-4">
                   <AvatarFallback>{clientInitials}</AvatarFallback>
                 </Avatar>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <h3 className="text-xl font-semibold text-accent-800 mb-2">
                   {isEditing ? `${formData.firstName} ${formData.lastName}`.trim() || 'Enter Name' : clientName}
                 </h3>
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-gray-600 mb-2">
                   {isEditing ? 'Editing Client Profile' : 'Client Profile & Information'}
                 </p>
+                
+                {/* Organization Context */}
+                <div className="text-xs text-gray-500 mb-4 flex items-center justify-center gap-2">
+                  <Building2 className="w-3 h-3" />
+                  <span>{user?.organization?.name || 'Your Organization'}</span>
+                  {client?.assignedBy && <span>• Supervisor Assigned</span>}
+                </div>
                 
                 {/* Client ID with enhanced styling */}
                 <div className="flex items-center justify-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border">
@@ -871,6 +885,27 @@ export default function ClientDetailsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
+                      <dt className="text-sm font-medium text-gray-600 mb-1">Insurance Type</dt>
+                      {isEditing ? (
+                        <Select value={formData.insurance} onValueChange={(value) => handleInputChange('insurance', value)}>
+                          <SelectTrigger className="text-gray-900">
+                            <SelectValue placeholder="Select insurance type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="medicaid">Medicaid</SelectItem>
+                            <SelectItem value="medicare">Medicare</SelectItem>
+                            <SelectItem value="private">Private Insurance</SelectItem>
+                            <SelectItem value="none">No Insurance</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <dd className="text-gray-900 font-medium">
+                          {getInsuranceLabel(typeof client.insurance === 'string' ? client.insurance : client.insurance?.type) || 'Not specified'}
+                        </dd>
+                      )}
+                    </div>
+                    
+                    <div>
                       <dt className="text-sm font-medium text-gray-600 mb-1">Insurance Provider</dt>
                       {isEditing ? (
                         <Input
@@ -923,15 +958,34 @@ export default function ClientDetailsPage() {
                     <div>
                       <dt className="text-sm font-medium text-gray-600 mb-1">Waiver Type</dt>
                       {isEditing ? (
-                        <Input
-                          value={formData.waiverType}
-                          onChange={(e) => handleInputChange('waiverType', e.target.value)}
-                          placeholder="Waiver type"
-                          className="text-gray-900"
-                        />
+                        <Select value={formData.waiverType} onValueChange={(value) => handleInputChange('waiverType', value)}>
+                          <SelectTrigger className="group h-12 text-base bg-gradient-to-r from-white to-gray-50 border-2 border-gray-200 hover:border-blue-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg">
+                            <div className="flex items-center w-full">
+                              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/10 mr-3 group-hover:from-blue-500/20 group-hover:to-blue-600/20 transition-all duration-300">
+                                <Shield className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform duration-300" />
+                              </div>
+                              <div className="flex-1 text-left">
+                                <div className="text-base font-medium text-gray-900">
+                                  {formData.waiverType ? formatWaiverTypeShort(formData.waiverType) : "Select waiver type"}
+                                </div>
+                              </div>
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent className="z-50 max-h-96 overflow-y-auto bg-white/95 backdrop-blur-xl border-2 border-gray-200/50 rounded-xl shadow-2xl">
+                            {WAIVER_TYPE_OPTIONS.map(option => (
+                              <SelectItem 
+                                key={option.value} 
+                                value={option.value}
+                                className="h-10 text-base px-4 py-2 font-medium text-gray-900 hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-blue-600/5 cursor-pointer transition-all duration-200 rounded-lg mx-2 my-1"
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       ) : (
                         <dd className="text-gray-900 font-medium">
-                          {client.waiverType || 'Not specified'}
+                          {formatWaiverType(client.waiverType)}
                         </dd>
                       )}
                     </div>
@@ -1088,7 +1142,7 @@ export default function ClientDetailsPage() {
                                 asChild
                                 className="bg-green-600 hover:bg-green-700 text-white"
                               >
-                                <Link href={`/case-manager/referrals/${referral._id}/thread`}>
+                                <Link href={`/case-manager/referrals/${referral._id}/workspace`}>
                                   <MessageSquare className="h-4 w-4 mr-2" />
                                   Workspace
                                 </Link>

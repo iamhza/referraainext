@@ -1,35 +1,18 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
 
-async function getSession() {
-  const cookieStore = cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-      },
-    }
-  );
-  const { data: { session } } = await supabase.auth.getSession();
-  return session;
-}
 
 export async function GET(req: Request) {
-  const session = await getSession();
-  if (!session || session.user.user_metadata?.role !== 'provider') {
+  const user = await getAuthenticatedUser();
+  if (!user || user.role !== 'provider') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
     const client = await clientPromise;
     const db = client.db('referradb');
-    const providerId = session.user.id;
+    const providerId = user.id;
 
     // Find clients linked to this provider through referrals
     const referrals = await db.collection('referrals').find({

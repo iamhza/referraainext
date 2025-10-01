@@ -1,8 +1,7 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
 
+import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
 // GET: Fetch recent comments (last 7 days) across all referrals for dashboard
 export async function GET(request: Request) {
   try {
@@ -18,21 +17,21 @@ export async function GET(request: Request) {
         },
       }
     );
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getAuthenticatedUser();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
     // Only case managers and admins can view dashboard
-    const userRole = session.user.user_metadata?.role;
-    if (userRole !== 'case_manager' && userRole !== 'admin') {
+    const userRole = user.role;
+    if (userRole !== 'case_manager' && userRole !== 'platform_admin') {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
     
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '10');
     const days = parseInt(searchParams.get('days') || '7');
-    const userId = session.user.id;
+    const userId = user.id;
     
     // Calculate date threshold for "recent" (default: last 7 days)
     const dateThreshold = new Date();
@@ -45,7 +44,7 @@ export async function GET(request: Request) {
     const pipeline = [
       // Match referrals that the case manager has access to
       {
-        $match: userRole === 'admin' ? {} : { caseManagerId: userId }
+        $match: userRole === 'platform_admin' ? {} : { caseManagerId: userId }
       },
       // Only include referrals that have been updated recently or have recent comments
       {

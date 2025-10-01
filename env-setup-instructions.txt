@@ -1,0 +1,12 @@
+
+# Add these to your .env.local file:
+
+# NextAuth.js Configuration
+NEXTAUTH_URL=http://localhost:3001
+NEXTAUTH_SECRET=your-secret-key-here
+
+# JWT Secret for custom auth (if needed)
+JWT_SECRET=your-jwt-secret-here
+
+# Note: Your existing MongoDB and Supabase env vars should remain the same
+

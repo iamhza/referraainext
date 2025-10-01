@@ -31,6 +31,7 @@ const clientSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
   lastName: z.string().min(2, "Last name must be at least 2 characters"),
   dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Please enter a valid date (YYYY-MM-DD)"),
+  sex: z.enum(["male", "female", "non-binary", "prefer-not-to-say", "other"]).optional(),
   email: z.string().email("Please enter a valid email address").optional(),
   phone: z.string().min(10, "Please enter a valid phone number"),
   address: z.string().min(5, "Please enter a valid address"),
@@ -67,6 +68,7 @@ export function ClientForm({ onSubmit, initialData, isLoading, className }: Clie
       firstName: "",
       lastName: "",
       dateOfBirth: "",
+      sex: undefined,
       email: "",
       phone: "",
       address: "",
@@ -129,6 +131,33 @@ export function ClientForm({ onSubmit, initialData, isLoading, className }: Clie
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="sex"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gender Identity (Optional)</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender identity" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="non-binary">Non-binary</SelectItem>
+                      <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Used for provider matching preferences
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

@@ -1,54 +1,35 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import { createClient } from '@supabase/supabase-js';
+import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
 
 const COLLECTION = 'users';
 
-async function getAdminSession() {
-  const cookieStore = cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-      },
-    }
-  );
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session || session.user.user_metadata?.role !== 'admin') {
-    return null;
-  }
-  return session;
-}
-
 export async function GET() {
-  const session = await getAdminSession();
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const user = await getAuthenticatedUser();
+  if (!user || user.role !== 'platform_admin') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
   try {
-    // Use Supabase Admin API to fetch users
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-    return NextResponse.json({ users: data.users });
+    const client = await clientPromise;
+    const db = client.db('referradb');
+    
+    // Fetch users from MongoDB instead of Supabase
+    const users = await db.collection(COLLECTION).find({}).toArray();
+    
+    return NextResponse.json({ users });
   } catch (error) {
+    console.error('Error fetching users:', error);
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
-  const session = await getAdminSession();
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const user = await getAuthenticatedUser();
+  if (!user || user.role !== 'platform_admin') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const { name, email, role, organization, status } = await request.json();
     if (!name || !email || !role) {
@@ -73,8 +54,10 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const session = await getAdminSession();
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const user = await getAuthenticatedUser();
+  if (!user || user.role !== 'platform_admin') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const { id, ...update } = await request.json();
     if (!id) return NextResponse.json({ error: 'Missing user id' }, { status: 400 });
@@ -94,8 +77,10 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const session = await getAdminSession();
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const user = await getAuthenticatedUser();
+  if (!user || user.role !== 'platform_admin') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const { id } = await request.json();
     if (!id) return NextResponse.json({ error: 'Missing user id' }, { status: 400 });

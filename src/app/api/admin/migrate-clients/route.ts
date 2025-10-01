@@ -1,25 +1,9 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
 import clientPromise from '@/lib/mongodb';
+import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
 import { ObjectId } from 'mongodb';
 
-async function getSession() {
-  const cookieStore = cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-      },
-    }
-  );
-  const { data: { session } } = await supabase.auth.getSession();
-  return session;
-}
+
 
 // Define types for the result details
 type MigrationResultDetail = 
@@ -29,8 +13,8 @@ type MigrationResultDetail =
 
 export async function POST(req: Request) {
   // Ensure only admins can run this migration
-  const session = await getSession();
-  if (!session || session.user.user_metadata?.role !== 'admin') {
+  const user = await getAuthenticatedUser();
+  if (!user || user.role !== 'platform_admin') {
     return NextResponse.json({ error: 'Unauthorized. Admin access required.' }, { status: 401 });
   }
   

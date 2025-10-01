@@ -12,6 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { motion } from "framer-motion";
 import { ArrowLeft, User, Calendar, Phone, Mail, MapPin, Shield, FileText, Plus, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useClientMutations } from "@/hooks/use-client-refresh";
+import { WAIVER_TYPE_OPTIONS, formatWaiverTypeShort } from "@/lib/formatting";
 import Link from "next/link";
 
 type InsuranceType = 'medicaid' | 'medicare' | 'private' | 'none';
@@ -53,7 +55,10 @@ interface ClientFormData {
 export default function NewClientPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { onClientAdded } = useClientMutations();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 3;
   
   const [formData, setFormData] = useState<ClientFormData>({
     // Basic Information
@@ -96,8 +101,49 @@ export default function NewClientPage() {
     }));
   };
 
+  const nextStep = () => {
+    if (currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const isStepValid = (step: number) => {
+    switch (step) {
+      case 1:
+        return formData.firstName && formData.lastName && formData.dateOfBirth && formData.phone;
+      case 2:
+        return formData.address && formData.city && formData.state && formData.zipCode;
+      case 3:
+        return true; // Additional details are optional
+      default:
+        return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // If not on the last step, go to next step
+    if (currentStep < totalSteps) {
+      if (isStepValid(currentStep)) {
+        nextStep();
+      } else {
+        toast({
+          title: "Please complete required fields",
+          description: "Fill in all required fields before proceeding.",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
+    // Final submission
     setIsSubmitting(true);
     
     try {
@@ -115,6 +161,9 @@ export default function NewClientPage() {
         title: "Client created successfully!",
         description: `${formData.firstName} ${formData.lastName} has been added to your client list.`,
       });
+      
+      // Trigger refresh for all client-related components
+      onClientAdded();
       
       router.push('/case-manager/clients');
     } catch (err) {
@@ -190,32 +239,38 @@ export default function NewClientPage() {
               {/* Progress Steps */}
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    currentStep >= 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'
+                  }`}>
                     1
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-900">Basic Information</h4>
-                    <p className="text-xs text-gray-500">Name, contact, and demographics</p>
+                    <h4 className={`text-sm font-medium ${currentStep >= 1 ? 'text-gray-900' : 'text-gray-400'}`}>Basic Information</h4>
+                    <p className={`text-xs ${currentStep >= 1 ? 'text-gray-500' : 'text-gray-400'}`}>Name, contact, and demographics</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gray-200 text-gray-400 rounded-full flex items-center justify-center text-sm font-medium">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    currentStep >= 2 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'
+                  }`}>
                     2
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-400">Address & Insurance</h4>
-                    <p className="text-xs text-gray-400">Location and coverage details</p>
+                    <h4 className={`text-sm font-medium ${currentStep >= 2 ? 'text-gray-900' : 'text-gray-400'}`}>Address & Insurance</h4>
+                    <p className={`text-xs ${currentStep >= 2 ? 'text-gray-500' : 'text-gray-400'}`}>Location and coverage details</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gray-200 text-gray-400 rounded-full flex items-center justify-center text-sm font-medium">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    currentStep >= 3 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'
+                  }`}>
                     3
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-400">Additional Details</h4>
-                    <p className="text-xs text-gray-400">Special considerations and notes</p>
+                    <h4 className={`text-sm font-medium ${currentStep >= 3 ? 'text-gray-900' : 'text-gray-400'}`}>Additional Details</h4>
+                    <p className={`text-xs ${currentStep >= 3 ? 'text-gray-500' : 'text-gray-400'}`}>Special considerations and notes</p>
                   </div>
                 </div>
               </div>
@@ -224,10 +279,13 @@ export default function NewClientPage() {
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-xs font-medium text-gray-600">Progress</span>
-                  <span className="text-xs font-semibold text-gray-900">33%</span>
+                  <span className="text-xs font-semibold text-gray-900">{Math.round((currentStep / totalSteps) * 100)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full w-1/3"></div>
+                  <div 
+                    className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                    style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+                  ></div>
                 </div>
               </div>
             </motion.div>
@@ -246,7 +304,8 @@ export default function NewClientPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-8">
-                {/* Basic Information Section */}
+                {/* Step 1: Basic Information Section */}
+                {currentStep === 1 && (
                 <div className="space-y-6">
                   <div className="border-b border-gray-200 pb-4">
                     <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
@@ -426,7 +485,12 @@ export default function NewClientPage() {
                       </Select>
                     </div>
                   </div>
+                </div>
+                )}
 
+                {/* Step 2: Address & Insurance Section */}
+                {currentStep === 2 && (
+                <>
                   {/* Address Section */}
                   <div className="space-y-6">
                     <div className="border-b border-gray-200 pb-4">
@@ -587,10 +651,48 @@ export default function NewClientPage() {
                           className="h-16 text-lg px-4 bg-gradient-to-r from-white to-gray-50 border-2 border-gray-200 hover:border-purple-400 focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 rounded-2xl transition-all duration-300 shadow-sm hover:shadow-lg focus:shadow-xl"
                         />
                       </div>
+
+                      {/* Waiver Type */}
+                      <div className="space-y-2">
+                        <Label htmlFor="waiverType" className="text-base font-medium text-gray-900">
+                          Waiver Type
+                        </Label>
+                        <Select 
+                          value={formData.waiverType}
+                          onValueChange={(value) => handleInputChange('waiverType', value)}
+                        >
+                          <SelectTrigger className="group h-16 text-lg bg-gradient-to-r from-white to-gray-50 border-2 border-gray-200 hover:border-purple-400 focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 rounded-2xl transition-all duration-300 shadow-sm hover:shadow-lg focus:shadow-xl">
+                            <div className="flex items-center w-full">
+                              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/10 mr-3 group-hover:from-purple-500/20 group-hover:to-purple-600/20 transition-all duration-300">
+                                <Shield className="w-5 h-5 text-purple-500 group-hover:scale-110 transition-transform duration-300" />
+                              </div>
+                              <div className="flex-1 text-left">
+                                <div className="text-lg font-medium text-gray-900">
+                                  {formData.waiverType ? formatWaiverTypeShort(formData.waiverType) : "Select waiver type"}
+                                </div>
+                              </div>
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent className="z-50 max-h-96 overflow-y-auto bg-white/95 backdrop-blur-xl border-2 border-gray-200/50 rounded-2xl shadow-2xl">
+                            {WAIVER_TYPE_OPTIONS.map(option => (
+                              <SelectItem 
+                                key={option.value} 
+                                value={option.value} 
+                                className="h-14 text-lg px-4 py-3 font-medium text-gray-900 hover:bg-gradient-to-r hover:from-purple-500/5 hover:to-purple-600/5 cursor-pointer transition-all duration-200 rounded-xl mx-2 my-1"
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
+                </>
+                )}
 
-                  {/* Additional Information Section */}
+                {/* Step 3: Additional Information Section */}
+                {currentStep === 3 && (
                   <div className="space-y-6">
                     <div className="border-b border-gray-200 pb-4">
                       <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
@@ -734,30 +836,32 @@ export default function NewClientPage() {
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Form Actions */}
                 <div className="flex items-center justify-between pt-8 border-t border-gray-200">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => router.push('/case-manager/clients')}
+                    onClick={currentStep === 1 ? () => router.push('/case-manager/clients') : prevStep}
                     className="border-gray-300 hover:border-gray-400 hover:bg-gray-50"
                   >
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    Cancel
+                    {currentStep === 1 ? 'Cancel' : 'Previous'}
                   </Button>
                   
                   <Button
                     type="submit"
-                    disabled={isSubmitting}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg font-medium"
+                    disabled={isSubmitting || (currentStep < totalSteps && !isStepValid(currentStep))}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg font-medium disabled:opacity-50"
                   >
                     {isSubmitting ? (
                       <>
                         <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                         Creating Client...
                       </>
+                    ) : currentStep < totalSteps ? (
+                      'Next Step'
                     ) : (
                       <>
                         <Plus className="h-5 w-5 mr-2" />

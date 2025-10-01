@@ -1,40 +1,68 @@
-// Brand colors
+// Brand colors - Asana-inspired professional palette
 export const brandColors = {
   primary: {
-    50: "#e6f7fe",
-    100: "#cceffd",
-    200: "#99dffb",
-    300: "#66cff9",
-    400: "#33bff7",
-    500: "#11ACF8", // Our new brand blue
-    600: "#0d8ac6",
-    700: "#0a6795",
-    800: "#074563",
-    900: "#042232",
+    50: "#f8f9ff", // Lightest blue-purple
+    100: "#f0f2ff", 
+    200: "#e1e6ff",
+    300: "#d1d9ff",
+    400: "#c2ccff",
+    500: "#3F69B2", // Main blue-purple
+    600: "#5356A5", // Darker purple
+    700: "#4a4d94",
+    800: "#414483",
+    900: "#383b72",
   },
   secondary: {
-    50: "#f0f9ff",
-    100: "#e0f4fe",
-    200: "#bae3fa",
-    300: "#7dcef5",
-    400: "#38b6ed",
-    500: "#0ca4e4",
-    600: "#0282c4",
-    700: "#016698",
-    800: "#065072",
-    900: "#0a3850",
+    50: "#f0fdfa", // Lightest teal
+    100: "#e6f7f5",
+    200: "#b3e5e0",
+    300: "#80d3cb",
+    400: "#4dc1b6",
+    500: "#6DCDD2", // Tiffany Blue - Primary action buttons, success states, important CTAs
+    600: "#5bb8bd",
+    700: "#4aa3a8",
+    800: "#388e93",
+    900: "#26797e",
   },
   accent: {
-    50: "#eefbff",
-    100: "#dcf7ff",
-    200: "#b9efff",
-    300: "#96e2ff",
-    400: "#73d0ff",
-    500: "#11ACF8",
-    600: "#0088cc",
-    700: "#006699",
-    800: "#004466",
-    900: "#002233",
+    50: "#f0f8ff", // Lightest blue
+    100: "#e6f2ff",
+    200: "#b3d9ff",
+    300: "#80c0ff",
+    400: "#4da7ff",
+    500: "#CCE5FE", // Columbia Blue - Hover effects, subtle highlights, notification badges, card borders
+    600: "#b3d1e6",
+    700: "#99bdcf",
+    800: "#80a9b8",
+    900: "#6695a1",
+  },
+  background: {
+    50: "#ffffff", // Pure white
+    100: "#fefefe",
+    200: "#fdfdfd",
+    300: "#fcfcfc",
+    400: "#fbfbfb",
+    500: "#ffffff", // Main background color
+    600: "#f0f0f0",
+    700: "#e1e1e1",
+    800: "#d2d2d2",
+    900: "#c3c3c3",
+  },
+  seasalt: {
+    50: "#fafbfc", // Lightest seasalt - main background
+    100: "#f8f9fa", // Very light seasalt
+    200: "#f6f7f8", // Light seasalt
+    300: "#f4f5f6", // Medium light seasalt
+    400: "#f2f3f4", // Medium seasalt
+    500: "#f0f1f2", // Base seasalt - card backgrounds
+    600: "#edeef0", // Slightly darker seasalt
+    700: "#eaebec", // Darker seasalt
+    800: "#e7e8ea", // Much darker seasalt
+    900: "#e4e5e7", // Darkest seasalt
+  },
+  sidebar: {
+    dark: "#2E2E30", // Dark sidebar option
+    light: "#F7F7F7", // Light sidebar option
   },
   success: {
     50: "#ecfdf3",
@@ -88,7 +116,7 @@ export const shadows = {
 // Gradients
 export const gradients = {
   subtle: `linear-gradient(to right, ${brandColors.primary[400]}, ${brandColors.secondary[400]})`,
-  primary: `linear-gradient(to right, ${brandColors.primary[500]}, ${brandColors.primary[600]})`,
+  primary: `linear-gradient(135deg, ${brandColors.primary[500]}, ${brandColors.primary[600]})`, // Blue-purple gradient
   secondary: `linear-gradient(to right, ${brandColors.secondary[500]}, ${brandColors.secondary[600]})`,
   accent: `linear-gradient(135deg, ${brandColors.primary[500]}, ${brandColors.accent[500]})`,
   highlight: `linear-gradient(to right, ${brandColors.primary[500]}, ${brandColors.accent[400]})`,

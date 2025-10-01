@@ -3,8 +3,10 @@ import clientPromise from '@/lib/mongodb';
 import { WithId, Document } from 'mongodb';
 
 interface ServiceDocument extends WithId<Document> {
-  service: string;
-  category?: 'residential' | 'nonResidential';
+  name: string;           // Changed from 'service'
+  category?: string;      // Keep for backward compatibility
+  residential: boolean;   // Changed from 'category' - this is the actual field
+  id?: string;           // Optional ID field
 }
 
 export async function GET() {
@@ -12,20 +14,25 @@ export async function GET() {
     const client = await clientPromise;
     const db = client.db('referradb');
     
-    // Fetch all services from the services collection and sort by service name
+    // Fetch all services from the services collection and sort by name
     const services = await db.collection('services')
       .find({})
-      .sort({ service: 1 }) // 1 for ascending order
+      .sort({ name: 1 }) // Sort by 'name' field
       .toArray() as ServiceDocument[];
 
-    // Categorize services based on the category field
+    console.log('🔍 Raw services from DB:', services); // Debug log
+
+    // Categorize services based on the residential boolean field
     const residentialServices = services
-      .filter(doc => doc.category === 'residential')
-      .map(doc => doc.service);
+      .filter(doc => doc.residential === true)
+      .map(doc => doc.name);
 
     const nonResidentialServices = services
-      .filter(doc => doc.category === 'nonResidential')
-      .map(doc => doc.service);
+      .filter(doc => doc.residential === false)
+      .map(doc => doc.name);
+
+    console.log('🏠 Residential services:', residentialServices); // Debug log
+    console.log('🏢 Non-residential services:', nonResidentialServices); // Debug log
 
     const categorizedServices = {
       residential: residentialServices,

@@ -58,6 +58,8 @@ export default function AdminDashboard() {
   const [userForm, setUserForm] = useState({ name: '', email: '', role: '', organization: '', status: 'active' });
   const [cleanupLoading, setCleanupLoading] = useState(false);
   const [cleanupResult, setCleanupResult] = useState<string | null>(null);
+  const [urgencyAnalysis, setUrgencyAnalysis] = useState<any>(null);
+  const [analyzingUrgency, setAnalyzingUrgency] = useState(false);
 
   useEffect(() => {
     async function fetchStats() {
@@ -257,6 +259,26 @@ export default function AdminDashboard() {
     }
   }
 
+  async function handleAnalyzeUrgency() {
+    setAnalyzingUrgency(true);
+    setUrgencyAnalysis(null);
+    
+    try {
+      const res = await fetch('/api/admin/standardize-urgency');
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to analyze urgency values');
+      }
+      
+      setUrgencyAnalysis(data.urgencyAnalysis);
+    } catch (err: any) {
+      setUrgencyAnalysis({ error: `❌ Error: ${err.message}` });
+    } finally {
+      setAnalyzingUrgency(false);
+    }
+  }
+
   const getProviderStatusBadge = (status: string | undefined) => {
     return (
       <Badge variant="outline" className={status === 'Active' || status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}>
@@ -271,14 +293,14 @@ export default function AdminDashboard() {
     switch (role) {
       case 'case_manager':
         return (
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 flex items-center">
+          <Badge variant="outline" className="bg-secondary-50 text-secondary-700 border-secondary-200 flex items-center">
             <Users className="mr-1 h-3 w-3" />
             Case Manager
           </Badge>
         );
       case 'provider':
         return (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 flex items-center">
+          <Badge variant="outline" className="bg-accent-50 text-accent-700 border-accent-200 flex items-center">
             <Users className="mr-1 h-3 w-3" />
             Provider
           </Badge>
@@ -294,9 +316,15 @@ export default function AdminDashboard() {
     }
   };
 
+  // Handle authentication and authorization in useEffect
+  useEffect(() => {
+    if (!loading && (!user || (user.user_metadata?.role !== 'admin' && user.user_metadata?.role !== 'platform_admin'))) {
+      router.push('/auth/signin');
+    }
+  }, [user, loading, router]);
+
   if (loading) return <div>Loading...</div>;
-  if (!user || user.user_metadata?.role !== 'admin') {
-    router.push('/auth/signin');
+  if (!user || (user.user_metadata?.role !== 'admin' && user.user_metadata?.role !== 'platform_admin')) {
     return null;
   }
 
@@ -400,6 +428,43 @@ export default function AdminDashboard() {
                     {cleanupResult && (
                       <div className="text-sm font-medium">
                         {cleanupResult}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="border rounded-lg p-4 bg-blue-50 border-blue-200">
+                  <h3 className="font-medium text-blue-900 mb-2">Analyze Urgency Values</h3>
+                  <p className="text-sm text-blue-700 mb-4">
+                    Check what urgency values currently exist in your referrals database. This will help identify 
+                    data consistency issues that make filtering ineffective.
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <Button 
+                      onClick={handleAnalyzeUrgency}
+                      disabled={analyzingUrgency}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {analyzingUrgency ? 'Analyzing...' : 'Check Urgency Values'}
+                    </Button>
+                    {urgencyAnalysis && (
+                      <div className="text-sm">
+                        {urgencyAnalysis.error ? (
+                          <div className="text-red-600">{urgencyAnalysis.error}</div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="font-medium text-blue-900">Current Urgency Values:</div>
+                            {urgencyAnalysis.map((item: any, index: number) => (
+                              <div key={index} className="flex justify-between text-sm">
+                                <span className="text-gray-700">
+                                  {item._id || 'No urgency set'}: 
+                                </span>
+                                <span className="font-medium">{item.count} referrals</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

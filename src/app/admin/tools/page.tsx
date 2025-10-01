@@ -3,14 +3,18 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Workflow, Database, Users, RefreshCw, Link as LinkIcon } from "lucide-react";
+import { Workflow, Database, Users, RefreshCw, Link as LinkIcon, AlertTriangle, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 export default function AdminToolsPage() {
+
   const { toast } = useToast();
   const [migratingClients, setMigratingClients] = useState(false);
   const [migratingReferrals, setMigratingReferrals] = useState(false);
+  const [standardizingUrgency, setStandardizingUrgency] = useState(false);
+  const [standardizingStatus, setStandardizingStatus] = useState(false);
+  const [addingTestProviders, setAddingTestProviders] = useState(false);
   
   const handleMigrateClients = async () => {
     setMigratingClients(true);
@@ -77,6 +81,111 @@ export default function AdminToolsPage() {
       });
     } finally {
       setMigratingReferrals(false);
+    }
+  };
+
+  const handleStandardizeUrgency = async () => {
+    setStandardizingUrgency(true);
+    try {
+      toast({
+        title: "Starting urgency standardization...",
+        description: "This may take a moment. Please wait.",
+      });
+      
+      const response = await fetch('/api/admin/standardize-urgency', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'standardize' }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to standardize urgency values');
+      }
+      
+      const data = await response.json();
+      
+      toast({
+        title: "Urgency standardization complete",
+        description: data.message || `Updated ${data.updatedCount || 0} referrals successfully.`,
+      });
+    } catch (error) {
+      console.error('Error standardizing urgency:', error);
+      toast({
+        title: "Standardization failed",
+        description: "There was an error during the urgency standardization process.",
+        variant: "destructive",
+      });
+    } finally {
+      setStandardizingUrgency(false);
+    }
+  };
+
+  const handleStandardizeStatus = async () => {
+    setStandardizingStatus(true);
+    try {
+      toast({
+        title: "Starting status standardization...",
+        description: "This may take a moment. Please wait.",
+      });
+      
+      const response = await fetch('/api/admin/standardize-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'standardize' }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to standardize status values');
+      }
+      
+      const data = await response.json();
+      
+      toast({
+        title: "Status standardization complete",
+        description: data.message || `Updated ${data.updatedCount || 0} referrals successfully.`,
+      });
+    } catch (error) {
+      console.error('Error standardizing status:', error);
+      toast({
+        title: "Standardization failed",
+        description: "There was an error during the status standardization process.",
+        variant: "destructive",
+      });
+    } finally {
+      setStandardizingStatus(false);
+    }
+  };
+
+  const handleAddTestProviders = async () => {
+    setAddingTestProviders(true);
+    try {
+      const response = await fetch('/api/admin/add-test-providers', {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || 'Failed to add test providers');
+      }
+      
+      const result = await response.json();
+      toast({
+        title: 'Success',
+        description: `Test providers added successfully. ${result.providers?.length || 0} providers created.`,
+      });
+    } catch (error) {
+      console.error('Error adding test providers:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to add test providers',
+        variant: 'destructive',
+      });
+    } finally {
+      setAddingTestProviders(false);
     }
   };
 
@@ -150,6 +259,111 @@ export default function AdminToolsPage() {
                 </>
               ) : (
                 "Migrate Referrals"
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
+        
+        {/* Urgency Standardization Tool */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-500" />
+              Urgency Standardization
+            </CardTitle>
+            <CardDescription>
+              Fix inconsistent urgency values
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600 mb-4">
+              This tool will standardize all urgency values in referrals to use consistent 
+              'high', 'medium', 'low' values, fixing case variations and synonyms.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Button 
+              onClick={handleStandardizeUrgency} 
+              disabled={standardizingUrgency}
+              className="w-full"
+            >
+              {standardizingUrgency ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Standardizing...
+                </>
+              ) : (
+                "Standardize Urgency"
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
+        
+        {/* Status Standardization Tool */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Status Standardization
+            </CardTitle>
+            <CardDescription>
+              Fix inconsistent referral status values
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600 mb-4">
+              This tool will standardize all referral status values to use consistent 
+              status names across case manager, admin, and provider views.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Button 
+              onClick={handleStandardizeStatus} 
+              disabled={standardizingStatus}
+              className="w-full"
+            >
+              {standardizingStatus ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Standardizing...
+                </>
+              ) : (
+                "Standardize Status"
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
+        
+        {/* Test Providers Tool */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-green-500" />
+              Add Test Providers
+            </CardTitle>
+            <CardDescription>
+              Add sample providers for testing
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600 mb-4">
+              This tool will add 3 test providers to the provider_profiles table so you can 
+              test the provider assignment functionality in the admin table.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Button 
+              onClick={handleAddTestProviders} 
+              disabled={addingTestProviders}
+              className="w-full"
+            >
+              {addingTestProviders ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                "Add Test Providers"
               )}
             </Button>
           </CardFooter>

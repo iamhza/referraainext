@@ -45,16 +45,12 @@ import {
   Users, 
   Info,
   Loader2,
-  Activity
+  Activity,
+  Globe
 } from 'lucide-react';
 import { formatSafeDate } from '@/lib/date-utils';
-
-type ReferralStatus = 
-  | 'under_review'
-  | 'provider_selection_required'
-  | 'in_progress'
-  | 'completed'
-  | 'cancelled';
+import { ReferralStatus, getStatusConfig } from '@/types/index';
+import { SubmissionsModal } from '@/components/referrals/SubmissionsModal';
 
 interface Provider {
   id: string;
@@ -94,6 +90,9 @@ export default function ReferralDetails() {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [assignedProvider, setAssignedProvider] = useState<any>(null);
+  const [providerLoading, setProviderLoading] = useState(false);
+  const [showSubmissionsModal, setShowSubmissionsModal] = useState(false);
 
   // Fetch referral
   useEffect(() => {
@@ -106,6 +105,11 @@ export default function ReferralDetails() {
         if (!res.ok) throw new Error('Failed to fetch referral');
         const data = await res.json();
         setReferral(data.referral);
+        
+        // If there's an assigned provider, fetch their details
+        if (data.referral?.assignedProvider) {
+          await fetchAssignedProvider(data.referral.assignedProvider);
+        }
       } catch (err) {
         setError('Could not load referral.');
       } finally {
@@ -114,6 +118,35 @@ export default function ReferralDetails() {
     }
     fetchReferral();
   }, [referralId]);
+
+  // Fetch assigned provider details
+  const fetchAssignedProvider = async (providerId: string) => {
+    setProviderLoading(true);
+    try {
+      console.log('Fetching provider details for ID:', providerId);
+      const res = await fetch(`/api/providers/${providerId}`);
+      console.log('Provider fetch response status:', res.status);
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.error('Provider fetch error:', errorData);
+        throw new Error(`Failed to fetch provider: ${errorData.error || res.statusText}`);
+      }
+      
+      const data = await res.json();
+      console.log('Provider data received:', data);
+      
+      if (data.provider) {
+        setAssignedProvider(data.provider);
+      } else {
+        console.error('No provider data in response');
+      }
+    } catch (err) {
+      console.error('Error fetching assigned provider:', err);
+    } finally {
+      setProviderLoading(false);
+    }
+  };
 
   // Map real data to UI fields (safe defaults)
   const clientName = referral ? `${referral.clientInfo?.firstName || ''} ${referral.clientInfo?.lastName || ''}`.trim() : '';
@@ -127,46 +160,7 @@ export default function ReferralDetails() {
     `${referral.clientInfo?.firstName?.charAt(0) || ''}${referral.clientInfo?.lastName?.charAt(0) || ''}`.trim().toUpperCase() : 
     'CL';
 
-  const getStatusConfig = (status: ReferralStatus) => {
-    const configs: Record<ReferralStatus, any> = {
-      under_review: {
-        icon: Clock,
-        color: 'amber',
-        label: 'Under Review',
-        description: referral?.expectedReviewCompletion ? `Expected completion by ${new Date(referral.expectedReviewCompletion).toLocaleDateString()}` : '',
-        progressValue: 25
-      },
-      provider_selection_required: {
-        icon: AlertCircle,
-        color: 'blue',
-        label: 'Provider Selection Required',
-        description: 'Please select a provider from the matched options',
-        progressValue: 50
-      },
-      in_progress: {
-        icon: Clock,
-        color: 'green',
-        label: 'In Progress',
-        description: 'Service is currently being provided',
-        progressValue: 75
-      },
-      completed: {
-        icon: CheckCircle,
-        color: 'green',
-        label: 'Completed',
-        description: 'Service has been completed',
-        progressValue: 100
-      },
-      cancelled: {
-        icon: XCircle,
-        color: 'red',
-        label: 'Cancelled',
-        description: 'This referral has been cancelled',
-        progressValue: 100
-      }
-    };
-    return configs[status as ReferralStatus] || configs['under_review'];
-  };
+  // Using centralized status config - no local function needed
 
   const handleProviderSelection = async (providerId: string) => {
     setSelectedProvider(providerId);
@@ -318,7 +312,7 @@ export default function ReferralDetails() {
               <Badge 
                 className={cn(
                   "px-3 py-1 text-sm font-medium flex items-center gap-1.5 rounded-full",
-                  statusConfig.color === 'amber' && "bg-amber-100 text-amber-800 border-amber-200",
+                  statusConfig.color === 'orange' && "bg-orange-100 text-orange-800 border-orange-200",
                   statusConfig.color === 'green' && "bg-green-100 text-green-800 border-green-200",
                   statusConfig.color === 'blue' && "bg-blue-100 text-blue-800 border-blue-200",
                   statusConfig.color === 'red' && "bg-red-100 text-red-800 border-red-200"
@@ -340,6 +334,15 @@ export default function ReferralDetails() {
                   Cancel
                 </Button>
               )}
+              
+              <Button
+                variant="outline"
+                onClick={() => setShowSubmissionsModal(true)}
+                className="rounded-full border-blue-200 hover:border-blue-300 hover:bg-blue-50"
+              >
+                <Globe className="mr-2 h-4 w-4" />
+                Network & Submissions
+              </Button>
               
               {canMessage && (
                 <EnhancedButton 
@@ -368,7 +371,7 @@ export default function ReferralDetails() {
                 </p>
                 <div className="flex gap-2">
                   <Button variant="default" size="sm" asChild className="bg-blue-600 hover:bg-blue-700 text-white">
-                    <Link href={`/case-manager/referrals/${referralId}/thread`}>
+                    <Link href={`/case-manager/referrals/${referralId}/workspace`}>
                       <MessageSquare className="mr-2 h-4 w-4" />
                       Open Workspace
                     </Link>
@@ -404,15 +407,15 @@ export default function ReferralDetails() {
               </Badge>
             </div>
             
-            <Card className="rounded-2xl border border-gray-100 overflow-hidden">
+            <Card className="rounded-2xl border border-secondary-300 overflow-hidden bg-primary-50">
               <div className="p-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
                   <div className="flex items-center gap-4">
-                    <Avatar className="h-14 w-14 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white font-medium text-xl shadow transition-transform duration-200">
+                    <Avatar className="h-14 w-14 rounded-full bg-gradient-to-br from-accent-400 to-accent-600 text-white font-medium text-xl shadow transition-transform duration-200">
                       <AvatarFallback>{clientInitials}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <h2 className="text-xl font-semibold text-gray-900">{clientName}</h2>
+                      <h2 className="text-xl font-semibold text-accent-800">{clientName}</h2>
                       <div className="flex flex-wrap items-center gap-x-4 mt-1 text-gray-600">
                         <span className="flex items-center gap-1.5">
                           <FileText className="h-4 w-4 text-gray-400" />
@@ -440,7 +443,7 @@ export default function ReferralDetails() {
                   className={cn("h-2 bg-gray-100", status === 'cancelled' && "bg-red-100")} 
                   style={{ 
                     '--progress-foreground': status === 'under_review' 
-                      ? '#f59e0b' // amber-500
+                      ? '#f97316' // orange-500
                       : status === 'provider_selection_required'
                       ? '#3b82f6' // blue-500 
                       : status === 'in_progress'
@@ -490,8 +493,8 @@ export default function ReferralDetails() {
                             )}
                             {referral?.serviceDetails?.urgency === 'medium' && (
                               <>
-                                <span className="w-3 h-3 rounded-full bg-amber-500"></span>
-                                <span className="font-medium text-amber-700">Medium Priority</span>
+                                <span className="w-3 h-3 rounded-full bg-orange-500"></span>
+                                <span className="font-medium text-orange-700">Medium Priority</span>
                               </>
                             )}
                             {referral?.serviceDetails?.urgency === 'low' && (
@@ -717,6 +720,172 @@ export default function ReferralDetails() {
                   </Card>
                 )}
 
+                {/* Provider Confirmation Card - Show for both matched and confirmed */}
+                {(status === 'matched' || status === 'confirmed') && (
+                  <Card className="rounded-xl border border-gray-100 hover:shadow-md transition-all duration-300">
+                    <CardHeader className="pb-4 pt-6">
+                      <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                        {status === 'matched' ? (
+                          <>
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                            Provider Matched - Review & Confirm
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-5 w-5 text-blue-500" />
+                            Provider Confirmed
+                          </>
+                        )}
+                      </CardTitle>
+                      <CardDescription className="text-base">
+                        {status === 'matched' 
+                          ? "Admin has matched you with a provider. Please review their details and confirm the match."
+                          : "You have confirmed this provider. They will be notified to begin services."
+                        }
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0 pb-6">
+                      {providerLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
+                          <span className="ml-3 text-gray-600">Loading provider details...</span>
+                        </div>
+                      ) : assignedProvider ? (
+                        <>
+                          <div className="flex items-center gap-4 mb-6">
+                            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-semibold text-lg">
+                              {assignedProvider.fullName?.charAt(0) || assignedProvider.displayName?.charAt(0) || 'P'}
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-lg">{assignedProvider.fullName || assignedProvider.displayName}</h3>
+                              <p className="text-gray-600">{assignedProvider.organization}</p>
+                            </div>
+                            <Badge className={`flex items-center gap-1 rounded-full ml-auto ${
+                              status === 'matched' 
+                                ? 'bg-green-50 text-green-700 border-green-200'
+                                : 'bg-blue-50 text-blue-700 border-blue-200'
+                            }`}>
+                              <CheckCircle className={`h-3 w-3 ${
+                                status === 'matched' 
+                                  ? 'fill-green-500 stroke-green-500'
+                                  : 'fill-blue-500 stroke-blue-500'
+                              }`} />
+                              {status === 'matched' ? 'Admin Selected' : 'Confirmed'}
+                            </Badge>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-lg bg-blue-50/50 border border-blue-100 mb-6">
+                            <div className="flex items-center gap-2">
+                              <Mail className="h-4 w-4 text-blue-600" />
+                              <span className="text-blue-800">{assignedProvider.email}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Building className="h-4 w-4 text-blue-600" />
+                              <span className="text-blue-800">{assignedProvider.organization}</span>
+                            </div>
+                            <div className="flex items-center gap-2 sm:col-span-2">
+                              <User className="h-4 w-4 text-blue-600" />
+                              <span className="text-blue-800">Provider ID: {assignedProvider.id.substring(0, 8)}...</span>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-3">
+                            {status === 'matched' ? (
+                              <>
+                                <EnhancedButton
+                                  variant="gradient"
+                                  rounded="full"
+                                  onClick={async () => {
+                                    try {
+                                      const res = await fetch(`/api/referrals/${referralId}`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ status: 'confirmed' }),
+                                      });
+                                      if (!res.ok) throw new Error('Failed to confirm provider');
+                                      // Refetch referral to update UI
+                                      const refRes = await fetch(`/api/referrals/${referralId}`);
+                                      const refData = await refRes.json();
+                                      setReferral(refData.referral);
+                                    } catch (err) {
+                                      console.error('Error confirming provider:', err);
+                                    }
+                                  }}
+                                  className="shadow-md hover:shadow-lg transition-all duration-200"
+                                >
+                                  <CheckCircle className="mr-2 h-4 w-4" />
+                                  Confirm Provider
+                                </EnhancedButton>
+                                
+                                <Button
+                                  variant="outline"
+                                  className="rounded-full border-red-200 hover:border-red-300 hover:bg-red-50 text-red-600 hover:text-red-700"
+                                  onClick={async () => {
+                                    try {
+                                      const res = await fetch(`/api/referrals/${referralId}`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ status: 'provider_selection_required' }),
+                                      });
+                                      if (!res.ok) throw new Error('Failed to reject provider');
+                                      // Refetch referral to update UI
+                                      const refRes = await fetch(`/api/referrals/${referralId}`);
+                                      const refData = await refRes.json();
+                                      setReferral(refData.referral);
+                                    } catch (err) {
+                                      console.error('Error rejecting provider:', err);
+                                    }
+                                  }}
+                                >
+                                  <XCircle className="mr-2 h-4 w-4" />
+                                  Request Different Provider
+                                </Button>
+                              </>
+                            ) : status === 'confirmed' ? (
+                              <>
+                                <div className="flex items-center gap-2 text-blue-600 bg-blue-50 px-4 py-2 rounded-full">
+                                  <CheckCircle className="h-4 w-4" />
+                                  <span className="font-medium">Provider Confirmed</span>
+                                </div>
+                                
+                                <Button
+                                  variant="outline"
+                                  className="rounded-full border-orange-200 hover:border-orange-300 hover:bg-orange-50 text-orange-600 hover:text-orange-700"
+                                  onClick={async () => {
+                                    try {
+                                      const res = await fetch(`/api/referrals/${referralId}`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ status: 'matched' }),
+                                      });
+                                      if (!res.ok) throw new Error('Failed to cancel confirmation');
+                                      // Refetch referral to update UI
+                                      const refRes = await fetch(`/api/referrals/${referralId}`);
+                                      const refData = await refRes.json();
+                                      setReferral(refData.referral);
+                                    } catch (err) {
+                                      console.error('Error canceling confirmation:', err);
+                                    }
+                                  }}
+                                >
+                                  <XCircle className="mr-2 h-4 w-4" />
+                                  Cancel Confirmation
+                                </Button>
+                              </>
+                            ) : null}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center py-8">
+                          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                          <p className="text-red-600 font-medium">Provider details not found</p>
+                          <p className="text-gray-500 text-sm mt-1">The assigned provider information could not be loaded.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
 
               </div>
               
@@ -765,6 +934,58 @@ export default function ReferralDetails() {
                             <div>
                               <p className="font-medium text-gray-700">Confirm Selection</p>
                               <p className="text-sm text-gray-600">Provider will be notified automatically</p>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      
+                      {status === 'matched' && (
+                        <>
+                          <div className="flex gap-3 items-start">
+                            <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
+                            <div>
+                              <p className="font-medium text-gray-900">Provider Matched</p>
+                              <p className="text-sm text-gray-600">Admin has selected a provider for you</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-3 items-start">
+                            <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+                            <div>
+                              <p className="font-medium text-gray-900">Review & Confirm</p>
+                              <p className="text-sm text-gray-600">Review provider details and confirm the match</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-3 items-start">
+                            <div className="w-2 h-2 rounded-full bg-gray-300 mt-2 flex-shrink-0"></div>
+                            <div>
+                              <p className="font-medium text-gray-700">Service Begins</p>
+                              <p className="text-sm text-gray-600">Provider will get access once confirmed</p>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      
+                      {status === 'confirmed' && (
+                        <>
+                          <div className="flex gap-3 items-start">
+                            <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+                            <div>
+                              <p className="font-medium text-gray-900">Provider Confirmed</p>
+                              <p className="text-sm text-gray-600">Provider has been notified and will begin services</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-3 items-start">
+                            <div className="w-2 h-2 rounded-full bg-gray-300 mt-2 flex-shrink-0"></div>
+                            <div>
+                              <p className="font-medium text-gray-700">Provider Acceptance</p>
+                              <p className="text-sm text-gray-600">Waiting for provider to accept and start services</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-3 items-start">
+                            <div className="w-2 h-2 rounded-full bg-gray-300 mt-2 flex-shrink-0"></div>
+                            <div>
+                              <p className="font-medium text-gray-700">Service Begins</p>
+                              <p className="text-sm text-gray-600">Service will begin once provider accepts</p>
                             </div>
                           </div>
                         </>
@@ -878,7 +1099,7 @@ export default function ReferralDetails() {
                       className="w-full justify-start rounded-full"
                       asChild
                     >
-                      <Link href={`/case-manager/referrals/${referralId}/thread`}>
+                      <Link href={`/case-manager/referrals/${referralId}/workspace`}>
                         <MessageSquare className="h-4 w-4 mr-2" />
                         Open Workspace
                       </Link>
@@ -1028,6 +1249,13 @@ export default function ReferralDetails() {
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Submissions Modal */}
+          <SubmissionsModal
+            referralId={referralId}
+            open={showSubmissionsModal}
+            onOpenChange={setShowSubmissionsModal}
+          />
         </div>
       </div>
     </div>

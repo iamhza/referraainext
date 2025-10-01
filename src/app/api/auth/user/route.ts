@@ -1,37 +1,32 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
+import { signIn } from 'next-auth/react';
 
 export async function GET() {
   try {
-    const cookieStore = cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-        },
-      }
-    );
+    const user = await getAuthenticatedUser();
     
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
     return NextResponse.json({ 
       user: {
-        id: session.user.id,
-        email: session.user.email,
-        role: session.user.user_metadata?.role
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        org_id: user.org_id,
+        team_id: user.team_id,
+        permissions: user.permissions,
+        organization: user.organization,
+        team: user.team,
+        authType: 'nextauth'
       }
     });
   } catch (error) {
     console.error('Error getting user:', error);
     return NextResponse.json({ error: 'Error getting user' }, { status: 500 });
   }
-} 
+}
+
+// POST method removed - NextAuth handles login at /api/auth/[...nextauth] 

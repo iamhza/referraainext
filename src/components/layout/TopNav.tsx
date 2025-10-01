@@ -102,7 +102,7 @@ export function TopNav() {
   const userRole = user?.user_metadata?.role || 'case_manager'
   
   // Filter nav items based on user role
-  const filteredNavItems = userRole === 'admin'
+  const filteredNavItems = (userRole === 'admin' || userRole === 'platform_admin')
     ? adminNavItems
     : navItems.filter(item => item.role === userRole);
 

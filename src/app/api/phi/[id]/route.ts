@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
+import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
 import clientPromise from '@/lib/mongodb';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { validateObjectId } from '@/lib/validation';
 
 export async function GET(
@@ -24,14 +23,14 @@ export async function GET(
       }
     );
     
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getAuthenticatedUser();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
     // Only admin and case managers can access PHI data
-    const userRole = session.user.user_metadata?.role;
-    if (!['admin', 'case_manager'].includes(userRole)) {
+    const userRole = user.role;
+    if (!['platform_admin', 'case_manager'].includes(userRole)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 

@@ -1,16 +1,29 @@
-import { Sidebar } from '@/components/layout/Sidebar'
+'use client'
+
+import { usePathname } from 'next/navigation'
+import DashboardLayout from '@/components/layout/DashboardLayout'
 
 export default function CaseManagerLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar />
-      <main className="min-h-screen lg:pl-64">
+  const pathname = usePathname()
+  const isWorkspacePage = pathname?.startsWith('/case-manager/workspace')
+
+  if (isWorkspacePage) {
+    // Workspace pages get full immersion - no main sidebar
+    return (
+      <div className="h-screen bg-white">
         {children}
-      </main>
-    </div>
+      </div>
+    )
+  }
+
+  // Regular case manager pages get the full dashboard layout with sidebar and topbar
+  return (
+    <DashboardLayout>
+      {children}
+    </DashboardLayout>
   )
 } 

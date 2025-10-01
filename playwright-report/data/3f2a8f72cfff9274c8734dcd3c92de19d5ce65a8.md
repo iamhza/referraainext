@@ -1,0 +1,117 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - link "R referra" [ref=e6] [cursor=pointer]:
+        - /url: /case-manager
+        - generic [ref=e8] [cursor=pointer]: R
+        - img "referra" [ref=e9] [cursor=pointer]
+      - navigation [ref=e10]:
+        - generic [ref=e12]:
+          - link "Dashboard" [ref=e13] [cursor=pointer]:
+            - /url: /case-manager
+            - img [ref=e14] [cursor=pointer]
+            - text: Dashboard
+          - link "Workspace" [ref=e19] [cursor=pointer]:
+            - /url: /case-manager/workspace
+            - img [ref=e20] [cursor=pointer]
+            - text: Workspace
+        - generic [ref=e22]:
+          - heading "REFERRALS" [level=3] [ref=e23]
+          - generic [ref=e24]:
+            - link "Clients" [ref=e25] [cursor=pointer]:
+              - /url: /case-manager/clients
+              - img [ref=e26] [cursor=pointer]
+              - text: Clients
+            - link "Connections" [ref=e31] [cursor=pointer]:
+              - /url: /case-manager/connections
+              - img [ref=e32] [cursor=pointer]
+              - text: Connections
+            - link "New referral" [ref=e37] [cursor=pointer]:
+              - /url: /case-manager/new-referral
+              - img [ref=e38] [cursor=pointer]
+              - text: New referral
+        - generic [ref=e39]:
+          - heading "MANAGEMENT" [level=3] [ref=e40]
+          - generic [ref=e41]:
+            - link "Analytics" [ref=e42] [cursor=pointer]:
+              - /url: /case-manager/old-dashboard
+              - img [ref=e43] [cursor=pointer]
+              - text: Analytics
+            - link "Settings" [ref=e45] [cursor=pointer]:
+              - /url: /case-manager/settings
+              - img [ref=e46] [cursor=pointer]
+              - text: Settings
+      - generic [ref=e49]:
+        - generic [ref=e50]:
+          - generic [ref=e52]: MI
+          - generic [ref=e53]:
+            - paragraph [ref=e54]: miknabil
+            - paragraph [ref=e55]: Case Manager
+        - button "Sign Out" [ref=e56] [cursor=pointer]:
+          - img
+          - text: Sign Out
+    - main [ref=e57]:
+      - generic [ref=e59]:
+        - generic [ref=e61]:
+          - generic [ref=e62]:
+            - heading "Dashboard" [level=1] [ref=e63]
+            - paragraph [ref=e64]: Hello, there 👋 Manage your caseload with the board view.
+          - generic [ref=e65]:
+            - generic [ref=e66]:
+              - button "Board" [ref=e67] [cursor=pointer]:
+                - img [ref=e68] [cursor=pointer]
+                - text: Board
+              - link "Table" [ref=e73] [cursor=pointer]:
+                - /url: /case-manager/clients
+                - button "Table" [ref=e74] [cursor=pointer]:
+                  - img [ref=e75] [cursor=pointer]
+                  - text: Table
+            - button "Help" [ref=e76] [cursor=pointer]:
+              - img [ref=e77] [cursor=pointer]
+              - text: Help
+            - button [ref=e80] [cursor=pointer]:
+              - img [ref=e81] [cursor=pointer]
+        - generic [ref=e84]:
+          - generic [ref=e85]:
+            - generic [ref=e87]:
+              - img [ref=e88]
+              - generic [ref=e93]: 0 Clients Total
+            - generic [ref=e94]:
+              - link "Add Client" [ref=e95] [cursor=pointer]:
+                - /url: /case-manager/clients/new
+                - button "Add Client" [ref=e96] [cursor=pointer]:
+                  - img [ref=e97] [cursor=pointer]
+                  - text: Add Client
+              - link "New Referral" [ref=e98] [cursor=pointer]:
+                - /url: /case-manager/new-referral
+                - button "New Referral" [ref=e99] [cursor=pointer]:
+                  - img [ref=e100] [cursor=pointer]
+                  - text: New Referral
+              - button "Request Updates" [disabled] [ref=e102]:
+                - img [ref=e103]
+                - text: Request Updates
+              - button "Download Report" [disabled] [ref=e106]:
+                - img [ref=e107]
+                - text: Download Report
+              - button [ref=e110] [cursor=pointer]:
+                - img [ref=e111] [cursor=pointer]
+          - paragraph [ref=e117]: Use the actions above to manage your caseload. Click client cards to view details or select multiple for bulk operations.
+        - generic [ref=e120]:
+          - img [ref=e122]
+          - heading "No Clients Yet" [level=3] [ref=e127]
+          - paragraph [ref=e128]: Add your first client to get started with the board view.
+        - paragraph [ref=e130]:
+          - text: Switch to
+          - link "table view" [ref=e131] [cursor=pointer]:
+            - /url: /case-manager/clients
+          - text: for detailed client management, or
+          - link "analytics" [ref=e132] [cursor=pointer]:
+            - /url: /case-manager/old-dashboard
+          - text: for detailed metrics.
+  - region "Notifications (F8)":
+    - list
+  - alert [ref=e133]
+```

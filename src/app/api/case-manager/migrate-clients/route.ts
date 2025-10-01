@@ -1,25 +1,9 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
 import clientPromise from '@/lib/mongodb';
+import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
 import { ObjectId } from 'mongodb';
 
-async function getSession() {
-  const cookieStore = cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-      },
-    }
-  );
-  const { data: { session } } = await supabase.auth.getSession();
-  return session;
-}
+
 
 // Define types for the result details
 type MigrationResultDetail = 
@@ -29,8 +13,8 @@ type MigrationResultDetail =
 
 export async function POST(req: Request) {
   // Ensure only case managers can run this migration
-  const session = await getSession();
-  if (!session || !['case_manager', 'admin'].includes(session.user.user_metadata?.role)) {
+  const user = await getAuthenticatedUser();
+  if (!user || !['case_manager', 'platform_admin'].includes(user.role)) {
     return NextResponse.json({ error: 'Unauthorized. Case manager access required.' }, { status: 401 });
   }
   
@@ -41,7 +25,7 @@ export async function POST(req: Request) {
     
     // Only get referrals for this case manager
     const referrals = await db.collection('referrals')
-      .find({ caseManagerId: session.user.id })
+      .find({ caseManagerId: user.id })
       .toArray();
     
     const results = {
@@ -113,7 +97,7 @@ export async function POST(req: Request) {
           ...clientInfo,
           createdAt: now,
           updatedAt: now,
-          caseManagerId: session.user.id, // Always set to current case manager
+          caseManagerId: user.id, // Always set to current case manager
           status: 'UNPLACED_NEW',
           source: 'migration_from_referral'
         };

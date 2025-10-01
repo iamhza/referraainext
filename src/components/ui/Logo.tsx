@@ -8,30 +8,37 @@ interface LogoProps {
 }
 
 export function Logo({ className, size = 'md', variant = 'full' }: LogoProps) {
-  const sizeClasses = {
+  const iconSizeClasses = {
     sm: 'h-6 w-6',
     md: 'h-8 w-8', 
     lg: 'h-10 w-10',
     xl: 'h-12 w-12'
   };
 
-  const textSizeClasses = {
+  const iconTextSizeClasses = {
     sm: 'text-lg',
     md: 'text-xl',
     lg: 'text-2xl', 
     xl: 'text-3xl'
   };
 
+  const logoTextSizeClasses = {
+    sm: 'text-lg',
+    md: 'text-xl',
+    lg: 'text-2xl',
+    xl: 'text-3xl'
+  };
+
   if (variant === 'icon') {
     return (
       <div className={cn(
-        "flex items-center justify-center rounded-full bg-blue-100",
-        sizeClasses[size],
+        "flex items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 shadow-sm",
+        iconSizeClasses[size],
         className
       )}>
         <span className={cn(
-          "font-bold text-blue-600",
-          textSizeClasses[size]
+          "font-suisse font-bold text-white",
+          iconTextSizeClasses[size]
         )}>
           R
         </span>
@@ -39,31 +46,39 @@ export function Logo({ className, size = 'md', variant = 'full' }: LogoProps) {
     );
   }
 
-  const logoHeightClasses = {
-    sm: 'h-4',
-    md: 'h-5',
-    lg: 'h-6',
-    xl: 'h-7'
-  };
-
   return (
-    <div className={cn("flex items-center space-x-3", className)}>
-      <div className={cn(
-        "flex items-center justify-center rounded-full bg-blue-100",
-        sizeClasses[size]
-      )}>
-        <span className={cn(
-          "font-bold text-blue-600",
-          textSizeClasses[size]
+    <div className={cn("flex items-center", className)}>
+      <div className="flex items-center">
+        {/* Icon */}
+        <div className={cn(
+          "flex items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 shadow-sm mr-3",
+          iconSizeClasses[size]
         )}>
-          R
-        </span>
+          <span className={cn(
+            "font-suisse font-bold text-white",
+            iconTextSizeClasses[size]
+          )}>
+            R
+          </span>
+        </div>
+        
+        {/* Wordmark */}
+        <div className="flex items-center">
+          <span 
+            className={cn(
+              "font-suisse font-semibold tracking-tight",
+              logoTextSizeClasses[size],
+              "bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent"
+            )}
+            style={{ 
+              fontFamily: 'var(--font-suisse)',
+              letterSpacing: '-0.02em'
+            }}
+          >
+            Referra
+          </span>
+        </div>
       </div>
-      <img 
-        src="/refrr.png" 
-        alt="referra" 
-        className={cn("w-auto", logoHeightClasses[size])}
-      />
     </div>
   );
 }
