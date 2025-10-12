@@ -44,6 +44,7 @@ interface SecureClient {
   livingSituation?: string;
   status?: string;
   profileComplete?: boolean;
+  serviceTypes?: string[]; // Array of service types for the client
   currentProvider?: string;
   linkedProviderId?: string;
   providerOnboarded?: boolean;
@@ -134,6 +135,7 @@ export async function createSecureClient(params: CreateClientParams, accessorId:
       caseManagerId: params.caseManagerId,
       caseManager: params.caseManager,
       source: params.source || 'secure_create',
+      serviceTypes: (params as any).serviceTypes || [],
       createdAt: now,
       updatedAt: now,
       retentionDate,
@@ -283,7 +285,7 @@ export async function updateSecureClient(clientId: string, updates: Partial<Crea
 
     // Add non-PHI field updates
     const nonPHIFields = ['sex', 'preferredContactMethod', 'needsTranslator', 'historyOfViolence', 
-                          'mobilityStatus', 'livingSituation', 'status', 'profileComplete'];
+                          'mobilityStatus', 'livingSituation', 'status', 'profileComplete', 'serviceTypes'];
     for (const field of nonPHIFields) {
       const value = (updates as any)[field];
       if (value !== undefined) {

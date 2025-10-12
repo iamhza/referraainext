@@ -9,6 +9,8 @@ import { EnhancedLabel as Label } from '@/components/ui/enhanced-label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useClientMutations } from '@/hooks/use-client-refresh';
 import { 
@@ -19,7 +21,8 @@ import {
   ChevronLeft, 
   Check,
   X,
-  Loader2
+  Loader2,
+  Heart
 } from 'lucide-react';
 
 interface ClientFormData {
@@ -44,6 +47,9 @@ interface ClientFormData {
   insuranceNumber: string;
   pmiNumber: string;
   waiverType: string;
+  
+  // Service Types
+  serviceTypes: string[];
   
   // Additional Information
   primaryLanguage: string;
@@ -139,6 +145,9 @@ export function AddClientModal({ isOpen, onClose, onClientAdded }: AddClientModa
     pmiNumber: '',
     waiverType: '',
     
+    // Service Types
+    serviceTypes: [],
+    
     // Additional Information
     primaryLanguage: 'English',
     needsTranslator: false,
@@ -150,10 +159,55 @@ export function AddClientModal({ isOpen, onClose, onClientAdded }: AddClientModa
     additionalNotes: '',
   });
 
+  const [services, setServices] = useState<{ residential: string[]; nonResidential: string[] }>({
+    residential: [],
+    nonResidential: []
+  });
+  const [servicesLoading, setServicesLoading] = useState(true);
+  const [servicesDropdownOpen, setServicesDropdownOpen] = useState(false);
+
+  // Fetch services on mount
+  useEffect(() => {
+    async function fetchServices() {
+      try {
+        const response = await fetch('/api/services');
+        if (!response.ok) throw new Error('Failed to fetch services');
+        const data = await response.json();
+        setServices(data.services);
+      } catch (err) {
+        console.error('Error fetching services:', err);
+      } finally {
+        setServicesLoading(false);
+      }
+    }
+    fetchServices();
+  }, []);
+
   const handleInputChange = (field: keyof ClientFormData, value: any) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
+    }));
+  };
+
+  const toggleService = (service: string) => {
+    if (formData.serviceTypes.includes(service)) {
+      setFormData(prev => ({
+        ...prev,
+        serviceTypes: prev.serviceTypes.filter(s => s !== service)
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        serviceTypes: [...prev.serviceTypes, service]
+      }));
+    }
+  };
+
+  const removeService = (service: string) => {
+    setFormData(prev => ({
+      ...prev,
+      serviceTypes: prev.serviceTypes.filter(s => s !== service)
     }));
   };
 
@@ -706,6 +760,96 @@ export function AddClientModal({ isOpen, onClose, onClientAdded }: AddClientModa
                                   <SelectItem value="AC Waiver">AC Waiver</SelectItem>
                                 </SelectContent>
                               </Select>
+                            </div>
+
+                            <div className="md:col-span-2 space-y-2">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Heart className="w-4 h-4 text-purple-600" />
+                                <Label className="text-sm font-semibold text-gray-700">Service Types</Label>
+                              </div>
+                              
+                              {/* Selected services as badges */}
+                              {formData.serviceTypes.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mb-2">
+                                  {formData.serviceTypes.map(service => (
+                                    <Badge 
+                                      key={service} 
+                                      variant="secondary" 
+                                      className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 text-xs"
+                                    >
+                                      {service}
+                                      <button
+                                        type="button"
+                                        onClick={() => removeService(service)}
+                                        className="ml-1 hover:text-emerald-900"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Dropdown */}
+                              <div className="relative">
+                                <button
+                                  type="button"
+                                  onClick={() => setServicesDropdownOpen(!servicesDropdownOpen)}
+                                  className="w-full px-4 py-3 text-left border border-gray-200 rounded-lg bg-white/50 backdrop-blur-sm hover:bg-gray-50 text-sm transition-all duration-200"
+                                >
+                                  {servicesLoading ? 'Loading services...' : 'Select services...'}
+                                </button>
+                                
+                                {servicesDropdownOpen && (
+                                  <>
+                                    <div
+                                      className="fixed inset-0 z-40"
+                                      onClick={() => setServicesDropdownOpen(false)}
+                                    />
+                                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-auto">
+                                      {/* Residential Services */}
+                                      <div className="p-2">
+                                        <div className="text-xs font-semibold text-gray-500 uppercase mb-2 px-2">
+                                          Residential Services
+                                        </div>
+                                        {services.residential.map(service => (
+                                          <label
+                                            key={service}
+                                            className="flex items-center px-2 py-2 hover:bg-gray-50 cursor-pointer rounded"
+                                          >
+                                            <Checkbox
+                                              checked={formData.serviceTypes.includes(service)}
+                                              onCheckedChange={() => toggleService(service)}
+                                              className="mr-2"
+                                            />
+                                            <span className="text-sm">{service}</span>
+                                          </label>
+                                        ))}
+                                      </div>
+
+                                      {/* Non-Residential Services */}
+                                      <div className="p-2 border-t">
+                                        <div className="text-xs font-semibold text-gray-500 uppercase mb-2 px-2">
+                                          Non-Residential Services
+                                        </div>
+                                        {services.nonResidential.map(service => (
+                                          <label
+                                            key={service}
+                                            className="flex items-center px-2 py-2 hover:bg-gray-50 cursor-pointer rounded"
+                                          >
+                                            <Checkbox
+                                              checked={formData.serviceTypes.includes(service)}
+                                              onCheckedChange={() => toggleService(service)}
+                                              className="mr-2"
+                                            />
+                                            <span className="text-sm">{service}</span>
+                                          </label>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
                             </div>
 
                             <div className="space-y-2">

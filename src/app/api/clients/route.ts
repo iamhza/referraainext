@@ -239,6 +239,7 @@ export async function POST(req: Request) {
     insuranceNumber: clientData.insuranceNumber,
     pmiNumber: clientData.pmiNumber,
     waiverType: clientData.waiverType,
+    serviceTypes: clientData.serviceTypes || [],
     primaryLanguage: clientData.primaryLanguage,
     needsTranslator: clientData.needsTranslator || false,
     historyOfViolence: clientData.historyOfViolence || false,

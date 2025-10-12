@@ -106,3 +106,6 @@ console.log('📋 Existing comments will be backed up in comments_backup field\n
 
 migrateActionCommentsToSecure();
 
+
+
+

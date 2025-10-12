@@ -11,6 +11,7 @@ interface ProfessionalDrawerProps {
   side?: "left" | "right"
   width?: string
   className?: string
+  responsive?: boolean
 }
 
 export function ProfessionalDrawer({
@@ -18,10 +19,38 @@ export function ProfessionalDrawer({
   onClose,
   children,
   side = "right",
-  width = "620px",
-  className
+  width,
+  className,
+  responsive = true
 }: ProfessionalDrawerProps) {
   const drawerRef = React.useRef<HTMLDivElement>(null)
+  const [drawerWidth, setDrawerWidth] = React.useState(width)
+
+  // Professional responsive width calculation
+  React.useEffect(() => {
+    if (!responsive || width) return
+
+    const calculateWidth = () => {
+      const viewportWidth = window.innerWidth
+      
+      // World-class responsive breakpoints
+      if (viewportWidth < 768) {
+        setDrawerWidth('100vw') // Mobile: Full width
+      } else if (viewportWidth < 1024) {
+        setDrawerWidth('90vw') // Tablet: 90% width
+      } else if (viewportWidth < 1440) {
+        setDrawerWidth('800px') // Desktop: 800px
+      } else if (viewportWidth < 1920) {
+        setDrawerWidth('900px') // Large Desktop: 900px
+      } else {
+        setDrawerWidth('1000px') // Extra Large: 1000px (max)
+      }
+    }
+
+    calculateWidth()
+    window.addEventListener('resize', calculateWidth)
+    return () => window.removeEventListener('resize', calculateWidth)
+  }, [responsive, width])
 
   // Enhanced escape key and accessibility
   React.useEffect(() => {
@@ -64,11 +93,11 @@ export function ProfessionalDrawer({
         className={cn(
           "fixed top-0 h-full z-40 bg-white border-l border-slate-200 shadow-xl",
           side === "right" ? "right-0" : "left-0",
-          "transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
+          "transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
           isOpen ? "translate-x-0" : "translate-x-full",
           className
         )}
-        style={{ width }}
+        style={{ width: drawerWidth }}
       >
         {/* Content container */}
         <div className="h-full">

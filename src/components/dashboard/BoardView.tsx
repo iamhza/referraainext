@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import useSWR from 'swr';
 import { ClientCard } from './ClientCard';
 import { ClientListItem } from './ClientListItem';
 import { DroppableColumn } from './DroppableColumn';
 import { ClientSideDrawer } from '../clients/ClientSideDrawer';
+import { ClientDetailsPanel } from '../clients/ClientDetailsPanel';
 import { ReferralPanel } from '../referrals/ReferralPanel';
 import { AddClientModal } from '../modals/AddClientModal';
 import { DeleteClientModal } from '../modals/DeleteClientModal';
@@ -46,6 +48,13 @@ interface BoardViewProps {
   className?: string;
 }
 
+// Smart fetcher for SWR - handles all data fetching logic
+const fetcher = async (url: string) => {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Failed to fetch');
+  return response.json();
+};
+
 export function BoardView({ 
   onClientClick, 
   onRequestUpdate, 
@@ -71,16 +80,32 @@ export function BoardView({
     gap 
   } = useResponsiveKanban(responsiveConfig);
   const router = useRouter();
-  const [clients, setClients] = useState<ClientType[]>([]);
+  
+  // SWR for smart caching and auto-revalidation
+  const { data: clientsData, error: clientsError, mutate: mutateClients, isLoading: clientsLoading } = useSWR('/api/clients', fetcher, {
+    revalidateOnFocus: true,  // Refresh when tab refocuses
+    revalidateOnReconnect: true,  // Refresh when internet reconnects
+    dedupingInterval: 2000,  // Prevent duplicate requests within 2s
+  });
+  
+  const { data: referralsData, error: referralsError } = useSWR('/api/referrals', fetcher, {
+    revalidateOnFocus: true,
+  });
+  
+  const { data: connectionsDataRaw, error: connectionsError, mutate: mutateConnections } = useSWR('/api/connections', fetcher, {
+    revalidateOnFocus: true,
+  });
+  
   const [connections, setConnections] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [localClients, setLocalClients] = useState<ClientType[]>([]); // Local state for drag operations
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [overId, setOverId] = useState<string | null>(null);
   const [originalClientsBeforeDrag, setOriginalClientsBeforeDrag] = useState<ClientType[] | null>(null);
+  const [draggedClientOriginalStatus, setDraggedClientOriginalStatus] = useState<string | null>(null); // Track original status before drag
   const [selectedClient, setSelectedClient] = useState<ClientType | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [showDetailsPanel, setShowDetailsPanel] = useState(false); // Track if showing details panel vs drawer
   const [isReferralPanelOpen, setIsReferralPanelOpen] = useState(false);
   const [referralClient, setReferralClient] = useState<ClientType | null>(null);
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
@@ -94,6 +119,7 @@ export function BoardView({
   const getStatusDisplayInfo = (status: string) => {
     switch (status) {
       case 'UNPLACED':
+      case 'UNPLACED_NEW': // Legacy support
         return { label: 'Unplaced', color: 'red' };
       case 'REFERRAL_SENT':
         return { label: 'Referral Sent', color: 'blue' };
@@ -102,6 +128,7 @@ export function BoardView({
       case 'ACTIVE_STABLE':
         return { label: 'Active', color: 'green' };
       case 'ACTIVE_NEEDS_ATTENTION':
+      case 'ACTIVE_FRUSTRATED': // Legacy support
         return { label: 'Needs Attention', color: 'yellow' };
       case 'CLOSED_DISCHARGED':
         return { label: 'Closed/Discharged', color: 'gray' };
@@ -124,6 +151,11 @@ export function BoardView({
   const handleCloseDrawer = () => {
     setIsDrawerOpen(false);
     setSelectedClient(null);
+    setShowDetailsPanel(false);
+  };
+
+  const handleViewProfile = () => {
+    setShowDetailsPanel(true);
   };
 
   const handleSideDrawerRequestUpdate = (clientId: string) => {
@@ -151,8 +183,8 @@ export function BoardView({
   };
 
   const handleReferralSuccess = () => {
-    // Refresh clients data
-    fetchClients();
+    // Refresh clients data using SWR
+    mutateClients();
     
     // Show success toast
     toast({
@@ -171,8 +203,9 @@ export function BoardView({
   };
 
   const handleClientAdded = () => {
-    fetchClients(); // Refresh the client list
-    fetchConnections(); // Also refresh connections
+    // Refresh data using SWR
+    mutateClients();
+    mutateConnections();
   };
 
 
@@ -189,95 +222,52 @@ export function BoardView({
     useSensor(KeyboardSensor)
   );
 
-  // Fetch connections data (same as table)
-  const fetchConnections = async () => {
-    try {
-      const response = await fetch('/api/client-connections');
-      if (!response.ok) {
-        throw new Error('Failed to fetch client connections');
-      }
-      const data = await response.json();
-      setConnections(data.connections || []);
-    } catch (error) {
-      console.error('Error fetching client connections:', error);
-      setConnections([]); // Fallback to empty array
+  // Computed clients from SWR data - enhanced and enriched
+  const clients = useMemo(() => {
+    if (!clientsData?.clients) return [];
+    
+    const rawClients = clientsData.clients;
+    const allReferrals = referralsData?.referrals || [];
+    const connectionsData = connectionsDataRaw?.connections || [];
+    const allActivities: any[] = []; // TODO: Implement activity fetching if needed
+    
+    // Enhance clients with computed fields
+    const enhancedClients = enhanceClientsData(
+      rawClients,
+      allReferrals,
+      connectionsData,
+      allActivities
+    );
+    
+    // Maintain backward compatibility with existing fields
+    return enhancedClients.map(client => ({
+      ...client,
+      activeReferrals: client.referralSummary?.active || 0,
+      pendingReferrals: client.referralSummary?.pending || 0,
+      unreadMessages: 0
+    }));
+  }, [clientsData, referralsData, connectionsDataRaw]);
+  
+  // Sync localClients with SWR data when not dragging
+  useEffect(() => {
+    if (!isDragging && clients.length > 0) {
+      setLocalClients(clients);
     }
-  };
-
-  // Fetch clients data with referral counts
-  const fetchClients = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Fetch clients from clients endpoint (same as table)
-      const clientsResponse = await fetch('/api/clients');
-      if (!clientsResponse.ok) {
-        throw new Error('Failed to fetch clients');
-      }
-      
-      const clientsData = await clientsResponse.json();
-      const clients = clientsData.clients || [];
-      
-      // Fetch all referrals for all clients in one go (more efficient)
-      const allReferralsResponse = await fetch('/api/referrals');
-      const allReferralsData = allReferralsResponse.ok ? await allReferralsResponse.json() : { referrals: [] };
-      const allReferrals = allReferralsData.referrals || [];
-      
-      // Fetch all activities (for last activity computation)
-      // Note: This would be a new endpoint or we can use existing data
-      const allActivities: any[] = []; // TODO: Implement activity fetching if needed
-      
-      // Fetch connections data for enhancement
-      let connectionsData = connections;
-      if (connectionsData.length === 0) {
-        try {
-          const connectionsResponse = await fetch('/api/connections');
-          if (connectionsResponse.ok) {
-            const connectionsResult = await connectionsResponse.json();
-            connectionsData = connectionsResult.connections || [];
-            setConnections(connectionsData); // Update state too
-          }
-        } catch (error) {
-          console.error('Error fetching connections for enhancement:', error);
-          connectionsData = [];
-        }
-      }
-
-      // Enhance clients with computed fields using our data enhancer
-      const enhancedClients = enhanceClientsData(
-        clients,
-        allReferrals,
-        connectionsData, // Use fetched connections data
-        allActivities
-      );
-      
-      // Maintain backward compatibility with existing activeReferrals/pendingReferrals fields
-      const clientsWithLegacyFields = enhancedClients.map(client => ({
-        ...client,
-        activeReferrals: client.referralSummary?.active || 0,
-        pendingReferrals: client.referralSummary?.pending || 0,
-        unreadMessages: 0 // TODO: Add unreadMessages from workspace API
-      }));
-      
-      setClients(clientsWithLegacyFields);
-      
-      // Notify parent component of client count
-      if (onClientsLoaded) {
-        onClientsLoaded(clientsWithLegacyFields.length);
-      }
-    } catch (err: any) {
-      console.error('Error fetching clients:', err);
-      setError(err.message || 'Failed to load clients');
-      toast({
-        title: "Error",
-        description: "Failed to load clients",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
+  }, [clients, isDragging]);
+  
+  // Update connections state when data changes
+  useEffect(() => {
+    if (connectionsDataRaw?.connections) {
+      setConnections(connectionsDataRaw.connections);
     }
-  };
+  }, [connectionsDataRaw]);
+  
+  // Notify parent of client count
+  useEffect(() => {
+    if (clients.length > 0 && onClientsLoaded) {
+      onClientsLoaded(clients.length);
+    }
+  }, [clients.length, onClientsLoaded]);
 
   // Load custom order from localStorage on mount
   useEffect(() => {
@@ -291,13 +281,15 @@ export function BoardView({
     }
   }, []);
 
-  // Initial fetch and refresh trigger
+  // Handle refresh trigger - SWR mutate for smart revalidation
   useEffect(() => {
-    fetchClients();
-    fetchConnections(); // Also fetch connections data
-  }, [refreshTrigger]);
+    if (refreshTrigger > 0) {
+      mutateClients();
+      mutateConnections();
+    }
+  }, [refreshTrigger, mutateClients, mutateConnections]);
 
-  // Group clients by status with custom ordering
+  // Group clients by status with custom ordering (use localClients for drag operations)
   const clientsByStatus = useMemo(() => {
     const groups = {
       UNPLACED: [] as ClientType[],
@@ -308,7 +300,7 @@ export function BoardView({
       CLOSED_DISCHARGED: [] as ClientType[]
     };
 
-    clients.forEach(client => {
+    localClients.forEach(client => {
       // Map old statuses to new ones for backward compatibility
       let status = client.status || 'UNPLACED';
       
@@ -360,7 +352,7 @@ export function BoardView({
     });
 
     return groups;
-  }, [clients, customOrder]);
+  }, [localClients, customOrder]);
 
   // Handle request update for a client
   const handleRequestUpdate = async (client: ClientType) => {
@@ -412,37 +404,63 @@ export function BoardView({
 
   // Handle delete client
   const handleDeleteClient = useCallback((clientId: string) => {
-    const client = clients.find(c => c._id === clientId);
+    const client = localClients.find(c => c._id === clientId);
     if (client) {
       setClientToDelete(client);
       setDeleteModalOpen(true);
     }
-  }, [clients]);
+  }, [localClients]);
 
   const handleConfirmDelete = useCallback(async () => {
     if (!clientToDelete) return;
 
     setIsDeleting(true);
+    
+    const deletedClientName = `${clientToDelete.firstName} ${clientToDelete.lastName}`;
+    const deletedClientId = clientToDelete._id;
+    
     try {
-      const response = await fetch(`/api/clients/${clientToDelete._id}`, {
-        method: 'DELETE',
-      });
+      // OPTIMISTIC UPDATE: Remove from UI immediately
+      await mutateClients(
+        async (currentData: any) => {
+          const response = await fetch(`/api/clients/${deletedClientId}`, {
+            method: 'DELETE',
+          });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete client');
-      }
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to delete client');
+          }
 
-      const deletedClientName = `${clientToDelete.firstName} ${clientToDelete.lastName}`;
-      const deletedClientId = clientToDelete._id;
+          // Return updated data with client removed
+          if (currentData?.clients) {
+            return {
+              ...currentData,
+              clients: currentData.clients.filter((c: any) => c._id !== deletedClientId)
+            };
+          }
+          
+          return currentData;
+        },
+        {
+          // Optimistic data - remove immediately in UI
+          optimisticData: (currentData: any) => {
+            if (!currentData?.clients) return currentData;
+            return {
+              ...currentData,
+              clients: currentData.clients.filter((c: any) => c._id !== deletedClientId)
+            };
+          },
+          rollbackOnError: true,
+          populateCache: true,
+          revalidate: false
+        }
+      );
 
-      // Close modal and reset state first
+      // Close modal and reset state
       setDeleteModalOpen(false);
       setClientToDelete(null);
       setIsDeleting(false);
-
-      // Remove client from local state
-      setClients(prevClients => prevClients.filter(c => c._id !== deletedClientId));
       
       // Close drawer if the deleted client was selected
       if (selectedClient?._id === deletedClientId) {
@@ -464,7 +482,7 @@ export function BoardView({
       });
       setIsDeleting(false);
     }
-  }, [clientToDelete, selectedClient, toast]);
+  }, [clientToDelete, selectedClient, toast, mutateClients]);
 
   const handleCancelDelete = useCallback(() => {
     setDeleteModalOpen(false);
@@ -487,22 +505,31 @@ export function BoardView({
   // Drag and drop handlers
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
+    const activeClient = localClients.find(c => c._id === active.id);
+    
     setActiveId(active.id as string);
     setIsDragging(true);
     setOverId(null);
     
+    // Store ORIGINAL status before any drag operations modify it
+    if (activeClient) {
+      setDraggedClientOriginalStatus(activeClient.status || null);
+      console.log('🎯 Drag start - Original status:', activeClient.status);
+    }
+    
     // Store original clients state for potential reversion
-    setOriginalClientsBeforeDrag([...clients]);
+    setOriginalClientsBeforeDrag([...localClients]);
   };
 
   const handleDragCancel = () => {
     setActiveId(null);
     setIsDragging(false);
     setOverId(null);
+    setDraggedClientOriginalStatus(null); // Clear original status
     
     // Revert to original state if drag was cancelled
     if (originalClientsBeforeDrag) {
-      setClients(originalClientsBeforeDrag);
+      setLocalClients(originalClientsBeforeDrag);
       setOriginalClientsBeforeDrag(null);
     }
   };
@@ -517,11 +544,11 @@ export function BoardView({
     const overId = over.id as string;
     
     // Find the dragged client
-    const activeClient = clients.find(client => client._id === activeId);
+    const activeClient = localClients.find(client => client._id === activeId);
     if (!activeClient) return;
     
     // Check if we're over a specific client
-    const overClient = clients.find(client => client._id === overId);
+    const overClient = localClients.find(client => client._id === overId);
     
     // Check if we're over a column container
     let targetStatus = null;
@@ -537,7 +564,7 @@ export function BoardView({
     
     // Handle cross-column visual feedback (more generous)
     if (targetStatus && activeClient.status !== targetStatus) {
-      setClients(currentClients => {
+      setLocalClients((currentClients: ClientType[]) => {
         const newClients = [...currentClients];
         
         // Remove the dragged item from its current position
@@ -579,6 +606,7 @@ export function BoardView({
 
     if (!over) {
       console.log('No drop target');
+      setDraggedClientOriginalStatus(null);
       return;
     }
 
@@ -586,34 +614,41 @@ export function BoardView({
     const overId = over.id as string;
 
     // Find the client being dragged
-    const draggedClient = clients.find(client => client._id === activeId);
+    const draggedClient = localClients.find(client => client._id === activeId);
     if (!draggedClient) {
       console.error('Dragged client not found:', activeId);
+      setDraggedClientOriginalStatus(null);
       return;
     }
 
+    // Use ORIGINAL status (before drag operations modified it)
+    const originalStatus = draggedClientOriginalStatus || draggedClient.status;
+    
     console.log('Drag end:', { 
       activeId, 
       overId, 
       draggedClient: draggedClient.firstName,
-      draggedStatus: draggedClient.status 
+      originalStatus: originalStatus,
+      currentStatus: draggedClient.status 
     });
 
     // Check if we're dropping on another client
-    const overClient = clients.find(client => client._id === overId);
+    const overClient = localClients.find(client => client._id === overId);
     
     if (overClient) {
       console.log('Dropping on client:', overClient.firstName, 'Status:', overClient.status);
+      console.log('🔍 Comparison:', { originalStatus, overClientStatus: overClient.status, isSameColumn: originalStatus === overClient.status });
       
-      if (draggedClient.status === overClient.status && activeId !== overId) {
+      if (originalStatus === overClient.status && activeId !== overId) {
         // Same column reordering
         console.log('Same column reorder');
         handleReorderWithinColumn(activeId, overId, draggedClient);
-      } else if (draggedClient.status !== overClient.status) {
+      } else if (originalStatus !== overClient.status) {
         // Cross-column move
         console.log('Cross-column move to client');
         handleCrossColumnMove(activeId, overId, draggedClient, overClient);
       }
+      setDraggedClientOriginalStatus(null);
       return;
     }
 
@@ -637,22 +672,25 @@ export function BoardView({
       newStatus = 'CLOSED_DISCHARGED';
     }
 
-    if (newStatus && draggedClient.status !== newStatus) {
-      console.log('Column drop - status change from', draggedClient.status, 'to', newStatus);
+    if (newStatus && originalStatus !== newStatus) {
+      console.log('Column drop - status change from', originalStatus, 'to', newStatus);
       handleStatusChange(activeId, newStatus, draggedClient);
     } else {
       console.log('No status change needed or unknown drop target');
     }
+    
+    // Clear the original status tracking
+    setDraggedClientOriginalStatus(null);
   };
 
   // Production-grade reordering within the same column
   const handleReorderWithinColumn = async (activeId: string, overId: string, draggedClient: any) => {
     console.log('Reordering within column:', { activeId, overId, status: draggedClient.status });
     
-    const activeIndex = clients.findIndex(client => client._id === activeId);
-    const overIndex = clients.findIndex(client => client._id === overId);
+    const activeIndex = localClients.findIndex(client => client._id === activeId);
+    const overIndex = localClients.findIndex(client => client._id === overId);
     
-    console.log('Indices:', { activeIndex, overIndex, totalClients: clients.length });
+    console.log('Indices:', { activeIndex, overIndex, totalClients: localClients.length });
     
     // Safety checks
     if (activeIndex === -1 || overIndex === -1) {
@@ -671,14 +709,14 @@ export function BoardView({
     }
     
     // Store original state for rollback
-    const originalClients = [...clients];
+    const originalClients = [...localClients];
     
     try {
       // Reorder the full clients array
-      const reorderedClients = arrayMove(clients, activeIndex, overIndex);
+      const reorderedClients = arrayMove(localClients, activeIndex, overIndex);
       
       // Update clients state immediately for instant UI feedback - batched update
-      setClients(reorderedClients);
+      setLocalClients(reorderedClients);
       
       // Create custom order for this status
       const status = draggedClient.status || 'UNPLACED_NEW';
@@ -712,7 +750,7 @@ export function BoardView({
       console.error('Error during reordering:', error);
       
       // Rollback to original state
-      setClients(originalClients);
+      setLocalClients(originalClients);
       
       toast({
         title: "Reorder Failed", 
@@ -722,7 +760,7 @@ export function BoardView({
     }
   };
 
-  // Handle cross-column moves - just commit the visual changes and update server
+  // Handle cross-column moves with OPTIMISTIC UPDATES
   const handleCrossColumnMove = async (activeId: string, overId: string, draggedClient: any, overClient: any) => {
     console.log('Cross-column move:', { 
       activeId, 
@@ -732,57 +770,92 @@ export function BoardView({
       insertBefore: overClient.firstName 
     });
     
+    // Keep the ORIGINAL database status (don't normalize)
     const newStatus = overClient.status;
     
-    // Don't modify the UI here - handleDragOver already positioned it correctly
-    // Just update the server and clean up
+    console.log('💾 Saving with original DB status:', newStatus);
+    const statusInfo = getStatusDisplayInfo(newStatus);
     
     // Clear the original clients backup since we're committing the change
     setOriginalClientsBeforeDrag(null);
 
     try {
-      // Update the client status on the server
-      const response = await fetch(`/api/clients/${activeId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
+      // OPTIMISTIC UPDATE: Update UI immediately, then confirm with server
+      await mutateClients(
+        async (currentData: any) => {
+          // Update the client status on the server
+          console.log('📤 [CrossColumn] Sending PATCH:', { clientId: activeId, newStatus });
+          const response = await fetch(`/api/clients/${activeId}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ status: newStatus }),
+          });
+
+          console.log('📥 [CrossColumn] Response:', { status: response.status, ok: response.ok });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error('❌ [CrossColumn] PATCH failed:', errorData);
+            throw new Error(errorData.error || 'Failed to update client status');
+          }
+
+          const result = await response.json();
+          console.log('✅ [CrossColumn] PATCH success:', result);
+          
+          // Return updated data with the new client from server
+          if (result.client && currentData?.clients) {
+            return {
+              ...currentData,
+              clients: currentData.clients.map((c: any) => 
+                c._id === result.client._id ? result.client : c
+              )
+            };
+          }
+          
+          return currentData;
         },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update client status');
-      }
-
-      const statusInfo = getStatusDisplayInfo(newStatus);
+        {
+          // Optimistic data - update immediately in UI
+          optimisticData: (currentData: any) => {
+            if (!currentData?.clients) return currentData;
+            return {
+              ...currentData,
+              clients: currentData.clients.map((c: any) => 
+                c._id === activeId ? { ...c, status: newStatus } : c
+              )
+            };
+          },
+          rollbackOnError: true,  // Auto-revert if server fails
+          populateCache: true,     // Use server response to update cache
+          revalidate: false        // Don't revalidate (we have fresh data from server)
+        }
+      );
+      
+      console.log('🎉 [CrossColumn] Showing success toast');
       toast({
         title: "Client Moved",
         description: `${draggedClient.firstName} ${draggedClient.lastName} moved to ${statusInfo.label}`,
       });
 
     } catch (error) {
-      console.error('Error updating client status:', error);
-      
-      // Revert the optimistic update
-      fetchClients();
+      console.error('❌ [CrossColumn] Error:', error);
       
       toast({
         title: "Move Failed",
-        description: "Failed to move client. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to move client. Changes reverted.",
         variant: "destructive",
       });
     }
   };
 
-  // Separate function for status changes
+  // Separate function for status changes with OPTIMISTIC UPDATES
   const handleStatusChange = async (activeId: string, newStatus: string, draggedClient: any) => {
     console.log('Status change:', { from: draggedClient.status, to: newStatus });
 
-    // Optimistically update the UI
-    const updatedClients = clients.map(client =>
-      client._id === activeId ? { ...client, status: newStatus as ClientStatus } : client
-    );
-    setClients(updatedClients);
+    const statusInfo = getStatusDisplayInfo(newStatus);
+    const oldStatusInfo = getStatusDisplayInfo(draggedClient.status);
 
     // Update custom order for the new column (add to beginning)
     setCustomOrder(prev => {
@@ -813,42 +886,71 @@ export function BoardView({
     });
 
     try {
-      // Update the client status on the server
-      const response = await fetch(`/api/clients/${activeId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
+      // OPTIMISTIC UPDATE: Update UI immediately, then confirm with server
+      await mutateClients(
+        async (currentData: any) => {
+          // Update the client status on the server
+          const response = await fetch(`/api/clients/${activeId}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ status: newStatus }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to update client status');
+          }
+
+          const result = await response.json();
+          
+          // Return updated data with the new client from server
+          if (result.client && currentData?.clients) {
+            return {
+              ...currentData,
+              clients: currentData.clients.map((c: any) => 
+                c._id === result.client._id ? result.client : c
+              )
+            };
+          }
+          
+          return currentData;
         },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update client status');
-      }
-
-      const statusInfo = getStatusDisplayInfo(newStatus);
-      const oldStatusInfo = getStatusDisplayInfo(draggedClient.status);
+        {
+          // Optimistic data - update immediately in UI
+          optimisticData: (currentData: any) => {
+            if (!currentData?.clients) return currentData;
+            return {
+              ...currentData,
+              clients: currentData.clients.map((c: any) => 
+                c._id === activeId ? { ...c, status: newStatus } : c
+              )
+            };
+          },
+          rollbackOnError: true,
+          populateCache: true,
+          revalidate: false
+        }
+      );
+      
       toast({
-        title: "Status Updated",
-        description: `${draggedClient.firstName} ${draggedClient.lastName}: ${oldStatusInfo.label} → ${statusInfo.label}`,
+        title: "Client Moved",
+        description: `${draggedClient.firstName} ${draggedClient.lastName} moved to ${statusInfo.label}`,
       });
 
     } catch (error) {
       console.error('Error updating client status:', error);
       
-      // Revert the optimistic update
-      setClients(clients);
-      
       toast({
         title: "Update Failed",
-        description: "Failed to update client status. Please try again.",
+        description: "Failed to update client status. Changes reverted.",
         variant: "destructive",
       });
     }
   };
 
   // Loading state
-  if (loading) {
+  if (clientsLoading) {
     return (
       <div className={`flex items-center justify-center py-12 ${className}`}>
         <div className="flex flex-col items-center gap-4">
@@ -860,7 +962,7 @@ export function BoardView({
   }
 
   // Error state
-  if (error) {
+  if (clientsError) {
     return (
       <div className={`flex items-center justify-center py-12 ${className}`}>
         <div className="text-center">
@@ -868,9 +970,9 @@ export function BoardView({
             <Users className="h-8 w-8 text-red-600" />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Failed to Load Board</h3>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <p className="text-gray-600 mb-4">{clientsError.message || 'An error occurred'}</p>
           <button
-            onClick={fetchClients}
+            onClick={() => mutateClients()}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Try Again
@@ -905,13 +1007,18 @@ export function BoardView({
       onDragCancel={handleDragCancel}
     >
       <div className={`h-full flex bg-gray-50/50 ${className}`}>
-        {/* Main Board Area - fixed width, no resizing */}
-        <div className="flex flex-col w-full relative kanban-board-container">
-          {/* Focus overlay when panel or drawer is open - reduced opacity for better card visibility */}
+        {/* Main Board Area - ALWAYS narrowed (permanent) */}
+        <div 
+          className="flex flex-col relative kanban-board-container"
+          style={{
+            width: 'calc(100% - 850px)' // Fixed narrow width - never changes
+          }}
+        >
+          {/* Focus overlay when panel or drawer is open - professional dimming effect */}
           {(isReferralPanelOpen || isDrawerOpen) && (
-            <div className="absolute inset-0 bg-gray-900/3 z-10 pointer-events-none transition-all duration-500" />
+            <div className="absolute inset-0 bg-black/[0.06] backdrop-blur-[0.5px] z-10 pointer-events-none transition-all duration-500 ease-in-out" />
           )}
-          {/* Board container - true edge-to-edge */}
+          {/* Board container - narrowed columns */}
           <div className="flex-1 overflow-hidden px-1 sm:px-2 lg:px-3 py-4">
             <div 
               className="grid grid-cols-6 h-full w-full kanban-board-grid"
@@ -1065,65 +1172,50 @@ export function BoardView({
       <DragOverlay dropAnimation={{ duration: 150, easing: 'ease-out' }}>
         {activeId ? (
           viewDensity === 'compact' ? (
-            <div className="transform rotate-1 scale-105 opacity-95" style={{ width: '400px' }}>
+            <div className="transform rotate-1 scale-105 opacity-95">
               <div className="bg-white border-2 border-blue-400 ring-4 ring-blue-100 rounded-lg shadow-2xl cursor-grabbing overflow-hidden">
                 {(() => {
-                  const client = clients.find(c => c._id === activeId)!;
-                  const isUrgent = client.status === 'ACTIVE_FRUSTRATED';
+                  const client = localClients.find(c => c._id === activeId)!;
+                  const isUrgent = client.status === 'ACTIVE_FRUSTRATED' || client.status === 'ACTIVE_NEEDS_ATTENTION';
                   const getStatusColor = () => {
                     switch (client.status) {
                       case 'ACTIVE_STABLE': return 'bg-green-500';
+                      case 'ACTIVE_NEEDS_ATTENTION':
                       case 'ACTIVE_FRUSTRATED': return 'bg-red-500';
-                      default: return 'bg-amber-500';
+                      case 'IN_PROCESS': return 'bg-purple-500';
+                      case 'REFERRAL_SENT': return 'bg-blue-500';
+                      default: return 'bg-slate-400';
                     }
                   };
                   
                   return (
-                    <div className="flex items-center px-4 py-3">
-                      {/* Status indicator */}
-                      <div className={`w-3 h-3 rounded-full flex-shrink-0 mr-3 ${getStatusColor()}`} />
+                    <div className="px-3 py-2.5">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        {/* Status indicator */}
+                        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ring-1 ring-white shadow-sm ${getStatusColor()}`} />
+                        
+                        {/* Name */}
+                        <h3 className="text-[12px] font-bold text-slate-900 flex-1">
+                          {capitalizeName(client.firstName || 'Unknown')} {capitalizeName(client.lastName || 'Client')}
+                        </h3>
+                        
+                        {isUrgent && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700 flex-shrink-0">
+                            !
+                          </span>
+                        )}
+                      </div>
                       
-                      {/* Name - Fixed width column */}
-                      <div className="w-40 sm:w-48 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <h3 className="text-sm font-semibold text-gray-900 truncate">
-                            {capitalizeName(client.firstName || 'Unknown')} {capitalizeName(client.lastName || 'Client')}
-                          </h3>
-                          {isUrgent && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 flex-shrink-0">
-                              Urgent
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-500 truncate">
+                      {/* Contact & PMI row */}
+                      <div className="flex items-center gap-2 pl-4.5">
+                        <span className="text-[10px] text-slate-600 font-medium whitespace-nowrap">
                           {client.phone ? `📞 ${client.phone}` : client.email ? `✉️ ${client.email}` : 'No contact'}
-                        </div>
-                      </div>
-
-                      {/* Service - Fixed width */}
-                      <div className="hidden sm:block w-32 text-xs text-gray-600 truncate">
-                        {client.serviceType || client.serviceType1 || '—'}
-                      </div>
-
-                      {/* PMI - Fixed width, centered */}
-                      <div className="hidden md:block w-24 text-xs font-mono text-gray-500 text-center truncate">
-                        {client.pmi || client.pmiNumber || '—'}
-                      </div>
-
-                      {/* Last Update - Fixed width, centered */}
-                      <div className="hidden lg:block w-20 text-xs text-gray-500 text-center truncate">
-                        {client.updatedAt ? 'Updated' : 'Recent'}
-                      </div>
-
-                      {/* Actions - Fixed width, centered */}
-                      <div className="w-16 flex justify-center">
-                        <div className="opacity-60">
-                          <button className="inline-flex items-center px-1.5 py-1 text-xs font-medium text-white bg-secondary-500 rounded">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                          </button>
-                        </div>
+                        </span>
+                        {(client.pmi || client.pmiNumber) && (
+                          <span className="font-mono text-[10px] text-slate-700 bg-blue-50 px-2 py-1 rounded border border-blue-200 whitespace-nowrap font-semibold">
+                            {client.pmi || client.pmiNumber}
+                          </span>
+                        )}
                       </div>
                     </div>
                   );
@@ -1133,7 +1225,7 @@ export function BoardView({
           ) : (
             <div className="transform rotate-1 scale-110 opacity-95">
               <ClientCard
-                client={clients.find(c => c._id === activeId)!}
+                client={localClients.find(c => c._id === activeId)!}
                 connections={connections}
                 className="shadow-2xl border-2 border-blue-400 ring-4 ring-blue-100 bg-white cursor-grabbing"
               />
@@ -1142,14 +1234,61 @@ export function BoardView({
         ) : null}
       </DragOverlay>
 
-      {/* Client Side Drawer */}
-      <ClientSideDrawer
-        client={selectedClient as any}
-        connections={connections}
-        isOpen={isDrawerOpen}
-        onClose={handleCloseDrawer}
-        onRequestUpdate={handleSideDrawerRequestUpdate}
-      />
+        {/* Dedicated Right Zone - ALWAYS visible (permanent white space) */}
+        <div 
+          className="fixed right-0 bottom-0 bg-white border-l border-slate-200"
+          style={{
+            width: '850px',
+            top: '80px', // Below the top bar
+            zIndex: 30
+          }}
+        >
+          {/* Drawer Content - Fades into this zone */}
+          <div 
+            className="w-full h-full transition-all duration-500 ease-in-out"
+            style={{
+              opacity: isDrawerOpen ? 1 : 0,
+              pointerEvents: isDrawerOpen ? 'auto' : 'none',
+              transform: isDrawerOpen ? 'translateY(0)' : 'translateY(10px)'
+            }}
+          >
+            {isDrawerOpen && selectedClient && (
+              showDetailsPanel ? (
+                <ClientDetailsPanel
+                  client={selectedClient as any}
+                  isOpen={isDrawerOpen}
+                  onClose={handleCloseDrawer}
+                  onUpdate={async () => {
+                    // Optimistically update using SWR
+                    await mutateClients();
+                    
+                    // Update selected client with fresh data
+                    try {
+                      const response = await fetch(`/api/clients/${selectedClient._id}`);
+                      if (response.ok) {
+                        const data = await response.json();
+                        if (data.client) {
+                          setSelectedClient(data.client);
+                        }
+                      }
+                    } catch (error) {
+                      console.error('Failed to refresh client:', error);
+                    }
+                  }}
+                />
+              ) : (
+                <ClientSideDrawer
+                  client={selectedClient as any}
+                  connections={connections}
+                  isOpen={isDrawerOpen}
+                  onClose={handleCloseDrawer}
+                  onRequestUpdate={handleSideDrawerRequestUpdate}
+                  onViewProfile={handleViewProfile}
+                />
+              )
+            )}
+          </div>
+        </div>
 
         {/* Referral Panel */}
         <ReferralPanel

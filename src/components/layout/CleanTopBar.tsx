@@ -8,6 +8,8 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ProviderDirectoryIntegration } from '@/components/providers/ProviderDirectoryIntegration';
+import type { Client as ClientType } from '@/types';
 import { Logo } from '@/components/ui/Logo';
 import {
   DropdownMenu,
@@ -38,6 +40,8 @@ interface CleanTopBarProps {
   viewDensity?: 'comfortable' | 'compact';
   onViewDensityChange?: (density: 'comfortable' | 'compact') => void;
   onAddClient?: () => void;
+  selectedClient?: ClientType | null;
+  onReferralCreated?: () => void;
 }
 
 export function CleanTopBar({ 
@@ -45,7 +49,9 @@ export function CleanTopBar({
   onRefresh, 
   viewDensity = 'comfortable', 
   onViewDensityChange,
-  onAddClient
+  onAddClient,
+  selectedClient,
+  onReferralCreated
 }: CleanTopBarProps) {
   const router = useRouter();
   const { user, signOut } = useAuth();
@@ -246,6 +252,13 @@ export function CleanTopBar({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Provider Directory */}
+          <ProviderDirectoryIntegration 
+            selectedClient={selectedClient}
+            prefilledCounty={user?.user_metadata?.county || 'Hennepin'}
+            onReferralCreated={onReferralCreated}
+          />
 
           {/* Report Dropdown */}
           <DropdownMenu>

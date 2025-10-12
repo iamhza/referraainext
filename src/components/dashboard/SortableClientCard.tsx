@@ -65,11 +65,6 @@ export function SortableClientCard({
       `}
     >
       <div className="relative group">
-        {/* Selected state indicator - more prominent and visible over overlay */}
-        {isSelected && !isDragging && (
-          <div className="absolute -top-2 -right-2 w-4 h-4 bg-blue-600 rounded-full shadow-lg animate-pulse border-2 border-white z-50" />
-        )}
-        
         {/* Drag handle indicator */}
         <div className={`absolute right-2 top-2 transition-opacity duration-200 pointer-events-none ${
           isSelected ? 'opacity-0' : 'opacity-0 group-hover:opacity-50'
@@ -97,10 +92,15 @@ export function SortableClientCard({
           shouldHideDetails={shouldHideDetails}
           className={`
             ${className}
-            ${isDragging ? 'shadow-2xl ring-2 ring-blue-400' : isSelected ? 'ring-2 ring-blue-500 shadow-xl scale-[1.02] bg-white' : 'hover:shadow-lg hover:scale-[1.01]'}
-            transition-all duration-300 ease-out relative z-20
+            ${isDragging ? 'shadow-2xl ring-2 ring-blue-400' : isSelected ? 'ring-2 ring-blue-500 shadow-2xl scale-[1.03] bg-white relative z-[60]' : 'hover:shadow-lg hover:scale-[1.01]'}
+            transition-all duration-500 ease-in-out relative z-20
           `}
         />
+        
+        {/* Selected state indicator - positioned AFTER card to be on top */}
+        {isSelected && !isDragging && (
+          <div className="absolute -top-2 -right-2 w-4 h-4 bg-blue-600 rounded-full shadow-2xl animate-pulse border-2 border-white z-[70] pointer-events-none" />
+        )}
       </div>
     </div>
   );

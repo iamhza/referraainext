@@ -57,12 +57,7 @@ export function SortableClientListItem({
         cursor-grab active:cursor-grabbing
       `}
     >
-      <div className="relative">
-        {/* Selected state indicator - more prominent and visible over overlay */}
-        {isSelected && !isDragging && (
-          <div className="absolute top-1/2 -translate-y-1/2 -left-1 w-3 h-3 bg-blue-600 rounded-full shadow-lg animate-pulse border-2 border-white z-50" />
-        )}
-        
+      <div className="relative group">
         {/* Drag handle indicator - only show on hover when not selected */}
         <div className={`absolute left-1 top-1/2 transform -translate-y-1/2 transition-opacity duration-200 pointer-events-none ${
           isSelected ? 'opacity-0' : 'opacity-0 group-hover:opacity-30'
@@ -88,10 +83,15 @@ export function SortableClientListItem({
           isSelected={isSelected}
           className={`
             ${className}
-            ${isDragging ? 'opacity-50 scale-95' : isSelected ? 'ring-2 ring-blue-500 shadow-lg bg-white' : 'hover:shadow-md'}
-            transition-all duration-200 ease-out relative z-20
+            ${isDragging ? 'opacity-50 scale-95' : isSelected ? 'ring-2 ring-blue-500 shadow-lg bg-white relative z-[60]' : 'hover:shadow-md'}
+            transition-all duration-500 ease-in-out relative z-20
           `}
         />
+        
+        {/* Selected state indicator - positioned AFTER to be on top */}
+        {isSelected && !isDragging && (
+          <div className="absolute top-1/2 -translate-y-1/2 -left-1 w-3 h-3 bg-blue-600 rounded-full shadow-2xl animate-pulse border-2 border-white z-[70] pointer-events-none" />
+        )}
       </div>
     </div>
   );

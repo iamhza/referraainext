@@ -298,7 +298,7 @@ export function ReferralFormPanel({ onComplete, prefilledClient, draftId, draftD
   return (
     <div className="h-full flex flex-col bg-white">
       {/* Compact Header with Step Progress */}
-      <div className="flex-shrink-0 px-6 py-4 border-b border-gray-200/60">
+      <div className="flex-shrink-0 px-5 py-3.5 border-b border-gray-200/60">
         <div className="flex items-center justify-between mb-3">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">
@@ -324,7 +324,7 @@ export function ReferralFormPanel({ onComplete, prefilledClient, draftId, draftD
 
       {/* Form Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="p-6">
+        <div className="p-5">
           <AnimatePresence mode="wait">
             <motion.div
               key={step}
@@ -350,7 +350,7 @@ export function ReferralFormPanel({ onComplete, prefilledClient, draftId, draftD
       </div>
 
       {/* Footer with Navigation */}
-      <div className="flex-shrink-0 px-6 py-4 border-t border-gray-200/60 bg-gray-50/50">
+      <div className="flex-shrink-0 px-5 py-3.5 border-t border-gray-200/60 bg-gray-50/50">
         <div className="flex items-center justify-between">
           <Button
             variant="outline"

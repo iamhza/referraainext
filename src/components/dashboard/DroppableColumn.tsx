@@ -53,45 +53,45 @@ export function DroppableColumn({
 
   const clientIds = clients.map(client => client._id!);
 
-  // Get column-specific styling
+  // Get column-specific styling - Professional, distinguishable colors
   const getColumnStyling = () => {
     switch (status) {
       case 'UNPLACED':
       case 'UNPLACED_NEW':
         return {
-          headerBg: 'bg-slate-100',
-          borderColor: 'border-slate-200'
+          headerBg: 'bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100',
+          borderColor: 'border-slate-300'
         };
       case 'REFERRAL_SENT':
         return {
-          headerBg: 'bg-blue-50',
-          borderColor: 'border-blue-200'
+          headerBg: 'bg-gradient-to-br from-blue-100 via-blue-50 to-blue-100',
+          borderColor: 'border-blue-300'
         };
       case 'IN_PROCESS':
         return {
-          headerBg: 'bg-purple-50',
-          borderColor: 'border-purple-200'
+          headerBg: 'bg-gradient-to-br from-purple-100 via-purple-50 to-purple-100',
+          borderColor: 'border-purple-300'
         };
       case 'ACTIVE_STABLE':
         return {
-          headerBg: 'bg-green-50',
-          borderColor: 'border-green-200'
+          headerBg: 'bg-gradient-to-br from-emerald-100 via-emerald-50 to-emerald-100',
+          borderColor: 'border-emerald-300'
         };
       case 'ACTIVE_NEEDS_ATTENTION':
       case 'ACTIVE_FRUSTRATED':
         return {
-          headerBg: 'bg-red-50',
-          borderColor: 'border-red-200'
+          headerBg: 'bg-gradient-to-br from-amber-100 via-amber-50 to-amber-100',
+          borderColor: 'border-amber-300'
         };
       case 'CLOSED_DISCHARGED':
         return {
-          headerBg: 'bg-gray-50',
-          borderColor: 'border-gray-200'
+          headerBg: 'bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100',
+          borderColor: 'border-gray-300'
         };
       default:
         return {
-          headerBg: 'bg-slate-100',
-          borderColor: 'border-slate-200'
+          headerBg: 'bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100',
+          borderColor: 'border-slate-300'
         };
     }
   };
@@ -124,24 +124,21 @@ export function DroppableColumn({
       />
       
       {viewDensity === 'compact' ? (
-        // List View for Compact - Separate scroll container
+        // List View for Compact - Optimized for narrow layout
         <div className="flex-1 flex flex-col min-h-0">
-          {/* Fixed Header - Outside scroll container */}
-          <div className="flex-shrink-0 px-3 pt-3">
-            <div className={`flex items-center px-4 py-2.5 text-xs font-semibold text-gray-600 ${columnStyle.headerBg} backdrop-blur-sm rounded-lg border ${columnStyle.borderColor} shadow-sm`}>
-              <div className="w-3 mr-3"></div>
-              <div className="w-40 sm:w-48 font-medium">Client</div>
-              <div className="hidden sm:block w-32 font-medium">Service</div>
-              <div className="hidden md:block w-24 text-center font-medium">PMI</div>
-              <div className="hidden lg:block w-20 text-center font-medium">Updated</div>
-              <div className="w-16 text-center font-medium">Action</div>
+          {/* Fixed Header - Hidden for narrow layout, takes too much space */}
+          <div className="flex-shrink-0 px-2 pt-2 hidden">
+            <div className={`flex items-center px-3 py-2 text-[10px] font-semibold text-gray-600 ${columnStyle.headerBg} backdrop-blur-sm rounded-lg border ${columnStyle.borderColor} shadow-sm`}>
+              <div className="w-2 mr-2"></div>
+              <div className="flex-1 font-medium">Client</div>
+              <div className="w-12 text-center font-medium">Action</div>
             </div>
           </div>
           
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent px-3 pt-3 pb-3">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent px-2 pt-2 pb-2">
             <SortableContext items={clientIds} strategy={verticalListSortingStrategy}>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {clients.map((client) => (
                   <SortableClientListItem
                     key={client._id}

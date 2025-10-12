@@ -1,21 +1,36 @@
 {
-  "css.validate": true,
-  "css.lint.unknownAtRules": "ignore",
-  "scss.validate": true,
-  "scss.lint.unknownAtRules": "ignore",
-  "less.validate": true,
-  "less.lint.unknownAtRules": "ignore",
-  "stylelint.validate": ["css", "postcss"],
-  "css.customData": [".vscode/css_custom_data.json"],
-  "emmet.includeLanguages": {
-    "postcss": "css"
-  },
+  // Tell IDE to treat these files as markdown (not TypeScript)
   "files.associations": {
-    "*.css": "tailwindcss"
+    ".cursorrules": "plaintext",
+    "*.md": "markdown"
   },
-  "editor.quickSuggestions": {
-    "strings": true
+  
+  // Exclude from validation
+  "files.exclude": {},
+  "search.exclude": {},
+  
+  // Disable TypeScript checking for these files
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.validate.enable": true,
+  
+  // Exclude from all language servers
+  "javascript.validate.enable": true,
+  "[plaintext]": {
+    "editor.quickSuggestions": {
+      "comments": "off",
+      "strings": "off",
+      "other": "off"
+    },
+    "editor.suggest.showWords": false
   },
-  "css.completion.completePropertyWithSemicolon": true,
-  "css.completion.triggerPropertyValueCompletion": true
+  
+  // Don't show errors for documentation files
+  "eslint.options": {
+    "ignore": [".cursorrules", "ai-dev-tasks/**", "tasks/**", "*.md"]
+  },
+  
+  // Disable validation for .cursorrules specifically
+  "eslint.enable": true,
+  "typescript.tsserver.experimental.enableProjectDiagnostics": false
 }

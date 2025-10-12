@@ -10,15 +10,17 @@ import type { Client as ClientType } from '@/types';
 
 export default function CaseManagerBoardPage() {
   const { user } = useAuth();
-  const { refreshTrigger } = useClientRefresh();
+  const { refreshTrigger, triggerRefresh } = useClientRefresh();
   const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set());
+  const [selectedClient, setSelectedClient] = useState<ClientType | null>(null);
   const [totalClients, setTotalClients] = useState(0);
   const [viewDensity, setViewDensity] = useState<'comfortable' | 'compact'>('comfortable');
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
 
-  // Handle client card clicks (will be used for drawer in Phase 2)
+  // Handle client card clicks
   const handleClientClick = (client: ClientType) => {
     console.log('Client clicked:', client);
+    setSelectedClient(client);
     // TODO: Open client drawer in Phase 2
     // For now, we could navigate to the detail page as fallback
     // window.open(`/case-manager/clients/${client._id}`, '_blank');
@@ -55,6 +57,11 @@ export default function CaseManagerBoardPage() {
     // No need to manually reload since BoardView listens to refreshTrigger
   };
 
+  const handleReferralCreated = () => {
+    // Trigger refresh when referral is created
+    triggerRefresh();
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -75,6 +82,8 @@ export default function CaseManagerBoardPage() {
         viewDensity={viewDensity}
         onViewDensityChange={setViewDensity}
         onAddClient={handleAddClient}
+        selectedClient={selectedClient}
+        onReferralCreated={handleReferralCreated}
       />
 
       {/* Board View - takes full remaining height */}

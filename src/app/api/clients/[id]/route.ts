@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import clientPromise from '@/lib/mongodb';
 import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
 import { ObjectId } from 'mongodb';
@@ -85,6 +86,9 @@ export async function DELETE(
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 500 });
     }
+
+    // Revalidate case manager pages to ensure fresh data
+    revalidatePath('/case-manager');
 
     return NextResponse.json({ 
       success: true, 
@@ -216,6 +220,10 @@ export async function PATCH(
     
     // Fetch the updated client to return it
     const updatedClient = await getSecureClient(clientId, user.id, user.role);
+    
+    // Revalidate case manager pages to ensure fresh data
+    revalidatePath('/case-manager');
+    revalidatePath(`/case-manager/clients/${clientId}`);
     
     return NextResponse.json({ 
       success: true,

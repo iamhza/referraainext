@@ -1199,4 +1199,4 @@ export default function ClientDetailsPage() {
       </div>
     </div>
   );
-} 
+}

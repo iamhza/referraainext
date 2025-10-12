@@ -40,42 +40,46 @@ export const useResponsiveKanban = (config: ResponsiveKanbanConfig): ResponsiveK
     const zoomLevel = window.outerWidth / window.innerWidth;
     const isNormalZoom = zoomLevel >= 0.95 && zoomLevel <= 1.05; // Consider 95%-105% as "normal"
     
-    // Determine responsive behavior - more reasonable breakpoints
-    let shouldCompactCards = idealColumnWidth < 200; // Only compact when really tight
-    let shouldHideDetails = idealColumnWidth < 160;  // Only hide details when extremely tight
+    // Determine responsive behavior - balanced for permanent narrow layout
+    let shouldCompactCards = idealColumnWidth < 150; // Compact only when really needed
+    let shouldHideDetails = idealColumnWidth < 120;  // Hide details rarely
     
-    // Override: At normal zoom levels, prefer comfortable view unless really constrained
-    if (isNormalZoom && idealColumnWidth > 180) {
+    // Override: At normal zoom levels, prefer comfortable view
+    if (isNormalZoom && idealColumnWidth > 140) {
       shouldCompactCards = false;
     }
     
-    // Debug logging to understand what's happening
-    console.log('Responsive Kanban Debug:', {
-      containerWidth,
-      idealColumnWidth,
-      zoomLevel,
-      isNormalZoom,
-      shouldCompactCards,
-      shouldHideDetails
-    });
     const columnWidth = Math.max(Math.min(idealColumnWidth, maxColumnWidth), minColumnWidth);
     
-    // Dynamic font sizing based on available space - more reasonable breakpoints
-    const fontSize = idealColumnWidth > 280 ? '0.875rem' : 
-                    idealColumnWidth > 200 ? '0.8125rem' : '0.75rem';
+    // Dynamic font sizing - balanced for narrow layout
+    const fontSize = idealColumnWidth > 200 ? '0.875rem' : 
+                    idealColumnWidth > 160 ? '0.8125rem' : '0.75rem';
     
-    // Dynamic gap sizing - more reasonable breakpoints
-    const gapSize = idealColumnWidth > 280 ? '0.75rem' : 
-                   idealColumnWidth > 200 ? '0.5rem' : '0.25rem';
+    // Dynamic gap sizing - balanced spacing
+    const gapSize = idealColumnWidth > 200 ? '0.625rem' : 
+                   idealColumnWidth > 160 ? '0.5rem' : '0.4rem';
 
-    setState({
-      columnWidth: `${columnWidth}px`,
-      shouldCompactCards,
-      shouldHideDetails,
-      fontSize,
-      gap: gapSize
+    // Only update state if values have actually changed
+    setState(prev => {
+      if (
+        prev.columnWidth === `${columnWidth}px` &&
+        prev.shouldCompactCards === shouldCompactCards &&
+        prev.shouldHideDetails === shouldHideDetails &&
+        prev.fontSize === fontSize &&
+        prev.gap === gapSize
+      ) {
+        return prev; // No change, return previous state
+      }
+      
+      return {
+        columnWidth: `${columnWidth}px`,
+        shouldCompactCards,
+        shouldHideDetails,
+        fontSize,
+        gap: gapSize
+      };
     });
-  }, [config]);
+  }, [config.columnCount, config.minColumnWidth, config.maxColumnWidth, config.gap]);
 
   useEffect(() => {
     updateLayout();

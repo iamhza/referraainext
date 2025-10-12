@@ -76,6 +76,7 @@ interface ClientSideDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onRequestUpdate?: (clientId: string) => void;
+  onViewProfile?: () => void;
 }
 
 type TabType = 'overview' | 'referrals' | 'timeline' | 'actions' | 'documents';
@@ -85,7 +86,8 @@ export function ClientSideDrawer({
   connections = [], 
   isOpen, 
   onClose, 
-  onRequestUpdate 
+  onRequestUpdate,
+  onViewProfile
 }: ClientSideDrawerProps) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -207,107 +209,105 @@ export function ClientSideDrawer({
 
   return (
     <>
-      <ProfessionalDrawer
-        isOpen={isOpen}
-        onClose={handleClose}
-        side="right"
-        width="620px"
-        className={`top-20 h-[calc(100vh-5rem)] ${
-          isReferralDetailsPanelOpen ? 'right-[600px]' : 'right-0'
-        }`}
-      >
-        <div className="flex flex-col h-full">
-          {/* Header - Clean & Action-Oriented */}
-          <div className="border-b border-gray-200 p-6">
-            <div className="flex items-start justify-between mb-6">
-              <div className="flex-1 space-y-3">
-                {/* Client Name and Status */}
-                <div className="flex items-center gap-3">
-                  <h1 className="text-xl font-semibold text-slate-900">
-                    {client.firstName} {client.lastName}
-                  </h1>
-                  <div 
-                    className={`w-3 h-3 rounded-full ring-2 ring-white shadow-sm ${getStatusDotColor(client.status)}`} 
-                    title={statusConfig.label} 
-                  />
-                  <Badge variant="secondary" className="text-xs px-2 py-1">
-                    {statusConfig.label}
-                  </Badge>
+      {/* Drawer content renders directly - positioning controlled by parent */}
+      <div className="flex flex-col h-full w-full overflow-hidden bg-white">
+          {/* Header - Compact Professional Design */}
+          <div className="border-b border-slate-200/80 px-5 py-4 bg-gradient-to-br from-white via-slate-50/20 to-white">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1 min-w-0">
+                {/* Name, Status & Contact - Compact Single Section */}
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-xl font-bold text-slate-900 tracking-tight mb-1.5">
+                      {client.firstName} {client.lastName}
+                    </h1>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div 
+                        className={`w-2 h-2 rounded-full ring-2 ring-white shadow-sm ${getStatusDotColor(client.status)}`} 
+                        title={statusConfig.label} 
+                      />
+                      <Badge 
+                        variant="secondary" 
+                        className="text-[11px] font-semibold px-2 py-0.5 bg-slate-100 border border-slate-200/60"
+                      >
+                        {statusConfig.label}
+                      </Badge>
+                      {client.assignedBy && (
+                        <Badge className="text-[11px] font-medium px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200/60">
+                          Supervisor
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 
-                {/* Contact Information */}
-                {((client.phoneNumber || client.phone) || client.email) && (
-                  <div className="flex items-center gap-4 text-sm text-slate-700">
-                    {(client.phoneNumber || client.phone) && (
-                      <span className="flex items-center gap-1.5">
-                        <Phone className="w-4 h-4 text-slate-500" />
-                        {client.phoneNumber || client.phone}
-                      </span>
-                    )}
-                    {client.email && (
-                      <span className="flex items-center gap-1.5">
-                        <User className="w-4 h-4 text-slate-500" />
+                {/* Compact Contact & Meta Row */}
+                <div className="flex items-center gap-3 text-xs text-slate-600 flex-wrap">
+                  {(client.phoneNumber || client.phone) && (
+                    <div className="flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-blue-600" />
+                      <span className="font-medium">{client.phoneNumber || client.phone}</span>
+                    </div>
+                  )}
+                  {client.email && (
+                    <div className="flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="font-medium truncate max-w-[180px]" title={client.email}>
                         {client.email}
                       </span>
-                    )}
-                  </div>
-                )}
-                
-                {/* Organization & Assignment Context */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-4 text-xs text-slate-600">
-                    <span className="flex items-center gap-1">
-                      <Building2 className="w-3 h-3" />
-                      {user?.organization?.name || 'Your Organization'}
-                    </span>
-                    {client.assignedBy && (
-                      <span className="flex items-center gap-1">
-                        <User className="w-3 h-3" />
-                        Assigned by supervisor
-                      </span>
-                    )}
-                  </div>
-                  
-                  {/* Last Activity */}
-                  <div className="flex items-center gap-1 text-xs text-slate-500">
-                    <Clock className="w-3 h-3" />
-                    <span>Last activity: {client.updatedAt 
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5 text-slate-500">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>{client.updatedAt 
                       ? formatDistanceToNow(new Date(client.updatedAt), { addSuffix: true })
-                      : 'No recent updates'
+                      : 'recently'
                     }</span>
                   </div>
                 </div>
               </div>
               
-              {/* Action Buttons */}
-              <div className="flex items-start gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  asChild 
-                  className="text-slate-600 hover:text-slate-800 hover:bg-slate-50 border-slate-200 hover:border-slate-300 transition-all duration-200"
-                >
-                  <Link href={`/case-manager/clients/${client._id}`}>
-                    <Edit className="w-4 h-4 mr-2" />
+              {/* Action Buttons - Compact */}
+              <div className="flex items-start gap-1.5 flex-shrink-0">
+                {onViewProfile ? (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={onViewProfile}
+                    className="text-slate-700 hover:text-slate-900 hover:bg-slate-50 border-slate-300 hover:border-slate-400 transition-all duration-200 h-7 px-2 text-xs"
+                  >
+                    <Edit className="w-3 h-3 mr-1" />
                     Edit
-                  </Link>
-                </Button>
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    asChild 
+                    className="text-slate-700 hover:text-slate-900 hover:bg-slate-50 border-slate-300 hover:border-slate-400 transition-all duration-200 h-7 px-2 text-xs"
+                  >
+                    <Link href={`/case-manager/clients/${client._id}`}>
+                      <Edit className="w-3 h-3 mr-1" />
+                      Edit
+                    </Link>
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => onRequestUpdate?.(client._id)}
-                  className="text-slate-600 hover:text-slate-800 hover:bg-slate-50 border-slate-200 hover:border-slate-300 transition-all duration-200"
+                  className="text-blue-700 hover:text-blue-900 hover:bg-blue-50 border-blue-300 hover:border-blue-400 transition-all duration-200 h-7 px-2 text-xs"
                 >
-                  <Send className="w-4 h-4 mr-2" />
+                  <Send className="w-3 h-3 mr-1" />
                   Update
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleClose}
-                  className="text-slate-400 hover:text-slate-700 hover:bg-red-50 hover:text-red-600 transition-all duration-200 group p-2"
+                  className="text-slate-400 hover:bg-red-50 hover:text-red-600 transition-all duration-200 group h-7 w-7 p-0"
                 >
-                  <X className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
+                  <X className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" />
                 </Button>
               </div>
             </div>
@@ -327,6 +327,7 @@ export function ClientSideDrawer({
                 client={client} 
                 connection={getClientConnection()} 
                 onConnectProvider={handleConnectProvider}
+                onViewProfile={onViewProfile}
               />
             )}
             {activeTab === 'referrals' && (
@@ -350,8 +351,7 @@ export function ClientSideDrawer({
               />
             )}
           </DrawerBody>
-          </div>
-      </ProfessionalDrawer>
+      </div>
 
       {/* Referral Details Panel */}
       <ReferralDetailsPanel
@@ -377,11 +377,13 @@ export function ClientSideDrawer({
 function OverviewTab({ 
   client, 
   connection, 
-  onConnectProvider 
+  onConnectProvider,
+  onViewProfile
 }: { 
   client: Client; 
   connection: any; 
   onConnectProvider: () => void;
+  onViewProfile?: () => void;
 }) {
   const { user } = useAuth();
   const [hoveredCard, setHoveredCard] = React.useState<string | null>(null);
@@ -453,12 +455,12 @@ function OverviewTab({
         </div>
       </DrawerSection>
 
-      {/* Essential Information with Premium Design */}
+      {/* Essential Information - Compact Professional Layout */}
       <DrawerSection title="Essential Information" delay={100}>
-        <div className="grid gap-4">
-          <InfoRow label="Date of Birth" value={client.dateOfBirth ? formatSafeDate(client.dateOfBirth) : 'Not provided'} />
-          <InfoRow label="Gender" value={client.sex ? client.sex.replace('-', ' ').charAt(0).toUpperCase() + client.sex.replace('-', ' ').slice(1) : 'Not provided'} />
-          <InfoRow label="Address" value={[client.city, client.state, client.zipCode].filter(Boolean).join(', ') || 'Not provided'} />
+        <div className="grid gap-2">
+          <InfoRow label="Date of Birth" value={client.dateOfBirth ? formatSafeDate(client.dateOfBirth) : 'Not provided'} icon={Calendar} />
+          <InfoRow label="Gender" value={client.sex ? client.sex.replace('-', ' ').charAt(0).toUpperCase() + client.sex.replace('-', ' ').slice(1) : 'Not provided'} icon={User} />
+          <InfoRow label="Address" value={[client.city, client.state, client.zipCode].filter(Boolean).join(', ') || 'Not provided'} icon={MapPin} />
           <InfoRow 
             label="Insurance" 
             value={
@@ -466,31 +468,14 @@ function OverviewTab({
                 ? client.insurance.charAt(0).toUpperCase() + client.insurance.slice(1)
                 : client.insurance?.type ? client.insurance.type.charAt(0).toUpperCase() + client.insurance.type.slice(1) : client.insuranceProvider || 'Not provided'
               }
+            icon={FileText}
           />
           {(client.pmi || client.pmiNumber) && (
-            <InfoRow label="PMI" value={client.pmi || client.pmiNumber || ''} isMono />
+            <InfoRow label="PMI Number" value={client.pmi || client.pmiNumber || ''} isMono icon={FileText} />
           )}
           {client.waiverType && (
-            <InfoRow label="Waiver" value={formatWaiverType(client.waiverType)} />
+            <InfoRow label="Waiver Type" value={formatWaiverType(client.waiverType)} icon={FileText} />
           )}
-        </div>
-      </DrawerSection>
-
-      {/* Activity Summary - Compact */}
-      <DrawerSection title="Activity Summary" delay={200}>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="text-center p-3 bg-slate-50 rounded-lg border border-slate-200">
-            <div className="text-lg font-semibold text-slate-900">{client.activeReferrals || 0}</div>
-            <div className="text-xs text-slate-600 font-medium">Active</div>
-          </div>
-          <div className="text-center p-3 bg-slate-50 rounded-lg border border-slate-200">
-            <div className="text-lg font-semibold text-slate-900">{client.pendingReferrals || 0}</div>
-            <div className="text-xs text-slate-600 font-medium">Pending</div>
-          </div>
-          <div className="text-center p-3 bg-slate-50 rounded-lg border border-slate-200">
-            <div className="text-lg font-semibold text-slate-900">{client.unreadMessages || 0}</div>
-            <div className="text-xs text-slate-600 font-medium">Messages</div>
-          </div>
         </div>
       </DrawerSection>
 
@@ -503,12 +488,24 @@ function OverviewTab({
 
       {/* Quick Actions */}
       <DrawerSection delay={400}>
-        <Button asChild variant="outline" size="sm" className="w-full border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors">
-          <Link href={`/case-manager/clients/${client._id}`} className="flex items-center justify-center gap-2">
-            <Eye className="w-4 h-4" />
+        {onViewProfile ? (
+          <Button 
+            onClick={onViewProfile} 
+            variant="outline" 
+            size="sm" 
+            className="w-full border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+          >
+            <Eye className="w-4 h-4 mr-2" />
             View Profile
-          </Link>
-        </Button>
+          </Button>
+        ) : (
+          <Button asChild variant="outline" size="sm" className="w-full border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors">
+            <Link href={`/case-manager/clients/${client._id}`} className="flex items-center justify-center gap-2">
+              <Eye className="w-4 h-4" />
+              View Profile
+            </Link>
+          </Button>
+        )}
       </DrawerSection>
     </>
   );
@@ -762,15 +759,23 @@ interface InfoRowProps {
   label: string
   value: string
   isMono?: boolean
+  icon?: React.ComponentType<{ className?: string }>
 }
 
-function InfoRow({ label, value, isMono }: InfoRowProps) {
+function InfoRow({ label, value, isMono, icon: Icon }: InfoRowProps) {
   return (
-    <div className="group flex items-center justify-between py-3 px-4 rounded-lg bg-gradient-to-r from-slate-50/50 to-white border border-slate-200/40 hover:border-slate-300/60 transition-all duration-200 hover:shadow-sm">
-      <span className="text-slate-600 font-medium text-sm">{label}</span>
+    <div className="group flex items-center justify-between py-2 px-3 rounded-lg bg-white border border-slate-200/60 hover:border-slate-300 hover:shadow-sm transition-all duration-150">
+      <div className="flex items-center gap-2">
+        {Icon && (
+          <div className="flex items-center justify-center w-6 h-6 rounded-md bg-slate-50 border border-slate-200/40">
+            <Icon className="w-3.5 h-3.5 text-slate-600" />
+          </div>
+        )}
+        <span className="text-slate-700 font-medium text-xs">{label}</span>
+      </div>
       <span className={cn(
-        "text-slate-900 font-semibold text-sm text-right max-w-[60%] truncate",
-        isMono && "font-mono text-xs bg-slate-100 px-2 py-1 rounded"
+        "text-slate-900 font-semibold text-xs text-right max-w-[60%] truncate",
+        isMono && "font-mono text-[11px] bg-slate-100/80 px-2 py-1 rounded border border-slate-200"
       )}>
         {value}
       </span>
@@ -1605,175 +1610,200 @@ function DocumentsTab({ clientId }: { clientId: string }) {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header with Upload */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-slate-900">Documents</h3>
-          <p className="text-sm text-slate-500">Organized repository of all client files</p>
+    <div className="h-full flex flex-col">
+      {/* Header Section - Professional spacing and hierarchy */}
+      <div className="flex-shrink-0 px-6 py-5 border-b border-slate-200 bg-gradient-to-br from-white via-slate-50/30 to-white">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex-1">
+            <h3 className="text-base font-bold text-slate-900 mb-1">Documents</h3>
+            <p className="text-xs text-slate-500">Organized repository of all client files</p>
+          </div>
+          <div className="relative flex-shrink-0">
+            <input
+              type="file"
+              id="document-upload"
+              className="hidden"
+              onChange={handleFileSelect}
+              disabled={isUploading}
+            />
+            <Button
+              asChild
+              size="sm"
+              disabled={isUploading}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm hover:shadow-md transition-all duration-200 h-8 px-3 text-xs"
+            >
+              <label htmlFor="document-upload" className="cursor-pointer flex items-center gap-1.5">
+                {isUploading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Upload className="w-3.5 h-3.5" />
+                )}
+                {isUploading ? 'Uploading...' : 'Upload'}
+              </label>
+            </Button>
+          </div>
         </div>
-        <div className="relative">
-          <input
-            type="file"
-            id="document-upload"
-            className="hidden"
-            onChange={handleFileSelect}
-            disabled={isUploading}
-          />
-          <Button
-            asChild
-            size="sm"
-            disabled={isUploading}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg transition-all duration-200"
-          >
-            <label htmlFor="document-upload" className="cursor-pointer flex items-center gap-2">
-              {isUploading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Plus className="w-4 h-4" />
-              )}
-              {isUploading ? 'Uploading...' : 'Upload Document'}
-            </label>
-          </Button>
+
+        {/* Filters Section - Stacked for better fit in 850px */}
+        <div className="space-y-3">
+          <div>
+            <Input
+              placeholder="Search documents..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-9 text-sm"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Select value={selectedType} onValueChange={setSelectedType}>
+                <SelectTrigger className="h-9 text-sm bg-white">
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-slate-300 shadow-xl z-50">
+                  {documentTypes.map(type => (
+                    <SelectItem key={type.value} value={type.value} className="text-sm hover:bg-slate-50 cursor-pointer">
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Select value={selectedContext} onValueChange={setSelectedContext}>
+                <SelectTrigger className="h-9 text-sm bg-white">
+                  <SelectValue placeholder="Filter by context" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-slate-300 shadow-xl z-50">
+                  <SelectItem value="all" className="text-sm hover:bg-slate-50 cursor-pointer">All Contexts</SelectItem>
+                  <SelectItem value="referral" className="text-sm hover:bg-slate-50 cursor-pointer">Referrals</SelectItem>
+                  <SelectItem value="connection" className="text-sm hover:bg-slate-50 cursor-pointer">Provider Connections</SelectItem>
+                  <SelectItem value="general" className="text-sm hover:bg-slate-50 cursor-pointer">General</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <Input
-            placeholder="Search documents..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full"
-          />
-        </div>
-        <div>
-          <Select value={selectedType} onValueChange={setSelectedType}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by type" />
-            </SelectTrigger>
-            <SelectContent>
-              {documentTypes.map(type => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Select value={selectedContext} onValueChange={setSelectedContext}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by context" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Contexts</SelectItem>
-              <SelectItem value="referral">Referrals</SelectItem>
-              <SelectItem value="connection">Provider Connections</SelectItem>
-              <SelectItem value="general">General</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* Document Count Badge - Professional styling */}
+      <div className="flex-shrink-0 px-6 py-3 border-b border-slate-100 bg-slate-50/40">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+            <FolderOpen className="w-3.5 h-3.5 text-blue-600" />
+            <span>{filteredDocuments.length}</span>
+          </div>
+          <span className="text-xs text-slate-500">
+            {filteredDocuments.length === 1 ? 'document' : 'documents'} found
+          </span>
         </div>
       </div>
 
-      {/* Document Count */}
-      <div className="flex items-center gap-2 text-sm text-slate-600">
-        <FolderOpen className="w-4 h-4" />
-        <span>{filteredDocuments.length} documents found</span>
-      </div>
-
-      {/* Documents List */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-          <span className="ml-2 text-slate-500">Loading documents...</span>
-        </div>
-      ) : Object.keys(groupedDocuments).length === 0 ? (
-        <div className="text-center py-12">
-          <FolderOpen className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <h4 className="text-lg font-medium text-slate-900 mb-2">No documents found</h4>
-          <p className="text-slate-500 mb-4">Upload your first document to get started</p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {Object.entries(groupedDocuments).map(([type, group]) => (
-            <div key={type} className="space-y-3">
-              <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
-                {group.label} ({group.documents.length})
-              </h4>
-              <div className="grid gap-3">
+      {/* Documents List - Scrollable with proper padding */}
+      <div className="flex-1 overflow-y-auto px-6 py-5">
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-3" />
+              <span className="text-sm text-slate-500 font-medium">Loading documents...</span>
+            </div>
+          </div>
+        ) : Object.keys(groupedDocuments).length === 0 ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="text-center max-w-sm">
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FolderOpen className="w-8 h-8 text-slate-400" />
+              </div>
+              <h4 className="text-base font-semibold text-slate-900 mb-2">No documents found</h4>
+              <p className="text-sm text-slate-500 mb-6">
+                {searchQuery || selectedType !== 'all' || selectedContext !== 'all' 
+                  ? 'Try adjusting your filters' 
+                  : 'Upload your first document to get started'}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {Object.entries(groupedDocuments).map(([type, group]) => (
+              <div key={type} className="space-y-3">
+                {/* Category Header - Professional hierarchy */}
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    {group.label}
+                  </h4>
+                  <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                    {group.documents.length}
+                  </span>
+                </div>
+                <div className="grid gap-3">
                 {group.documents.map((doc) => (
                   <div
                     key={doc._id}
-                    className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all duration-200 group"
+                    className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-sm hover:border-slate-300 transition-all duration-200 group"
                   >
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-0.5">
                         {getDocumentIcon(doc.type)}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <h5 className="font-medium text-slate-900 truncate group-hover:text-blue-600 transition-colors">
-                              {doc.name}
-                            </h5>
-                            {doc.description && (
-                              <p className="text-sm text-slate-600 mt-1 line-clamp-2">
-                                {doc.description}
-                              </p>
-                            )}
-                            {/* Enhanced Context Information */}
-                            {(() => {
-                              const context = getDocumentContext(doc);
-                              return context ? (
-                                <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200 group/context">
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex items-start gap-3 flex-1">
-                                      <div className="text-lg">{context.icon}</div>
-                                      <div className="flex-1 min-w-0">
-                                        {/* Context Type Badge */}
-                                        <div className="flex items-center gap-2 mb-1">
-                                          <Badge 
-                                            variant="outline" 
-                                            className="text-xs font-medium bg-blue-50 text-blue-700 border-blue-200"
-                                          >
-                                            Linked to {context.type === 'referral' ? 'Referral' : 'Connection'}
-                                          </Badge>
-                                          {context.status && (
-                                            <Badge 
-                                              variant={
-                                                context.status === 'accepted' || context.status === 'active' ? 'default' : 
-                                                context.status === 'pending' || context.status === 'sent' ? 'secondary' :
-                                                context.status === 'rejected' || context.status === 'closed' ? 'destructive' : 'secondary'
-                                              }
-                                              className="text-xs capitalize"
-                                            >
-                                              {context.status}
-                                            </Badge>
-                                          )}
-                                        </div>
-                                        
-                                        {/* Service Type */}
-                                        <div className="mb-1">
-                                          <span className="font-medium text-slate-900 text-sm">
-                                            {context.serviceType}
-                                          </span>
-                                        </div>
-                                        
-                                        {/* Provider & Organization */}
-                                        {context.providerName && (
-                                          <div className="text-xs text-slate-600 mb-1">
-                                            <span className="font-medium">Provider:</span> {context.providerName}
-                                          </div>
-                                        )}
-                                        {context.organization && (
-                                          <div className="text-xs text-slate-500">
-                                            <span className="font-medium">Organization:</span> {context.organization}
-                                          </div>
-                                        )}
-                                      </div>
+                      <div className="flex-1 min-w-0 space-y-2">
+                        {/* Document Name & Description */}
+                        <div>
+                          <h5 className="font-semibold text-sm text-slate-900 truncate group-hover:text-blue-600 transition-colors mb-1">
+                            {doc.name}
+                          </h5>
+                          {doc.description && (
+                            <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                              {doc.description}
+                            </p>
+                          )}
+                        </div>
+                        {/* Context Information - Compact and professional */}
+                        {(() => {
+                          const context = getDocumentContext(doc);
+                          return context ? (
+                            <div className="p-2.5 bg-slate-50 rounded-md border border-slate-200">
+                              <div className="flex items-start gap-2 mb-2">
+                                <div className="text-base flex-shrink-0">{context.icon}</div>
+                                <div className="flex-1 min-w-0">
+                                  {/* Context Type Badge */}
+                                  <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                                    <Badge 
+                                      variant="outline" 
+                                      className="text-[10px] font-semibold bg-blue-50 text-blue-700 border-blue-200 px-1.5 py-0.5"
+                                    >
+                                      {context.type === 'referral' ? 'Referral' : 'Connection'}
+                                    </Badge>
+                                    {context.status && (
+                                      <Badge 
+                                        variant={
+                                          context.status === 'accepted' || context.status === 'active' ? 'default' : 
+                                          context.status === 'pending' || context.status === 'sent' ? 'secondary' :
+                                          context.status === 'rejected' || context.status === 'closed' ? 'destructive' : 'secondary'
+                                        }
+                                        className="text-[10px] capitalize px-1.5 py-0.5"
+                                      >
+                                        {context.status}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Service Type */}
+                                  <div className="text-xs font-semibold text-slate-900 mb-1">
+                                    {context.serviceType}
+                                  </div>
+                                  
+                                  {/* Provider & Organization */}
+                                  {context.providerName && (
+                                    <div className="text-[11px] text-slate-600 mb-0.5">
+                                      <span className="font-medium">Provider:</span> {context.providerName}
                                     </div>
+                                  )}
+                                  {context.organization && (
+                                    <div className="text-[11px] text-slate-500">
+                                      <span className="font-medium">Org:</span> {context.organization}
+                                    </div>
+                                  )}
+                                </div>
                                     
                                     {/* Context Management Actions */}
                                     <div className="flex items-center gap-1 opacity-0 group-hover/context:opacity-100 transition-opacity">
@@ -1801,38 +1831,39 @@ function DocumentsTab({ clientId }: { clientId: string }) {
                               ) : null;
                             })()}
 
-                            {/* Document Metadata */}
-                            <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
-                              <div className="flex items-center gap-1">
-                                <User className="w-3 h-3" />
-                                <span>{doc.uploadedBy}</span>
-                              </div>
-                              <span>•</span>
-                              <div className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                <span>{formatDistanceToNow(new Date(doc.uploadedAt), { addSuffix: true })}</span>
-                              </div>
-                              <span>•</span>
-                              <span>{formatFileSize(doc.size)}</span>
+                        {/* Document Metadata - Compact footer */}
+                        <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100">
+                          <div className="flex items-center gap-3 text-[11px] text-slate-500">
+                            <div className="flex items-center gap-1">
+                              <User className="w-3 h-3" />
+                              <span className="font-medium">{doc.uploadedBy}</span>
                             </div>
+                            <span className="text-slate-300">•</span>
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              <span>{formatDistanceToNow(new Date(doc.uploadedAt), { addSuffix: true })}</span>
+                            </div>
+                            <span className="text-slate-300">•</span>
+                            <span className="font-medium">{formatFileSize(doc.size)}</span>
                           </div>
-                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => window.open(`/api/documents/secure/${doc.accessToken}`, '_blank')}
-                              className="h-8 w-8 p-0"
+                              className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-600"
+                              title="View document"
                             >
-                              <ExternalLink className="w-4 h-4" />
+                              <ExternalLink className="w-3.5 h-3.5" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDeleteClick(doc)}
-                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              className="h-7 w-7 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50"
                               title="Delete document"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </Button>
                           </div>
                         </div>
@@ -1844,12 +1875,13 @@ function DocumentsTab({ clientId }: { clientId: string }) {
             </div>
           ))}
         </div>
-      )}
+        )}
+      </div>
 
       {/* Upload Modal */}
       {showUploadModal && (uploadFile || editingDocument) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl border border-slate-200 pointer-events-auto">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                 <Upload className="w-5 h-5 text-blue-600" />
@@ -1887,12 +1919,12 @@ function DocumentsTab({ clientId }: { clientId: string }) {
                   Document Type
                 </label>
                 <Select value={uploadType} onValueChange={setUploadType}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[100] bg-white border-slate-300 shadow-xl">
                     {documentTypes.filter(type => type.value !== 'all').map(type => (
-                      <SelectItem key={type.value} value={type.value}>
+                      <SelectItem key={type.value} value={type.value} className="hover:bg-slate-50 cursor-pointer">
                         {type.label}
                       </SelectItem>
                     ))}
@@ -1905,42 +1937,36 @@ function DocumentsTab({ clientId }: { clientId: string }) {
                   Context
                 </label>
                 <Select value={uploadContext} onValueChange={setUploadContext}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="general">General (Client-level)</SelectItem>
-                    {referrals.length > 0 ? (
-                      referrals.map(referral => {
-                        // Extract service type from serviceDetails.type (this is where it's stored)
-                        const serviceType = referral.serviceDetails?.type || 
-                                          referral.serviceType || 
-                                          referral.service || 
-                                          referral.requestedService ||
-                                          'Referral';
-                        
-                        const providerInfo = referral.assignedProviderName ? ` - ${referral.assignedProviderName}` : '';
-                        const statusInfo = referral.status ? ` (${referral.status})` : '';
-                        
-                        return (
-                          <SelectItem key={`referral_${referral._id}`} value={`referral_${referral._id}`}>
-                            📄 {serviceType}{providerInfo}{statusInfo}
-                          </SelectItem>
-                        );
-                      })
-                    ) : (
-                      <SelectItem value="" disabled>No referrals found</SelectItem>
-                    )}
-                    {connections.length > 0 ? (
-                      connections.map(connection => (
-                        <SelectItem key={`connection_${connection._id}`} value={`connection_${connection._id}`}>
-                          👥 {connection.serviceType || 'Service'} Connection
-                          {connection.providerName && ` - ${connection.providerName}`}
+                  <SelectContent className="z-[100] bg-white border-slate-300 shadow-xl max-h-[300px]">
+                    <SelectItem value="general" className="hover:bg-slate-50 cursor-pointer">
+                      General (Client-level)
+                    </SelectItem>
+                    {referrals.length > 0 && referrals.map(referral => {
+                      // Extract service type from serviceDetails.type (this is where it's stored)
+                      const serviceType = referral.serviceDetails?.type || 
+                                        referral.serviceType || 
+                                        referral.service || 
+                                        referral.requestedService ||
+                                        'Referral';
+                      
+                      const providerInfo = referral.assignedProviderName ? ` - ${referral.assignedProviderName}` : '';
+                      const statusInfo = referral.status ? ` (${referral.status})` : '';
+                      
+                      return (
+                        <SelectItem key={`referral_${referral._id}`} value={`referral_${referral._id}`} className="hover:bg-slate-50 cursor-pointer">
+                          📄 {serviceType}{providerInfo}{statusInfo}
                         </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="" disabled>No connections found</SelectItem>
-                    )}
+                      );
+                    })}
+                    {connections.length > 0 && connections.map(connection => (
+                      <SelectItem key={`connection_${connection._id}`} value={`connection_${connection._id}`} className="hover:bg-slate-50 cursor-pointer">
+                        👥 {connection.serviceType || 'Service'} Connection
+                        {connection.providerName && ` - ${connection.providerName}`}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -2007,8 +2033,8 @@ function DocumentsTab({ clientId }: { clientId: string }) {
 
       {/* Delete Confirmation Dialog */}
       {showDeleteDialog && documentToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl border border-slate-200 pointer-events-auto">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
                 <AlertTriangle className="w-5 h-5 text-red-600" />

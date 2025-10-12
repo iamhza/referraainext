@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { formatDistanceToNow, parseISO } from 'date-fns';
-import { capitalizeName } from '@/lib/formatting';
+import { capitalizeName, formatWaiverTypeShort } from '@/lib/formatting';
 import { useWorkspaceStatus } from '@/hooks/use-workspace-status';
 import { 
   getPrimaryContact, 
@@ -204,10 +204,10 @@ export function ClientCard({
   return (
     <div 
       className={`
-        group bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md
+        group bg-white rounded-xl border border-slate-300 shadow-sm hover:shadow-md
         cursor-pointer transition-all duration-300 flex flex-col
-        hover:scale-[1.01] hover:-translate-y-0.5 hover:border-slate-300
-        ${viewDensity === 'compact' ? 'p-4 mb-2 min-h-[140px] max-h-[160px]' : 'p-6 mb-4 min-h-[180px] max-h-[220px]'}
+        hover:scale-[1.01] hover:-translate-y-0.5 hover:border-slate-400
+        ${viewDensity === 'compact' ? 'p-2.5 mb-2 min-h-[140px] max-h-[160px]' : 'p-3.5 mb-3 min-h-[180px] max-h-[220px]'}
         ${isUrgent 
           ? 'border-2 border-red-300 ring-1 ring-red-100/50' 
           : ''
@@ -216,21 +216,28 @@ export function ClientCard({
       `}
       style={{
         width: '100%',
-        height: viewDensity === 'compact' ? '140px' : '200px',
+        height: viewDensity === 'compact' ? '140px' : '185px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
       }}
       onClick={onClick}
     >
-      {/* Header: Name + Status + Priority */}
-      <div className={viewDensity === 'compact' ? 'mb-2' : 'mb-4'}>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className={`font-bold text-slate-900 leading-tight truncate flex-1 mr-3 ${
-            viewDensity === 'compact' ? 'text-[15px]' : 'text-[17px]'
-          }`}>
+      {/* Header: Name + Status + Priority - Optimized for narrow layout */}
+      <div className={viewDensity === 'compact' ? 'mb-1.5' : 'mb-2'}>
+        <div className="flex items-start justify-between mb-1">
+          <h3 className={`font-bold text-slate-900 leading-snug flex-1 mr-2 ${
+            viewDensity === 'compact' ? 'text-[13px]' : 'text-[15px]'
+          }`} style={{ 
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            wordBreak: 'break-word',
+            hyphens: 'auto'
+          }}>
             {capitalizeName(client.firstName || 'Unknown')} {capitalizeName(client.lastName || 'Client')}
           </h3>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             {/* Delete button */}
             {onDelete && (
               <button
@@ -241,27 +248,27 @@ export function ClientCard({
                 className={`
                   p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 
                   transition-all duration-200 opacity-0 group-hover:opacity-100
-                  ${viewDensity === 'compact' ? 'w-6 h-6' : 'w-7 h-7'}
+                  ${viewDensity === 'compact' ? 'w-5 h-5' : 'w-6 h-6'}
                 `}
                 title="Delete client"
               >
-                <Trash2 className={viewDensity === 'compact' ? 'w-3 h-3' : 'w-4 h-4'} />
+                <Trash2 className={viewDensity === 'compact' ? 'w-3 h-3' : 'w-3.5 h-3.5'} />
               </button>
             )}
             
             {/* Status indicator - polished Tailwind dot */}
             <div 
-              className={`w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-white shadow-sm ${statusIndicator.dotColor}`}
+              className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ring-2 ring-white shadow-sm ${statusIndicator.dotColor}`}
               title={statusIndicator.label}
             />
           </div>
         </div>
         
         {/* Critical info row - Enhanced with primary contact logic */}
-        <div className={`flex items-center justify-between text-slate-600 ${
-          viewDensity === 'compact' ? 'text-[11px]' : 'text-[13px]'
+        <div className={`flex items-center gap-1.5 text-slate-600 ${
+          viewDensity === 'compact' ? 'text-[10px]' : 'text-[12px]'
         }`}>
-          <span className="font-medium truncate">
+          <span className="font-medium whitespace-nowrap">
             {(() => {
               const contact = getPrimaryContact(client);
               if (!contact) return 'No contact';
@@ -269,32 +276,90 @@ export function ClientCard({
               return `${icon} ${contact.value}`;
             })()}
           </span>
-          <span className="text-[11px] text-gray-500 ml-2 font-medium">
+          <span className="text-[9px] text-gray-500 font-medium whitespace-nowrap ml-auto">
             {client.lastActivitySummary?.relativeTime || getLastUpdateText().replace('Updated ', '').replace('Added ', '')}
           </span>
         </div>
       </div>
 
       {/* Key info section - Enhanced with real data */}
-      <div className={`flex-1 overflow-hidden ${viewDensity === 'compact' ? 'space-y-0.5' : 'space-y-1'}`}>
-        {/* PMI - Always visible as requested */}
+      <div className={`flex-1 overflow-hidden ${viewDensity === 'compact' ? 'space-y-0.5' : 'space-y-0.5'}`}>
+        {/* PMI - Compact display */}
         {(() => {
           const pmi = getPrimaryPMI(client);
           return pmi ? (
-            <div className={`text-gray-600 ${viewDensity === 'compact' ? 'text-[10px]' : 'text-[12px]'}`}>
-              <span className="font-mono text-[11px] text-gray-700 bg-blue-50 px-2 py-1 rounded border">
+            <div className="flex items-center">
+              <span className={`font-mono text-gray-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 font-semibold shadow-sm flex-shrink-0 ${
+                viewDensity === 'compact' ? 'text-[9px]' : 'text-[10px]'
+              }`}>
                 PMI: {pmi}
               </span>
             </div>
           ) : null;
         })()}
 
-        {/* Waiver Type - Using computed primary waiver */}
-        {client.primaryWaiverType && !shouldHideDetails && (
-          <div className={`text-gray-600 ${viewDensity === 'compact' ? 'text-[10px]' : 'text-[12px]'}`}>
-            <span className="font-semibold text-gray-700">Waiver:</span> {client.primaryWaiverType}
-          </div>
-        )}
+        {/* Service Types - Full display with wrapping */}
+        {(() => {
+          const services = (client as any).serviceTypes || [];
+          if (services.length === 0) return null;
+          
+          // Always show only 1 service to prevent cramping
+          const firstService = services[0];
+          const remainingCount = services.length - 1;
+          
+          return (
+            <div className="flex items-start gap-1 overflow-hidden">
+              <span 
+                className={`inline-flex items-center bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200 font-semibold shadow-sm hover:bg-emerald-100 transition-colors leading-snug ${
+                  viewDensity === 'compact' ? 'text-[9px]' : 'text-[10px]'
+                }`}
+                style={{
+                  wordBreak: 'break-word',
+                  hyphens: 'auto',
+                  maxWidth: '100%',
+                  flexShrink: 1
+                }}
+                title={firstService}
+              >
+                {firstService}
+              </span>
+              {remainingCount > 0 && (
+                <span 
+                  className={`inline-flex items-center bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200 font-semibold shadow-sm hover:bg-blue-100 transition-colors cursor-help flex-shrink-0 whitespace-nowrap ${
+                    viewDensity === 'compact' ? 'text-[9px]' : 'text-[10px]'
+                  }`}
+                  title={`All services:\n• ${services.join('\n• ')}`}
+                >
+                  +{remainingCount}
+                </span>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Waiver Type - Always render for consistent card height */}
+        {!shouldHideDetails && (() => {
+          const waiverType = (client as any).waiverType || client.primaryWaiverType;
+          const formattedWaiver = waiverType ? formatWaiverTypeShort(waiverType) : null;
+          
+          return (
+            <div className="flex items-center overflow-hidden min-h-[16px]">
+              {formattedWaiver ? (
+                <span className={`text-gray-700 font-medium truncate ${
+                  viewDensity === 'compact' ? 'text-[9px]' : 'text-[10px]'
+                }`} title={`Waiver: ${formattedWaiver}`}>
+                  <span className="text-gray-500 font-semibold">Waiver:</span> {formattedWaiver}
+                </span>
+              ) : (
+                <span className={`text-gray-400 italic ${
+                  viewDensity === 'compact' ? 'text-[9px]' : 'text-[10px]'
+                }`}>
+                  No waiver
+                </span>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Provider Connections - Using computed summary with compact display */}
         {(() => {

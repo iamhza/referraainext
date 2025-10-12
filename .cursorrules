@@ -1,0 +1,1487 @@
+# Referra Platform - Cursor AI Development Rules
+
+## Project Context
+
+You are working on **Referra**, a multi-tenant referral management platform for social services organizations. This is a PRODUCTION application serving case managers, service providers, supervisors, and organization admins.
+
+### Tech Stack
+- **Framework**: Next.js 14+ (App Router, React Server Components)
+- **Language**: TypeScript (strict mode)
+- **Database**: Supabase (PostgreSQL with Row Level Security)
+- **Auth**: Supabase Auth
+- **UI**: Tailwind CSS + shadcn/ui components
+- **State**: React hooks, Server Actions for mutations
+- **Testing**: Playwright for E2E tests
+- **Deployment**: Vercel
+
+### Core Business Context
+- **Multi-tenant SaaS**: Strict organization-level data isolation
+- **User Roles**: case_manager, provider, supervisor, org_admin
+- **Core Workflow**: Case managers create referrals → Providers receive/respond → Status tracking
+- **Compliance**: HIPAA-adjacent (handles sensitive client information)
+
+---
+
+## 🎯 Structured Development Workflow
+
+### Use AI Dev Tasks System for All Significant Features
+
+**Before implementing any feature:**
+
+1. **Create PRD First**
+   ```
+   Use @ai-dev-tasks/create-prd.md for any new feature
+   ```
+   - Ask clarifying questions about user stories, requirements, edge cases
+   - Save to `/tasks/[n]-prd-[feature-name].md`
+   - Get user approval before proceeding
+
+2. **Generate Task List**
+   ```
+   Use @ai-dev-tasks/generate-tasks.md on the approved PRD
+   ```
+   - Break down into parent tasks and sub-tasks
+   - Identify relevant files
+   - Save to `/tasks/tasks-[n]-prd-[feature-name].md`
+
+3. **Execute Tasks Iteratively**
+   ```
+   Use @ai-dev-tasks/process-task-list.md
+   ```
+   - Implement ONE sub-task at a time
+   - Wait for user approval ("yes"/"y") before next task
+   - Mark tasks complete as you go
+   - Commit after each parent task completion
+
+**When to skip PRD workflow:**
+- Simple bug fixes (< 10 lines changed)
+- Typo corrections
+- Minor styling adjustments
+- Updating documentation only
+
+---
+
+## 🏗️ Architecture Patterns
+
+### Database (Supabase)
+
+**ALWAYS implement Row Level Security (RLS):**
+```sql
+-- Every table MUST have these columns
+CREATE TABLE public.table_name (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  organization_id UUID NOT NULL REFERENCES public.organizations(id),
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  created_by UUID REFERENCES auth.users(id),
+  deleted_at TIMESTAMPTZ  -- Soft deletes
+);
+
+-- ALWAYS enable RLS
+ALTER TABLE public.table_name ENABLE ROW LEVEL SECURITY;
+
+-- ALWAYS create organization isolation policy
+CREATE POLICY "org_isolation_policy" ON public.table_name
+  USING (organization_id IN (
+    SELECT organization_id FROM public.user_profiles 
+    WHERE user_id = auth.uid()
+  ));
+```
+
+**Database Best Practices:**
+- Use UUIDs for all primary keys
+- Add indexes on foreign keys and frequently queried columns
+- Use `TIMESTAMPTZ` for all timestamps
+- Include `updated_at` trigger for auto-updates
+- Soft delete with `deleted_at` instead of hard deletes
+- Use `jsonb` for flexible metadata columns
+- Always add descriptive comments to migrations
+
+**RLS Policy Patterns:**
+```sql
+-- Read access (organization members)
+CREATE POLICY "org_members_select" ON public.table_name FOR SELECT
+  USING (organization_id IN (
+    SELECT organization_id FROM public.user_profiles 
+    WHERE user_id = auth.uid()
+  ));
+
+-- Write access (specific roles only)
+CREATE POLICY "case_managers_insert" ON public.table_name FOR INSERT
+  WITH CHECK (
+    organization_id IN (
+      SELECT organization_id FROM public.user_profiles 
+      WHERE user_id = auth.uid() 
+      AND role IN ('case_manager', 'supervisor', 'org_admin')
+    )
+  );
+
+-- Update own records only
+CREATE POLICY "update_own_records" ON public.table_name FOR UPDATE
+  USING (created_by = auth.uid())
+  WITH CHECK (created_by = auth.uid());
+```
+
+### API Routes
+
+**Standard API Route Pattern:**
+```typescript
+// src/app/api/[resource]/route.ts
+import { createClient } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+
+// Define request schema
+const requestSchema = z.object({
+  field: z.string().min(1),
+  // ... more fields
+});
+
+export async function POST(request: Request) {
+  try {
+    // 1. Create Supabase client
+    const supabase = createClient();
+    
+    // 2. Verify authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' }, 
+        { status: 401 }
+      );
+    }
+
+    // 3. Get user profile and organization
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('organization_id, role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json(
+        { error: 'Profile not found' }, 
+        { status: 404 }
+      );
+    }
+
+    // 4. Parse and validate request body
+    const body = await request.json();
+    const validated = requestSchema.parse(body);
+
+    // 5. Check role-based permissions (if needed)
+    if (!['case_manager', 'supervisor', 'org_admin'].includes(profile.role)) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions' }, 
+        { status: 403 }
+      );
+    }
+
+    // 6. Perform database operation (RLS handles organization isolation)
+    const { data, error } = await supabase
+      .from('resource')
+      .insert({
+        ...validated,
+        organization_id: profile.organization_id,
+        created_by: user.id,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // 7. Return success response
+    return NextResponse.json(data, { status: 201 });
+
+  } catch (error) {
+    // 8. Handle errors appropriately
+    console.error('API Error:', error);
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Invalid request data', details: error.errors }, 
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Internal server error' }, 
+      { status: 500 }
+    );
+  }
+}
+
+// GET pattern with query params
+export async function GET(request: Request) {
+  try {
+    const supabase = createClient();
+    const { searchParams } = new URL(request.url);
+    
+    // Auth check...
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Build query with filters
+    let query = supabase
+      .from('resource')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    // Apply filters from query params
+    const status = searchParams.get('status');
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('API Error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' }, 
+      { status: 500 }
+    );
+  }
+}
+```
+
+**API Route Checklist:**
+- [ ] Authentication check (reject if not logged in)
+- [ ] Get user profile and organization_id
+- [ ] Role-based permission check (if needed)
+- [ ] Input validation with Zod schemas
+- [ ] Proper error handling and logging
+- [ ] Appropriate HTTP status codes
+- [ ] RLS policies enforce data isolation
+- [ ] Rate limiting considerations for public endpoints
+
+### Server Actions
+
+**For mutations, prefer Server Actions over API routes:**
+```typescript
+// src/lib/actions/client-actions.ts
+'use server';
+
+import { createClient } from '@/lib/supabase/server';
+import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+
+const createClientSchema = z.object({
+  first_name: z.string().min(1),
+  last_name: z.string().min(1),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+});
+
+type ActionResult<T> = 
+  | { success: true; data: T }
+  | { success: false; error: string };
+
+export async function createClient(
+  formData: FormData
+): Promise<ActionResult<{ id: string }>> {
+  try {
+    const supabase = createClient();
+    
+    // Auth check
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    // Get profile
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('organization_id, role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!profile) {
+      return { success: false, error: 'Profile not found' };
+    }
+
+    // Validate input
+    const rawData = {
+      first_name: formData.get('first_name'),
+      last_name: formData.get('last_name'),
+      email: formData.get('email'),
+      phone: formData.get('phone'),
+    };
+
+    const validated = createClientSchema.parse(rawData);
+
+    // Insert
+    const { data, error } = await supabase
+      .from('clients')
+      .insert({
+        ...validated,
+        organization_id: profile.organization_id,
+        created_by: user.id,
+      })
+      .select('id')
+      .single();
+
+    if (error) throw error;
+
+    // Revalidate relevant paths
+    revalidatePath('/case-manager/clients');
+    revalidatePath('/case-manager');
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('Create client error:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to create client' 
+    };
+  }
+}
+```
+
+### React Components
+
+**Server Component (default):**
+```typescript
+// src/components/clients/ClientList.tsx
+import { createClient } from '@/lib/supabase/server';
+import { ClientCard } from './ClientCard';
+
+export async function ClientList() {
+  const supabase = createClient();
+  
+  const { data: clients } = await supabase
+    .from('clients')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (!clients?.length) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        No clients found. Create your first client to get started.
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {clients.map((client) => (
+        <ClientCard key={client.id} client={client} />
+      ))}
+    </div>
+  );
+}
+```
+
+**Client Component (when needed):**
+```typescript
+// src/components/clients/AddClientModal.tsx
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { toast } from 'sonner';
+import { createClient } from '@/lib/actions/client-actions';
+
+interface AddClientModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function AddClientModal({ open, onOpenChange }: AddClientModalProps) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+
+    try {
+      const formData = new FormData(event.currentTarget);
+      const result = await createClient(formData);
+
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success('Client created successfully');
+      onOpenChange(false);
+      event.currentTarget.reset();
+    } catch (error) {
+      toast.error('Failed to create client');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Add New Client</DialogTitle>
+        </DialogHeader>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="first_name">First Name *</Label>
+              <Input
+                id="first_name"
+                name="first_name"
+                required
+                disabled={loading}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="last_name">Last Name *</Label>
+              <Input
+                id="last_name"
+                name="last_name"
+                required
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Creating...' : 'Create Client'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+**Component Best Practices:**
+- Use Server Components by default (no 'use client')
+- Only add 'use client' when you need: hooks, event handlers, browser APIs, context
+- Always implement loading states
+- Always implement error states
+- Always implement empty states
+- Use optimistic updates for better UX
+- Implement proper form validation
+- Use toast notifications for user feedback
+- Make components responsive (mobile-first)
+- Use semantic HTML
+- Add proper ARIA labels for accessibility
+
+---
+
+## 🔒 Security Requirements
+
+### CRITICAL: Security is NON-NEGOTIABLE
+
+**Every feature MUST include:**
+
+1. **Authentication**
+   ```typescript
+   const { data: { user } } = await supabase.auth.getUser();
+   if (!user) {
+     // Reject request
+   }
+   ```
+
+2. **Authorization** (organization + role)
+   ```typescript
+   const { data: profile } = await supabase
+     .from('user_profiles')
+     .select('organization_id, role')
+     .eq('user_id', user.id)
+     .single();
+   
+   // Check role if needed
+   if (!['case_manager', 'supervisor'].includes(profile.role)) {
+     // Reject request
+   }
+   ```
+
+3. **Row Level Security**
+   - EVERY table MUST have RLS enabled
+   - Policies MUST check organization_id
+   - Test RLS policies thoroughly
+
+4. **Input Validation**
+   - Use Zod schemas for all inputs
+   - Sanitize user-provided content
+   - Validate file uploads (type, size)
+   - Never trust client-side validation alone
+
+5. **Data Access**
+   - Never expose sensitive data in client components
+   - Redact PII in logs
+   - Use environment variables for secrets
+   - Never commit .env files
+
+**Security Checklist for Every Feature:**
+- [ ] Authentication required
+- [ ] User's organization_id verified
+- [ ] Role-based permissions checked (if applicable)
+- [ ] RLS policies prevent cross-org data access
+- [ ] All inputs validated with Zod
+- [ ] No SQL injection vulnerabilities
+- [ ] No XSS vulnerabilities
+- [ ] Sensitive data encrypted at rest
+- [ ] HTTPS enforced in production
+- [ ] Rate limiting considered
+
+---
+
+## 💻 Code Quality Standards
+
+### TypeScript
+
+**Strict Mode - NO EXCEPTIONS:**
+```typescript
+// tsconfig.json has strict: true
+
+// ❌ NEVER use 'any'
+function process(data: any) { }
+
+// ✅ Use proper types or 'unknown'
+function process(data: ClientData) { }
+function process(data: unknown) { 
+  if (isClientData(data)) {
+    // Type guard
+  }
+}
+
+// ✅ Define interfaces for all data structures
+interface Client {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  organization_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// ✅ Use discriminated unions for variants
+type ActionResult<T> = 
+  | { success: true; data: T }
+  | { success: false; error: string };
+
+// ✅ Use const assertions for literals
+const REFERRAL_STATUSES = ['pending', 'accepted', 'rejected'] as const;
+type ReferralStatus = typeof REFERRAL_STATUSES[number];
+```
+
+### Naming Conventions
+
+```typescript
+// Files
+client-card.tsx              // Components (kebab-case)
+client-actions.ts            // Actions/utilities (kebab-case)
+use-client-data.ts           // Hooks (kebab-case, starts with 'use-')
+
+// Components
+export function ClientCard() { }        // PascalCase
+export function AddClientModal() { }    // PascalCase
+
+// Functions
+function calculateTotal() { }           // camelCase
+async function fetchClientData() { }    // camelCase
+
+// Constants
+const MAX_UPLOAD_SIZE = 5 * 1024 * 1024;  // UPPER_SNAKE_CASE
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
+// Types/Interfaces
+interface UserProfile { }               // PascalCase
+type ReferralStatus = string;           // PascalCase
+
+// Database
+clients                                 // snake_case (tables)
+organization_id                         // snake_case (columns)
+created_at                             // snake_case (columns)
+```
+
+### Code Organization
+
+```
+src/
+├── app/                          # Next.js App Router
+│   ├── (auth)/                  # Route group (auth required)
+│   │   ├── case-manager/        # Case manager pages
+│   │   ├── provider/            # Provider pages
+│   │   └── supervisor/          # Supervisor pages
+│   ├── api/                     # API routes
+│   │   └── [resource]/          # Resource-based routes
+│   ├── login/                   # Public pages
+│   └── layout.tsx               # Root layout
+│
+├── components/                   # React components
+│   ├── ui/                      # shadcn/ui base components
+│   ├── dashboard/               # Dashboard components
+│   ├── clients/                 # Client management
+│   ├── referrals/              # Referral management
+│   ├── providers/              # Provider directory
+│   └── layout/                 # Layout components
+│
+├── lib/                         # Utilities and business logic
+│   ├── supabase/               # Supabase clients
+│   │   ├── client.ts           # Client-side
+│   │   ├── server.ts           # Server-side
+│   │   └── middleware.ts       # Middleware
+│   ├── actions/                # Server actions
+│   ├── utils/                  # Helper functions
+│   └── hooks/                  # Custom React hooks
+│
+└── types/                       # TypeScript definitions
+    ├── database.ts             # Database types
+    └── index.ts                # Shared types
+```
+
+### Error Handling
+
+**Always handle errors gracefully:**
+```typescript
+// API Routes
+try {
+  // Operation
+} catch (error) {
+  console.error('Detailed error for debugging:', error);
+  
+  // Return user-friendly error
+  return NextResponse.json(
+    { error: 'Something went wrong. Please try again.' },
+    { status: 500 }
+  );
+}
+
+// Client Components
+try {
+  // Operation
+  toast.success('Operation completed');
+} catch (error) {
+  console.error('Error:', error);
+  toast.error('Operation failed. Please try again.');
+}
+
+// Server Actions
+try {
+  // Operation
+  return { success: true, data };
+} catch (error) {
+  console.error('Error:', error);
+  return { 
+    success: false, 
+    error: 'Operation failed. Please try again.' 
+  };
+}
+```
+
+**Error Handling Principles:**
+- Log detailed errors server-side
+- Show user-friendly messages client-side
+- Never expose stack traces to users
+- Never expose database errors to users
+- Provide actionable error messages
+- Use proper HTTP status codes
+- Handle network failures gracefully
+
+---
+
+## 🎨 UI/UX Standards
+
+### Design System
+
+**Use shadcn/ui components consistently:**
+```typescript
+// ✅ Use shadcn components
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+// ❌ Don't create custom buttons/inputs unless absolutely necessary
+<button className="...">  // No, use <Button>
+<input className="..." />  // No, use <Input>
+```
+
+### Responsive Design
+
+**Mobile-first approach:**
+```typescript
+// ✅ Mobile-first responsive classes
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {/* Content */}
+</div>
+
+<div className="flex flex-col md:flex-row gap-4">
+  {/* Content */}
+</div>
+
+// ✅ Hide on mobile, show on desktop
+<div className="hidden md:block">Desktop only</div>
+
+// ✅ Show on mobile, hide on desktop
+<div className="block md:hidden">Mobile only</div>
+```
+
+**Responsive breakpoints:**
+- `sm`: 640px (tablets)
+- `md`: 768px (tablets/small laptops)
+- `lg`: 1024px (laptops)
+- `xl`: 1280px (desktops)
+- `2xl`: 1536px (large desktops)
+
+### Loading States
+
+**ALWAYS implement loading states:**
+```typescript
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+
+export function ActionButton() {
+  const [loading, setLoading] = useState(false);
+
+  async function handleClick() {
+    setLoading(true);
+    try {
+      await performAction();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Button onClick={handleClick} disabled={loading}>
+      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+      {loading ? 'Processing...' : 'Submit'}
+    </Button>
+  );
+}
+```
+
+### Empty States
+
+**ALWAYS implement empty states:**
+```typescript
+export function ClientList({ clients }: { clients: Client[] }) {
+  if (clients.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <Users className="h-12 w-12 text-muted-foreground mb-4" />
+        <h3 className="text-lg font-semibold mb-2">No clients yet</h3>
+        <p className="text-muted-foreground mb-4">
+          Get started by adding your first client.
+        </p>
+        <Button>Add Client</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {clients.map(client => <ClientCard key={client.id} client={client} />)}
+    </div>
+  );
+}
+```
+
+### Accessibility
+
+**WCAG 2.1 AA compliance:**
+- Use semantic HTML (`<button>`, `<nav>`, `<main>`, etc.)
+- Add ARIA labels to interactive elements
+- Ensure sufficient color contrast (4.5:1 for text)
+- Support keyboard navigation (Tab, Enter, Esc)
+- Add focus indicators
+- Use proper heading hierarchy (h1 → h2 → h3)
+- Provide alt text for images
+- Ensure form labels are properly associated
+
+```typescript
+// ✅ Good accessibility
+<Button aria-label="Delete client">
+  <Trash2 className="h-4 w-4" />
+</Button>
+
+<Dialog>
+  <DialogContent aria-describedby="dialog-description">
+    <DialogTitle>Confirm Action</DialogTitle>
+    <p id="dialog-description">Are you sure you want to proceed?</p>
+  </DialogContent>
+</Dialog>
+```
+
+---
+
+## 🧪 Testing Requirements
+
+### E2E Tests with Playwright
+
+**Test every user-facing feature:**
+```typescript
+// tests/clients/create-client.spec.ts
+import { test, expect } from '@playwright/test';
+
+test.describe('Create Client', () => {
+  test.beforeEach(async ({ page }) => {
+    // Login as case manager
+    await page.goto('/login');
+    await page.fill('[name="email"]', 'test-cm@example.com');
+    await page.fill('[name="password"]', 'password123');
+    await page.click('button[type="submit"]');
+    await expect(page).toHaveURL('/case-manager');
+  });
+
+  test('should create new client with valid data', async ({ page }) => {
+    await page.goto('/case-manager/clients');
+    await page.click('[data-testid="add-client-button"]');
+
+    // Fill form
+    await page.fill('[name="first_name"]', 'John');
+    await page.fill('[name="last_name"]', 'Doe');
+    await page.fill('[name="email"]', 'john.doe@example.com');
+    await page.fill('[name="phone"]', '555-0123');
+
+    // Submit
+    await page.click('button[type="submit"]');
+
+    // Verify success
+    await expect(page.locator('text=Client created successfully')).toBeVisible();
+    await expect(page.locator('text=John Doe')).toBeVisible();
+  });
+
+  test('should show validation errors for missing required fields', async ({ page }) => {
+    await page.goto('/case-manager/clients');
+    await page.click('[data-testid="add-client-button"]');
+
+    // Try to submit without filling
+    await page.click('button[type="submit"]');
+
+    // Verify validation errors
+    await expect(page.locator('text=First name is required')).toBeVisible();
+  });
+
+  test('should work on mobile viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/case-manager/clients');
+    
+    // Mobile-specific tests
+    await expect(page.locator('[data-testid="mobile-menu"]')).toBeVisible();
+  });
+});
+```
+
+**Test Coverage Requirements:**
+- [ ] Happy path (successful flow)
+- [ ] Validation errors
+- [ ] Permission checks (try as different roles)
+- [ ] Empty states
+- [ ] Loading states
+- [ ] Error states (network failure, server error)
+- [ ] Mobile responsiveness
+- [ ] Keyboard navigation
+
+### Manual Testing Checklist
+
+Before marking any feature complete:
+- [ ] Test as each user role (case_manager, provider, supervisor, org_admin)
+- [ ] Test on mobile (iPhone, Android)
+- [ ] Test on tablet (iPad)
+- [ ] Test on desktop (Chrome, Firefox, Safari)
+- [ ] Test with slow network (throttle in DevTools)
+- [ ] Test with screen reader (VoiceOver/NVDA)
+- [ ] Test keyboard navigation (no mouse)
+- [ ] Test with browser extensions disabled
+- [ ] Verify data isolation (create separate org, verify no cross-access)
+
+---
+
+## 📝 Documentation Requirements
+
+### Code Comments
+
+**When to add comments:**
+```typescript
+// ✅ Complex business logic
+// Calculate prorated amount based on remaining days in billing cycle
+// Formula: (days_remaining / total_days_in_month) * monthly_rate
+const proratedAmount = (daysRemaining / totalDays) * monthlyRate;
+
+// ✅ Non-obvious workarounds
+// Workaround for Safari bug with date inputs
+// See: https://bugs.webkit.org/show_bug.cgi?id=123456
+if (isSafari) {
+  // Workaround implementation
+}
+
+// ✅ Important side effects
+// This will trigger a webhook to external system
+// Failure is logged but does not block the operation
+await notifyExternalSystem(data);
+
+// ❌ Obvious code (don't comment)
+// Set loading to true
+setLoading(true);  // No comment needed
+
+// ❌ Outdated comments (worse than no comments)
+// TODO: Fix this later (from 2023)
+```
+
+### README Files
+
+**When to create/update README:**
+- New major feature → Update main README.md
+- New component library → Add component-specific README
+- New API integration → Document in README-[integration].md
+- New testing approach → Update testing documentation
+
+### Migration Comments
+
+**ALWAYS comment database migrations:**
+```sql
+-- Migration: Add client document management
+-- Author: [Your Name]
+-- Date: 2025-01-15
+-- Description: Adds tables for storing client documents with proper RLS
+-- Related PRD: /tasks/0023-prd-client-documents.md
+
+CREATE TABLE public.client_documents (
+  -- Primary key and relationships
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  client_id UUID NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE,
+  
+  -- Document metadata
+  file_name TEXT NOT NULL,
+  file_size INTEGER NOT NULL,
+  file_type TEXT NOT NULL,
+  storage_path TEXT NOT NULL,
+  
+  -- Standard columns
+  organization_id UUID NOT NULL REFERENCES public.organizations(id),
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  created_by UUID REFERENCES auth.users(id),
+  deleted_at TIMESTAMPTZ
+);
+
+-- Index for performance
+CREATE INDEX idx_client_documents_client_id ON public.client_documents(client_id)
+  WHERE deleted_at IS NULL;
+
+-- Enable RLS
+ALTER TABLE public.client_documents ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies
+CREATE POLICY "org_members_select_documents" 
+  ON public.client_documents FOR SELECT
+  USING (
+    organization_id IN (
+      SELECT organization_id FROM public.user_profiles 
+      WHERE user_id = auth.uid()
+    )
+    AND deleted_at IS NULL
+  );
+```
+
+---
+
+## 🚫 Common Pitfalls to AVOID
+
+### ❌ DON'T Do These
+
+```typescript
+// ❌ Don't use 'any'
+function process(data: any) { }
+
+// ❌ Don't skip authentication checks
+export async function GET(request: Request) {
+  // No auth check - SECURITY VULNERABILITY
+  const data = await supabase.from('clients').select();
+}
+
+// ❌ Don't disable RLS
+ALTER TABLE public.clients DISABLE ROW LEVEL SECURITY;  // NEVER!
+
+// ❌ Don't commit sensitive data
+const API_KEY = 'sk_live_abc123';  // Use env vars!
+
+// ❌ Don't use inline styles
+<div style={{ color: 'red' }}>  // Use Tailwind classes
+
+// ❌ Don't hard-code URLs
+fetch('https://api.example.com/data');  // Use env vars
+
+// ❌ Don't ignore errors
+try {
+  await dangerousOperation();
+} catch (e) {
+  // Empty catch - BAD!
+}
+
+// ❌ Don't use var
+var count = 0;  // Use const/let
+
+// ❌ Don't mutate props
+function Component({ data }) {
+  data.value = 'new';  // NO! Props are immutable
+}
+
+// ❌ Don't use nested ternaries
+const value = a ? b : c ? d : e ? f : g;  // Unreadable
+
+// ❌ Don't create massive components
+export function Dashboard() {
+  // 1000 lines of code
+  // Split into smaller components!
+}
+
+// ❌ Don't fetch in loops
+for (const client of clients) {
+  const data = await fetchClientData(client.id);  // N+1 query!
+}
+// Use: const data = await fetchAllClientData(clients.map(c => c.id));
+
+// ❌ Don't forget loading states
+<Button onClick={handleSubmit}>Submit</Button>  // No loading state
+
+// ❌ Don't forget empty states
+{items.map(item => <ItemCard key={item.id} item={item} />)}
+// What if items is empty?
+
+// ❌ Don't use magic numbers
+if (status === 3) { }  // What is 3?
+// Use: if (status === ReferralStatus.ACCEPTED) { }
+```
+
+### ✅ DO These Instead
+
+```typescript
+// ✅ Use proper types
+function process(data: ClientData) { }
+
+// ✅ Always check authentication
+export async function GET(request: Request) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+}
+
+// ✅ Always enable RLS
+ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
+
+// ✅ Use environment variables
+const apiKey = process.env.API_KEY;
+
+// ✅ Use Tailwind classes
+<div className="text-red-600">
+
+// ✅ Use environment variables for URLs
+const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+// ✅ Handle errors properly
+try {
+  await dangerousOperation();
+} catch (error) {
+  console.error('Operation failed:', error);
+  toast.error('Something went wrong');
+}
+
+// ✅ Use const/let
+const count = 0;
+let mutableValue = 1;
+
+// ✅ Never mutate props
+function Component({ data }) {
+  const [localData, setLocalData] = useState(data);
+  setLocalData({ ...localData, value: 'new' });
+}
+
+// ✅ Extract complex logic
+const getValue = () => {
+  if (a) return b;
+  if (c) return d;
+  if (e) return f;
+  return g;
+};
+const value = getValue();
+
+// ✅ Split large components
+export function Dashboard() {
+  return (
+    <>
+      <DashboardHeader />
+      <DashboardStats />
+      <DashboardCharts />
+      <DashboardActivity />
+    </>
+  );
+}
+
+// ✅ Batch database queries
+const clientIds = clients.map(c => c.id);
+const allData = await supabase
+  .from('client_data')
+  .select('*')
+  .in('client_id', clientIds);
+
+// ✅ Always implement loading states
+const [loading, setLoading] = useState(false);
+<Button onClick={handleSubmit} disabled={loading}>
+  {loading ? 'Submitting...' : 'Submit'}
+</Button>
+
+// ✅ Always implement empty states
+{items.length === 0 ? (
+  <EmptyState />
+) : (
+  items.map(item => <ItemCard key={item.id} item={item} />)
+)}
+
+// ✅ Use named constants
+const REFERRAL_STATUS_ACCEPTED = 3;
+if (status === REFERRAL_STATUS_ACCEPTED) { }
+// Better: Use enums or const objects
+```
+
+---
+
+## 🎯 Performance Optimization
+
+### Database Query Optimization
+
+```typescript
+// ❌ Bad: N+1 queries
+for (const referral of referrals) {
+  const provider = await supabase
+    .from('providers')
+    .select('*')
+    .eq('id', referral.provider_id)
+    .single();
+}
+
+// ✅ Good: Single query with join
+const { data: referrals } = await supabase
+  .from('referrals')
+  .select(`
+    *,
+    provider:providers(*)
+  `);
+```
+
+### React Performance
+
+```typescript
+// ✅ Use React.memo for expensive components
+export const ClientCard = React.memo(({ client }: { client: Client }) => {
+  return <Card>...</Card>;
+});
+
+// ✅ Use useCallback for event handlers passed to children
+const handleUpdate = useCallback((id: string) => {
+  // Handler logic
+}, []);
+
+// ✅ Use useMemo for expensive calculations
+const sortedClients = useMemo(() => {
+  return clients.sort((a, b) => a.name.localeCompare(b.name));
+}, [clients]);
+
+// ✅ Lazy load heavy components
+const HeavyChart = dynamic(() => import('./HeavyChart'), {
+  loading: () => <Skeleton />,
+});
+```
+
+### Image Optimization
+
+```typescript
+// ✅ Use Next.js Image component
+import Image from 'next/image';
+
+<Image
+  src="/avatar.jpg"
+  alt="User avatar"
+  width={48}
+  height={48}
+  className="rounded-full"
+/>
+
+// ✅ Use placeholder for loading
+<Image
+  src="/avatar.jpg"
+  alt="User avatar"
+  width={48}
+  height={48}
+  placeholder="blur"
+  blurDataURL="data:image/..."
+/>
+```
+
+---
+
+## 🔄 Git Workflow
+
+### Commit Messages
+
+**Use Conventional Commits:**
+```bash
+# Format: <type>(<scope>): <subject>
+
+# Types:
+feat:     # New feature
+fix:      # Bug fix
+refactor: # Code change that neither fixes a bug nor adds a feature
+style:    # Changes that don't affect code meaning (formatting, etc.)
+docs:     # Documentation only changes
+test:     # Adding or updating tests
+chore:    # Changes to build process or auxiliary tools
+
+# Examples:
+git commit -m "feat(clients): add bulk import functionality" \
+  -m "- Supports CSV file upload" \
+  -m "- Validates data before import" \
+  -m "- Shows progress indicator"
+
+git commit -m "fix(referrals): resolve status update race condition" \
+  -m "- Added optimistic locking" \
+  -m "- Improved error handling"
+
+git commit -m "refactor(auth): simplify session management"
+
+git commit -m "docs: update API documentation for providers endpoint"
+```
+
+### Branch Naming
+
+```bash
+# Format: <type>/<ticket>-<description>
+
+# Examples:
+feature/REF-123-client-document-upload
+fix/REF-456-referral-status-bug
+refactor/REF-789-database-queries
+chore/update-dependencies
+```
+
+### When to Commit
+
+**Commit after each parent task completion:**
+- All sub-tasks under parent task complete
+- Tests passing
+- No linter errors
+- Code reviewed (if pair programming)
+
+**Never commit:**
+- Broken code
+- Failing tests
+- console.log() debugging statements
+- Commented-out code
+- .env files
+- node_modules
+- Temporary files
+
+---
+
+## 🚀 Deployment Checklist
+
+Before deploying to production:
+
+### Code Quality
+- [ ] All tests passing
+- [ ] No TypeScript errors
+- [ ] No ESLint errors
+- [ ] No console.log() statements
+- [ ] Removed commented-out code
+- [ ] Updated documentation
+
+### Security
+- [ ] Environment variables set in Vercel
+- [ ] No secrets in code
+- [ ] RLS policies tested
+- [ ] CORS configured correctly
+- [ ] Rate limiting enabled
+
+### Performance
+- [ ] Database queries optimized
+- [ ] Images optimized
+- [ ] Bundle size acceptable
+- [ ] Lighthouse score > 90
+
+### Testing
+- [ ] E2E tests passing
+- [ ] Manual testing completed
+- [ ] Mobile testing done
+- [ ] Cross-browser testing done
+- [ ] Load testing done (if high traffic expected)
+
+### Monitoring
+- [ ] Error tracking configured (Sentry)
+- [ ] Analytics configured
+- [ ] Logging configured
+- [ ] Alerts configured
+
+---
+
+## 🎓 Learning Resources
+
+### Official Documentation
+- Next.js: https://nextjs.org/docs
+- Supabase: https://supabase.com/docs
+- TypeScript: https://www.typescriptlang.org/docs
+- Tailwind CSS: https://tailwindcss.com/docs
+- shadcn/ui: https://ui.shadcn.com
+
+### Platform-Specific Docs
+- `/tasks/` - All PRDs and task lists
+- `COMPLETE_PLATFORM_OVERVIEW.md` - Architecture overview
+- `FINALIZED_USER_FLOWS.md` - User workflows
+- `COMPREHENSIVE_QA_TESTING.md` - Testing guidelines
+
+---
+
+## 💬 Communication Standards
+
+### Asking for Clarification
+
+When requirements are unclear, ALWAYS ask before implementing:
+
+```
+"I need clarification on the following:
+
+1. Should supervisors be able to see all referrals or only those from their team members?
+2. What should happen if a provider rejects a referral? Should the case manager be notified?
+3. Are there any character limits for client notes?
+
+Once clarified, I'll update the PRD and proceed with implementation."
+```
+
+### Reporting Progress
+
+When completing tasks:
+```
+✅ Completed Task 2.3: API route for referral status updates
+
+Changes:
+- Created `/api/referrals/[id]/status` route
+- Added Zod validation for status transitions
+- Implemented authorization checks
+- Added error handling
+- Tests passing
+
+Next: Moving to Task 2.4 (notification system integration)
+```
+
+### Flagging Issues
+
+When you encounter problems:
+```
+⚠️ Issue with Task 3.2
+
+Problem: The existing `notifications` table doesn't have an `organization_id` column, which breaks RLS isolation.
+
+Options:
+1. Add migration to add `organization_id` to `notifications` table
+2. Create new `notification_recipients` junction table with proper RLS
+3. Use Supabase Realtime pub/sub instead of database notifications
+
+Recommendation: Option 2 (better scalability and security)
+
+Waiting for approval before proceeding.
+```
+
+---
+
+## ⚡ Quick Reference
+
+### Common Commands
+
+```bash
+# Development
+npm run dev                  # Start dev server
+npm run build               # Build for production
+npm run start               # Start production server
+npm run lint                # Run ESLint
+npm run type-check          # Check TypeScript
+
+# Testing
+npm run test                # Run all tests
+npm run test:e2e           # Run E2E tests
+npx playwright test --ui    # Run tests in UI mode
+npx playwright show-report  # Show test report
+
+# Database
+npx supabase migration new [name]  # Create migration
+npx supabase db reset              # Reset local DB
+npx supabase db push               # Push migrations
+
+# Git
+git status                         # Check status
+git add .                          # Stage all changes
+git commit -m "feat: message"      # Commit
+git push                           # Push to remote
+```
+
+### File Paths
+
+```
+API Routes:        src/app/api/[resource]/route.ts
+Pages:            src/app/[role]/[page]/page.tsx
+Components:       src/components/[category]/[Component].tsx
+Server Actions:   src/lib/actions/[resource]-actions.ts
+Types:            src/types/[category].ts
+Utilities:        src/lib/utils/[util].ts
+Tests:            tests/[feature].spec.ts
+Migrations:       supabase/migrations/[timestamp]_[name].sql
+Tasks:            tasks/[n]-prd-[name].md
+                  tasks/tasks-[n]-prd-[name].md
+```
+
+---
+
+## 🎯 Final Reminders
+
+1. **Security First**: Never compromise on security. When in doubt, ask.
+2. **Test Everything**: Untested code is broken code.
+3. **Mobile Matters**: Most users are on mobile devices.
+4. **Use PRD Workflow**: For all significant features, follow the structured workflow.
+5. **Ask Questions**: Better to ask than to implement wrong.
+6. **Review Your Work**: Before marking complete, review your own code.
+7. **Think About Users**: Every feature should improve user experience.
+8. **Document Decisions**: Future you (and teammates) will thank you.
+9. **Performance Matters**: Slow software is bad software.
+10. **Quality Over Speed**: Do it right the first time.
+
+---
+
+**Remember**: You're building a production application that people rely on for their important work. Every line of code matters. Every security check matters. Every test matters. Take pride in your work and maintain these high standards.
+
+Now go build something amazing! 🚀
+

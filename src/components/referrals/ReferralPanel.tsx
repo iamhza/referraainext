@@ -61,30 +61,24 @@ export function ReferralPanel({
 
   return (
     <>
-      {/* Enhanced Backdrop for mobile/tablet with blur */}
+      {/* Referral Panel - Matches drawer size and position */}
       <div 
-        className={`
-          fixed inset-0 z-40 bg-black/30 backdrop-blur-sm transition-all duration-300 ease-out
-          ${isOpen && !isAnimating ? 'opacity-100' : 'opacity-0'}
-          lg:hidden
-        `}
-        onClick={handleClose}
-      />
-
-      {/* Referral Panel */}
-      <div 
-        className={`
-          fixed top-0 right-0 h-full z-50
-          bg-white shadow-2xl border-l border-gray-200/80
-          transform transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
-          ${isOpen && !isAnimating 
-            ? 'translate-x-0 scale-100 opacity-100' 
-            : 'translate-x-full scale-95 opacity-0'
-          }
-          w-full lg:w-[640px] xl:w-[680px]
-          overflow-hidden
-        `}
+        className="fixed right-0 bottom-0 bg-white border-l border-slate-200"
+        style={{
+          width: '850px',
+          top: '80px', // Below the top bar
+          zIndex: 30
+        }}
       >
+        {/* Panel Content - Fades into this zone */}
+        <div 
+          className="w-full h-full transition-all duration-500 ease-in-out overflow-hidden"
+          style={{
+            opacity: isOpen && !isAnimating ? 1 : 0,
+            pointerEvents: isOpen && !isAnimating ? 'auto' : 'none',
+            transform: isOpen && !isAnimating ? 'translateY(0)' : 'translateY(10px)'
+          }}
+        >
         {/* Success State Overlay */}
         {showSuccess && (
           <div className="absolute inset-0 bg-white z-50 flex items-center justify-center">
@@ -104,17 +98,17 @@ export function ReferralPanel({
         )}
 
         <div className="flex flex-col h-full">
-          {/* Premium Header */}
-          <div className="flex-shrink-0 px-6 py-5 border-b border-gray-200/80 bg-gradient-to-r from-gray-50/50 to-white">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-8 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full" />
+          {/* Compact Header - Matches drawer style */}
+          <div className="flex-shrink-0 px-5 py-4 border-b border-gray-200/80 bg-gradient-to-r from-gray-50/50 to-white">
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-1.5 h-7 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full" />
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">
+                  <h2 className="text-base font-semibold text-gray-900">
                     Create Referral
                   </h2>
                   {selectedClient && (
-                    <p className="text-sm text-gray-600 mt-0.5">
+                    <p className="text-xs text-gray-600 mt-0.5">
                       for {selectedClient.firstName} {selectedClient.lastName}
                     </p>
                   )}
@@ -125,27 +119,27 @@ export function ReferralPanel({
                 variant="ghost"
                 size="sm"
                 onClick={handleClose}
-                className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all duration-200 group rounded-full w-8 h-8 p-0"
+                className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all duration-200 group rounded-full w-7 h-7 p-0"
               >
-                <X className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
+                <X className="w-3.5 h-3.5 group-hover:scale-110 transition-transform duration-200" />
               </Button>
             </div>
 
-            {/* Client Context Card */}
+            {/* Client Context Card - Compact */}
             {selectedClient && (
-              <div className="bg-white border border-gray-200/60 rounded-xl p-4 shadow-sm">
+              <div className="bg-white border border-gray-200/60 rounded-lg p-3 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center">
-                      <span className="text-blue-700 font-semibold text-sm">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-9 h-9 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center">
+                      <span className="text-blue-700 font-semibold text-xs">
                         {selectedClient.firstName?.[0]}{selectedClient.lastName?.[0]}
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-gray-900 text-sm">
                         {selectedClient.firstName} {selectedClient.lastName}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-[11px] text-gray-500">
                         {selectedClient.dateOfBirth ? 
                           `DOB: ${new Date(selectedClient.dateOfBirth).toLocaleDateString()}` : 
                           'Client profile'
@@ -153,7 +147,7 @@ export function ReferralPanel({
                       </p>
                     </div>
                   </div>
-                  <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  <div className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
                     selectedClient.status === 'ACTIVE_STABLE' 
                       ? 'bg-green-100 text-green-700'
                       : selectedClient.status === 'ACTIVE_FRUSTRATED'
@@ -175,6 +169,7 @@ export function ReferralPanel({
               onComplete={handleFormComplete}
             />
           </div>
+        </div>
         </div>
       </div>
     </>

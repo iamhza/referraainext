@@ -1,0 +1,19 @@
+# Ignore documentation and configuration files
+.cursorrules
+ai-dev-tasks/
+tasks/
+*.md
+
+# Standard ignores
+node_modules/
+.next/
+out/
+build/
+dist/
+coverage/
+
+# Test results
+test-results/
+playwright-report/
+
+

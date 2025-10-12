@@ -114,7 +114,8 @@ export async function GET(request: Request) {
 
     // Simplified referral lookup - just check by case manager and provider IDs
     // Don't rely on clientMatchKey since existing referrals don't have it
-    const referrals = await db.collection('referrals').find({
+    // Only query if we have items (MongoDB doesn't allow empty $or arrays)
+    const referrals = items.length > 0 ? await db.collection('referrals').find({
       $or: items.map(item => ({
         caseManagerId: item.caseManagerId,
         $or: [{ providerId: item.providerId }, { assignedProvider: item.providerId }]
@@ -129,17 +130,18 @@ export async function GET(request: Request) {
       status: 1,
       updatedAt: 1,
       _id: 1
-    }).toArray();
+    }).toArray() : [];
 
     // Get pending connections for these client matches
-    const pendingConnections = await db.collection('pending_connections').find({
+    // Only query if we have items (MongoDB doesn't allow empty $or arrays)
+    const pendingConnections = items.length > 0 ? await db.collection('pending_connections').find({
       status: 'pending',
       $or: items.map(item => ({
         clientMatchKey: item.matchKey,
         caseManagerId: item.caseManagerId,
         providerId: item.providerId
       }))
-    }).toArray();
+    }).toArray() : [];
 
     // Get recent comments for last activity
     const referralIds = referrals.map(r => r._id);
