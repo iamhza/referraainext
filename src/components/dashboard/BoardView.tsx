@@ -11,6 +11,8 @@ import { ClientDetailsPanel } from '../clients/ClientDetailsPanel';
 import { ReferralPanel } from '../referrals/ReferralPanel';
 import { AddClientModal } from '../modals/AddClientModal';
 import { DeleteClientModal } from '../modals/DeleteClientModal';
+import { FilterBar, type FilterType, type FilterCounts } from './FilterBar';
+import { PriorityPanel } from './PriorityPanel';
 import { useToast } from '@/hooks/use-toast';
 import { useResponsiveKanban } from '@/hooks/useResponsiveKanban';
 import { enhanceClientsData } from '@/lib/client-data-enhancer';
@@ -103,6 +105,8 @@ export function BoardView({
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<ClientType | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [showPriorityPanel, setShowPriorityPanel] = useState(true);
   const { toast } = useToast();
 
   // Helper function to get status display info for toasts

@@ -11,6 +11,7 @@ import {
   formatConnectionSummary, 
   formatReferralSummary 
 } from '@/lib/client-data-enhancer';
+import { SmartStatusBar } from './SmartStatusBar';
 import type { Client as ClientType } from '@/types';
 
 interface ClientCardProps {
@@ -248,6 +249,20 @@ export function ClientCard({
       }}
       onClick={onClick}
     >
+      {/* Smart Status Bar - NEW: Shows urgent actions from actions library */}
+      {client.smartStatus && (
+        <div className={viewDensity === 'compact' ? 'mb-2' : 'mb-3'}>
+          <SmartStatusBar 
+            status={client.smartStatus} 
+            compact={viewDensity === 'compact'}
+            onClick={(e) => {
+              e?.stopPropagation?.();
+              // Could open action completion modal here
+            }}
+          />
+        </div>
+      )}
+
       {/* Header: Name + Status + Priority - Optimized for narrow layout */}
       <div className={viewDensity === 'compact' ? 'mb-1.5' : 'mb-2'}>
         <div className="flex items-start justify-between mb-1">

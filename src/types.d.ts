@@ -153,6 +153,18 @@ export interface Client {
     relativeTime: string;
   };
   primaryWaiverType?: string; // Computed from connections or referrals
+  
+  // NEW: Smart Status System - Computed from actions library
+  smartStatus?: {
+    text: string;
+    subtext?: string;
+    color: 'red' | 'orange' | 'yellow' | 'gray';
+    urgencyScore: number;
+    actionId: string;
+    actionType: string;
+    serviceContext?: string;
+    dueDate?: string;
+  };
 }
 
 export interface ClientRelationship {

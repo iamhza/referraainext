@@ -3,6 +3,7 @@ import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
 import { getSecureClientsForCaseManager, getSecureClientsForProvider, createSecureClient } from '@/lib/secure-client';
+import { computeSmartStatus } from '@/lib/smart-status-computer';
 
 const COLLECTION = 'clients';
 
@@ -142,7 +143,34 @@ export async function GET(req: Request) {
         secureClients = [];
       }
       
-      return NextResponse.json({ clients: secureClients || [] });
+      // Enhance clients with smart status from actions library
+      const enhancedClients = await Promise.all(
+        secureClients.map(async (client) => {
+          try {
+            // Fetch actions for this client
+            const actions = await db.collection('actions')
+              .find({ 
+                clientId: client._id?.toString(),
+                status: 'pending' // Only pending actions matter for smart status
+              })
+              .toArray();
+            
+            // Compute smart status
+            const smartStatus = computeSmartStatus(actions as any[]);
+            
+            return {
+              ...client,
+              smartStatus
+            };
+          } catch (error) {
+            console.error(`Error computing smart status for client ${client._id}:`, error);
+            // Return client without smart status on error
+            return client;
+          }
+        })
+      );
+      
+      return NextResponse.json({ clients: enhancedClients || [] });
 }
 
 export async function POST(req: Request) {
