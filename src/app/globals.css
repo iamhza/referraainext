@@ -1,9 +1,35 @@
-@import '../styles/fonts.css';
-@import '../styles/kanban-responsive.css';
+@import url('../styles/fonts.css');
+@import url('../styles/kanban-layout-variables.css');
+@import url('../styles/kanban-responsive.css');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Kanban Column Scrollbar Styles */
+.overflow-y-auto {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.overflow-y-auto::-webkit-scrollbar {
+  width: 8px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
 
 /* Shepherd.js Tour Styles */
 .shepherd-element {

@@ -24,6 +24,7 @@ interface ClientCardProps {
   connections?: any[]; // Connection data from the connections API
   viewDensity?: 'comfortable' | 'compact';
   shouldHideDetails?: boolean; // From responsive system
+  isSelected?: boolean; // Selected state for drawer/panel
 }
 
 export function ClientCard({ 
@@ -36,7 +37,8 @@ export function ClientCard({
   className = '', 
   connections = [], 
   viewDensity = 'comfortable',
-  shouldHideDetails = false 
+  shouldHideDetails = false,
+  isSelected = false 
 }: ClientCardProps) {
   const [isRequestingUpdate, setIsRequestingUpdate] = useState(false);
   
@@ -80,7 +82,7 @@ export function ClientCard({
     return connection;
   };
 
-  // Format last update time
+  // Format last update time - Compact version
   const getLastUpdateText = () => {
     if (client.updatedAt) {
       return `Updated ${formatDistanceToNow(parseISO(client.updatedAt), { addSuffix: true })}`;
@@ -89,6 +91,28 @@ export function ClientCard({
       return `Added ${formatDistanceToNow(parseISO(client.createdAt), { addSuffix: true })}`;
     }
     return 'No recent updates';
+  };
+
+  // Compact time formatter for card display
+  const getCompactTimeAgo = () => {
+    const timestamp = client.updatedAt || client.createdAt;
+    if (!timestamp) return 'N/A';
+
+    const date = parseISO(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    const diffMonths = Math.floor(diffDays / 30);
+    const diffYears = Math.floor(diffDays / 365);
+
+    if (diffYears > 0) return `${diffYears}Y ago`;
+    if (diffMonths > 0) return `${diffMonths}mo ago`;
+    if (diffDays > 0) return `${diffDays}D ago`;
+    if (diffHours > 0) return `${diffHours}h ago`;
+    if (diffMins > 0) return `${diffMins}min ago`;
+    return '< 1min ago';
   };
 
   // Get status indicator
@@ -130,7 +154,7 @@ export function ClientCard({
         return { 
           dotColor: 'bg-gray-500', 
           ringColor: 'ring-gray-100', 
-          label: 'Closed/Discharged' 
+          label: 'Closed' 
         };
       default:
         return { 
@@ -205,9 +229,8 @@ export function ClientCard({
     <div 
       className={`
         group bg-white rounded-xl border border-slate-300 shadow-sm hover:shadow-md
-        cursor-pointer transition-all duration-300 flex flex-col
+        cursor-pointer transition-all flex flex-col
         hover:scale-[1.01] hover:-translate-y-0.5 hover:border-slate-400
-        ${viewDensity === 'compact' ? 'p-2.5 mb-2 min-h-[140px] max-h-[160px]' : 'p-3.5 mb-3 min-h-[180px] max-h-[220px]'}
         ${isUrgent 
           ? 'border-2 border-red-300 ring-1 ring-red-100/50' 
           : ''
@@ -216,8 +239,12 @@ export function ClientCard({
       `}
       style={{
         width: '100%',
-        height: viewDensity === 'compact' ? '140px' : '185px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+        minHeight: 'var(--card-min-height)',
+        padding: 'var(--card-padding)',
+        marginBottom: 'var(--card-gap)',
+        fontSize: 'var(--font-sm)',
+        boxShadow: 'var(--shadow-sm)',
+        transition: 'all var(--transition-medium) var(--easing-smooth)',
       }}
       onClick={onClick}
     >
@@ -277,7 +304,7 @@ export function ClientCard({
             })()}
           </span>
           <span className="text-[9px] text-gray-500 font-medium whitespace-nowrap ml-auto">
-            {client.lastActivitySummary?.relativeTime || getLastUpdateText().replace('Updated ', '').replace('Added ', '')}
+            {getCompactTimeAgo()}
           </span>
         </div>
       </div>

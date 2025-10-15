@@ -1,0 +1,212 @@
+/**
+ * Kanban Board Layout Variables
+ * 
+ * Production-grade CSS custom properties for zoom-resilient, responsive kanban layout.
+ * All values use relative units (rem, em, vw) that scale automatically with browser zoom.
+ * 
+ * Usage: var(--property-name)
+ * Example: padding: var(--space-md);
+ */
+
+:root {
+  /* ============================================
+     SPACING SCALE
+     Uses rem units - scales with browser zoom
+     Base: 1rem = 16px at 100% zoom
+     ============================================ */
+  
+  --space-xs: 0.25rem;    /* 4px - Minimal spacing between tight elements */
+  --space-sm: 0.5rem;     /* 8px - Small gaps, icon padding */
+  --space-md: 1rem;       /* 16px - Standard spacing, card padding */
+  --space-lg: 1.5rem;     /* 24px - Section spacing */
+  --space-xl: 2rem;       /* 32px - Large gaps between major sections */
+  --space-2xl: 3rem;      /* 48px - Extra large spacing */
+  --space-3xl: 4rem;      /* 64px - Maximum spacing for major divisions */
+
+  /* ============================================
+     COLUMN SIZING
+     Defines kanban column dimensions
+     ============================================ */
+  
+  --column-min-width: 12rem;      /* 192px - Minimum column width before wrapping */
+  --column-max-width: 24rem;      /* 384px - Maximum to prevent over-expansion */
+  --column-gap: var(--space-md);  /* Gap between columns */
+  --column-padding: var(--space-md); /* Internal column padding */
+
+  /* ============================================
+     PANEL SIZING
+     Right side panel (drawer/details) dimensions
+     Uses clamp() for fluid responsive sizing
+     Production-grade: Never covers more than 50% of screen
+     ============================================ */
+  
+  /* Base sizing - comfortable on all screens */
+  --panel-min-width: 36rem;       /* 576px - Wide enough for all tabs */
+  --panel-preferred-width: 45vw;  /* 45% of viewport - generous space */
+  --panel-max-width: 55vw;        /* Never more than 55% - board stays visible */
+  --panel-absolute-max: 72rem;    /* 1152px - Maximum on ultra-wide screens */
+  
+  /* ============================================
+     TYPOGRAPHY SCALE
+     Font sizes and line heights using rem units
+     ============================================ */
+  
+  /* Font Sizes */
+  --font-xs: 0.75rem;     /* 12px - Tiny labels, metadata */
+  --font-sm: 0.875rem;    /* 14px - Body text, card content */
+  --font-base: 1rem;      /* 16px - Standard body text */
+  --font-lg: 1.125rem;    /* 18px - Section headers */
+  --font-xl: 1.25rem;     /* 20px - Card titles, important text */
+  --font-2xl: 1.5rem;     /* 24px - Page headers */
+  --font-3xl: 2rem;       /* 32px - Major headings */
+  
+  /* Line Heights */
+  --leading-tight: 1.25;   /* Tight spacing for headers */
+  --leading-normal: 1.5;   /* Normal reading line height */
+  --leading-relaxed: 1.75; /* Relaxed for better readability */
+
+  /* ============================================
+     Z-INDEX LAYERS
+     Organized stacking context for UI layers
+     ============================================ */
+  
+  --z-base: 0;           /* Base layer - board content */
+  --z-overlay: 10;       /* Overlay dimming effect */
+  --z-drawer: 30;        /* Side drawer panel */
+  --z-panel: 40;         /* Details panel */
+  --z-modal: 50;         /* Modal dialogs */
+  --z-dropdown: 60;      /* Dropdowns and popovers */
+  --z-toast: 70;         /* Toast notifications */
+  --z-tooltip: 80;       /* Tooltips - highest layer */
+
+  /* ============================================
+     TRANSITION TIMINGS
+     Consistent animation durations and easing
+     ============================================ */
+  
+  /* Durations */
+  --transition-fast: 150ms;     /* Quick interactions, hover states */
+  --transition-medium: 300ms;   /* Panel slides, drawer animations */
+  --transition-slow: 500ms;     /* Page transitions, major layout changes */
+  
+  /* Easing Functions */
+  --easing-smooth: cubic-bezier(0.4, 0.0, 0.2, 1);      /* Smooth acceleration */
+  --easing-spring: cubic-bezier(0.68, -0.55, 0.265, 1.55); /* Bouncy effect */
+  --easing-ease-out: cubic-bezier(0.0, 0.0, 0.2, 1);    /* Fast start, slow end */
+  --easing-ease-in: cubic-bezier(0.4, 0.0, 1, 1);       /* Slow start, fast end */
+
+  /* ============================================
+     CARD SIZING
+     Dimensions for client cards in kanban
+     ============================================ */
+  
+  --card-min-height: 4rem;        /* 64px - Minimum card height */
+  --card-padding: var(--space-md); /* Standard card internal padding */
+  --card-gap: var(--space-sm);    /* Gap between cards in column */
+  --card-border-radius: 0.5rem;   /* 8px - Rounded corners */
+
+  /* ============================================
+     RESPONSIVE BREAKPOINTS
+     Viewport width breakpoints (for reference)
+     Use these in media queries or container queries
+     ============================================ */
+  
+  --breakpoint-xs: 320px;   /* Mobile phones (minimum) */
+  --breakpoint-sm: 640px;   /* Small tablets */
+  --breakpoint-md: 768px;   /* Tablets */
+  --breakpoint-lg: 1024px;  /* Small laptops */
+  --breakpoint-xl: 1280px;  /* Standard laptops */
+  --breakpoint-2xl: 1536px; /* Large desktops */
+  --breakpoint-3xl: 1920px; /* Ultra-wide monitors */
+
+  /* ============================================
+     SHADOWS & EFFECTS
+     Consistent elevation system
+     ============================================ */
+  
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+  
+  /* Overlay dimming for focus effects */
+  --overlay-opacity: 0.06;        /* Subtle dimming when panel opens */
+  --overlay-blur: 0.5px;          /* Slight blur for depth */
+}
+
+/* ============================================
+   ZOOM-LEVEL SPECIFIC OVERRIDES
+   Fine-tune spacing at extreme zoom levels
+   ============================================ */
+
+/* High zoom (150%+) - reduce spacing slightly */
+@media (resolution >= 1.5dppx) {
+  :root {
+    --space-md: 0.875rem;
+    --space-lg: 1.25rem;
+  }
+}
+
+/* Very high zoom (200%+) - aggressive spacing reduction */
+@media (resolution >= 2dppx) {
+  :root {
+    --space-md: 0.75rem;
+    --space-lg: 1rem;
+    --column-gap: var(--space-sm);
+  }
+}
+
+/* ============================================
+   RESPONSIVE PANEL SIZING
+   Adjust panel width for different screen sizes
+   ============================================ */
+
+/* Small screens (tablets) - Full width panels work better */
+@media (width <= 768px) {
+  :root {
+    --panel-min-width: 100vw;       /* Full width on mobile/tablet */
+    --panel-preferred-width: 100vw;
+    --panel-max-width: 100vw;
+  }
+}
+
+/* Medium screens (laptops) - More board space needed */
+@media (769px <= width <= 1280px) {
+  :root {
+    --panel-min-width: 24rem;       /* 384px */
+    --panel-preferred-width: 40vw;  /* 40% */
+    --panel-max-width: 45vw;        /* Max 45% */
+  }
+}
+
+/* Large screens (desktops) - Generous space for all tabs */
+@media (1281px <= width <= 1920px) {
+  :root {
+    --panel-min-width: 38rem;       /* 608px - Comfortable for all content */
+    --panel-preferred-width: 45vw;  /* 45% - More generous */
+    --panel-max-width: 56rem;       /* 896px - Up to ~50% of 1920px screen */
+  }
+}
+
+/* Ultra-wide screens - Prevent panel from being too wide */
+@media (width >= 1921px) {
+  :root {
+    --panel-min-width: 40rem;       /* 640px */
+    --panel-preferred-width: 35vw;  /* 35% of ultra-wide */
+    --panel-max-width: 72rem;       /* Cap at 1152px */
+  }
+}
+
+/* ============================================
+   REDUCED MOTION PREFERENCE
+   Respect user's accessibility preferences
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-fast: 0ms;
+    --transition-medium: 0ms;
+    --transition-slow: 0ms;
+  }
+}
+

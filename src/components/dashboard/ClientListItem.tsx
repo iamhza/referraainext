@@ -63,6 +63,33 @@ export function ClientListItem({
     return 'Recently added';
   };
 
+  // Compact time formatter for card display
+  const getCompactTimeAgo = () => {
+    const timestamp = client.updatedAt || client.createdAt;
+    if (!timestamp) return 'N/A';
+
+    try {
+      const date = typeof timestamp === 'string' ? parseISO(timestamp) : timestamp;
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      const diffMonths = Math.floor(diffDays / 30);
+      const diffYears = Math.floor(diffDays / 365);
+
+      if (diffYears > 0) return `${diffYears}Y ago`;
+      if (diffMonths > 0) return `${diffMonths}mo ago`;
+      if (diffDays > 0) return `${diffDays}D ago`;
+      if (diffHours > 0) return `${diffHours}h ago`;
+      if (diffMins > 0) return `${diffMins}min ago`;
+      return '< 1min ago';
+    } catch (error) {
+      console.error('Error formatting compact time:', error);
+      return 'N/A';
+    }
+  };
+
   // Status indicator
   const getStatusIndicator = () => {
     switch (client.status) {
@@ -102,7 +129,7 @@ export function ClientListItem({
         return { 
           dotColor: 'bg-gray-500', 
           ringColor: 'ring-gray-100', 
-          label: 'Closed/Discharged' 
+          label: 'Closed' 
         };
       default:
         return { 
@@ -122,19 +149,19 @@ export function ClientListItem({
         group relative bg-white border border-slate-200 hover:border-blue-300
         hover:shadow-sm transition-all duration-300 rounded-lg overflow-x-hidden
         ${isUrgent ? 'ring-1 ring-red-200 border-red-300' : ''}
-        ${isSelected ? 'border-slate-900/20 shadow-md bg-white' : 'hover:bg-slate-50/30'}
         ${className}
       `}
       onClick={onClick}
       style={{ 
         cursor: 'pointer',
-        minHeight: '82px',
-        maxHeight: '82px'
+        minHeight: 'calc(var(--card-min-height) + 1rem)',
+        padding: 'var(--space-md)',
+        fontSize: 'var(--font-xs)'
       }}
     >
       
       {/* Compact row - Fixed height layout with better spacing */}
-      <div className="h-full flex flex-col justify-center px-4 py-3 gap-1.5">
+      <div className="h-full flex flex-col justify-center gap-1.5">
         {/* Row 1: Name + Status */}
         <div className="flex items-center gap-2">
           <div 

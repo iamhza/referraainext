@@ -228,6 +228,6 @@ export function DroppableColumn({
         </div>
       )}
     </div>
-    </div>
+  </div>
   );
 }

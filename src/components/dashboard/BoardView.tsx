@@ -64,21 +64,11 @@ export function BoardView({
   className = '' 
 }: BoardViewProps) {
   
-  // Responsive kanban configuration - optimized for your screen
-  const responsiveConfig = {
-    columnCount: 6,
-    minColumnWidth: 160,  // Allow smaller minimum
-    maxColumnWidth: 350,  // Reasonable maximum
-    gap: 12
-  };
-  
+  // Simplified responsive hook - CSS Grid handles all sizing now!
   const { 
-    columnWidth, 
     shouldCompactCards, 
-    shouldHideDetails, 
-    fontSize, 
-    gap 
-  } = useResponsiveKanban(responsiveConfig);
+    shouldHideDetails
+  } = useResponsiveKanban();
   const router = useRouter();
   
   // SWR for smart caching and auto-revalidation
@@ -131,7 +121,7 @@ export function BoardView({
       case 'ACTIVE_FRUSTRATED': // Legacy support
         return { label: 'Needs Attention', color: 'yellow' };
       case 'CLOSED_DISCHARGED':
-        return { label: 'Closed/Discharged', color: 'gray' };
+        return { label: 'Closed', color: 'gray' };
       default:
         return { label: status.replace('_', ' '), color: 'gray' };
     }
@@ -1006,25 +996,19 @@ export function BoardView({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className={`h-full flex bg-gray-50/50 ${className}`}>
-        {/* Main Board Area - ALWAYS narrowed (permanent) */}
+      <div className={`h-full relative bg-gray-50/50 ${className}`}>
+        {/* Main Board Area - Full width, never shrinks */}
         <div 
-          className="flex flex-col relative kanban-board-container"
-          style={{
-            width: 'calc(100% - 850px)' // Fixed narrow width - never changes
-          }}
+          className="flex flex-col absolute inset-0 kanban-board-container"
         >
-          {/* Focus overlay when panel or drawer is open - professional dimming effect */}
-          {(isReferralPanelOpen || isDrawerOpen) && (
-            <div className="absolute inset-0 bg-black/[0.06] backdrop-blur-[0.5px] z-10 pointer-events-none transition-all duration-500 ease-in-out" />
-          )}
           {/* Board container - narrowed columns */}
           <div className="flex-1 overflow-hidden px-1 sm:px-2 lg:px-3 py-4">
             <div 
-              className="grid grid-cols-6 h-full w-full kanban-board-grid"
+              className="grid h-full w-full kanban-board-grid"
               style={{ 
-                gap: gap,
-                fontSize: fontSize
+                gridTemplateColumns: 'repeat(6, minmax(var(--column-min-width), 1fr))',
+                gap: 'var(--column-gap)',
+                fontSize: 'var(--font-sm)'
               }}
             >
             {/* Unplaced Column */}
@@ -1234,22 +1218,23 @@ export function BoardView({
         ) : null}
       </DragOverlay>
 
-        {/* Dedicated Right Zone - ALWAYS visible (permanent white space) */}
+        {/* Right Panel - Overlay that slides in from right (board stays full width!) */}
         <div 
-          className="fixed right-0 bottom-0 bg-white border-l border-slate-200"
+          className="absolute top-0 right-0 h-full bg-white border-l border-slate-200 overflow-hidden shadow-2xl"
           style={{
-            width: '850px',
-            top: '80px', // Below the top bar
-            zIndex: 30
+            width: 'min(clamp(var(--panel-min-width), var(--panel-preferred-width), var(--panel-max-width)), var(--panel-absolute-max))',
+            transform: isDrawerOpen ? 'translateX(0)' : 'translateX(100%)',
+            transition: 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+            zIndex: 'var(--z-panel)'
           }}
         >
-          {/* Drawer Content - Fades into this zone */}
+          {/* Drawer Content */}
           <div 
-            className="w-full h-full transition-all duration-500 ease-in-out"
+            className="w-full h-full"
             style={{
               opacity: isDrawerOpen ? 1 : 0,
               pointerEvents: isDrawerOpen ? 'auto' : 'none',
-              transform: isDrawerOpen ? 'translateY(0)' : 'translateY(10px)'
+              transition: 'opacity 200ms cubic-bezier(0.4, 0, 0.2, 1)'
             }}
           >
             {isDrawerOpen && selectedClient && (

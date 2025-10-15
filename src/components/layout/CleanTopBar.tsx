@@ -31,7 +31,8 @@ import {
   LogOut,
   Upload,
   Camera,
-  ChevronRight
+  ChevronRight,
+  Zap
 } from 'lucide-react';
 
 interface CleanTopBarProps {
@@ -259,6 +260,17 @@ export function CleanTopBar({
             prefilledCounty={user?.user_metadata?.county || 'Hennepin'}
             onReferralCreated={onReferralCreated}
           />
+
+          {/* Triage Feed POC Button */}
+          <Button 
+            variant="default" 
+            size="sm"
+            onClick={() => router.push('/case-manager/triage-feed')}
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0"
+          >
+            <Zap className="w-4 h-4 mr-2" />
+            Triage Feed POC
+          </Button>
 
           {/* Report Dropdown */}
           <DropdownMenu>

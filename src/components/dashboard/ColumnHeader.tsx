@@ -53,7 +53,7 @@ export function ColumnHeader({ status, count, onAddClient, className = '', heade
         };
       case 'CLOSED_DISCHARGED':
         return {
-          title: 'Closed/Discharged',
+          title: 'Closed',
           textColor: 'text-slate-900',
           countBg: 'bg-gray-200/80',
           countText: 'text-gray-600'
@@ -86,11 +86,19 @@ export function ColumnHeader({ status, count, onAddClient, className = '', heade
   const config = getColumnConfig();
 
   return (
-    <div className={`px-3 py-3 h-16 flex items-center border-b border-slate-200/60 ${headerBg || 'bg-slate-50'} rounded-t-xl ${className}`}>
+    <div className={`flex items-center border-b border-slate-200/60 ${headerBg || 'bg-slate-50'} rounded-t-xl ${className}`}
+      style={{
+        padding: 'var(--space-md)',
+        minHeight: '4rem',
+        fontSize: 'var(--font-sm)'
+      }}
+    >
       <div className="flex items-center justify-between w-full min-w-0">
         {/* Column title - compact for narrow layout */}
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <h2 className={`text-[14px] font-bold ${config.textColor} leading-tight whitespace-nowrap truncate`}>
+          <h2 className={`font-bold ${config.textColor} leading-tight whitespace-nowrap truncate`}
+            style={{ fontSize: 'var(--font-base)' }}
+          >
             {config.title}
           </h2>
           <span className={`text-[13px] font-semibold ${config.countBg} ${config.countText} px-2 py-0.5 rounded-full min-w-[24px] text-center shadow-sm flex-shrink-0`}>
@@ -101,17 +109,27 @@ export function ColumnHeader({ status, count, onAddClient, className = '', heade
         {/* Column actions - compact */}
         <div className="flex items-center gap-0.5 flex-shrink-0 ml-1">
           <button
-            className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-lg transition-all duration-200"
+            className="flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-lg transition-all"
             onClick={onAddClient}
             title="Add client"
+            style={{
+              width: '1.75em',
+              height: '1.75em',
+              transition: 'all var(--transition-fast) var(--easing-smooth)'
+            }}
           >
-            <Plus className="w-4 h-4" />
+            <Plus style={{ width: '1em', height: '1em' }} />
           </button>
           <button
-            className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-lg transition-all duration-200"
+            className="flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-lg transition-all"
             title="Column options"
+            style={{
+              width: '1.75em',
+              height: '1.75em',
+              transition: 'all var(--transition-fast) var(--easing-smooth)'
+            }}
           >
-            <MoreHorizontal className="w-4 h-4" />
+            <MoreHorizontal style={{ width: '1em', height: '1em' }} />
           </button>
         </div>
       </div>

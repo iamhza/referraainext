@@ -63,20 +63,23 @@ export function ReferralPanel({
     <>
       {/* Referral Panel - Matches drawer size and position */}
       <div 
-        className="fixed right-0 bottom-0 bg-white border-l border-slate-200"
+        className="fixed right-0 bottom-0 bg-white border-l border-slate-200 shadow-2xl"
         style={{
           width: '850px',
           top: '80px', // Below the top bar
-          zIndex: 30
+          zIndex: 30,
+          transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1)'
         }}
       >
         {/* Panel Content - Fades into this zone */}
         <div 
-          className="w-full h-full transition-all duration-500 ease-in-out overflow-hidden"
+          className="w-full h-full overflow-hidden"
           style={{
             opacity: isOpen && !isAnimating ? 1 : 0,
             pointerEvents: isOpen && !isAnimating ? 'auto' : 'none',
-            transform: isOpen && !isAnimating ? 'translateY(0)' : 'translateY(10px)'
+            transform: isOpen && !isAnimating ? 'translateY(0)' : 'translateY(10px)',
+            transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
         {/* Success State Overlay */}

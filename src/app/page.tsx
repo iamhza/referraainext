@@ -4,12 +4,16 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, CheckCircle, Users, Shield, Clock, MessageSquare, FileText, Zap, Star, TrendingUp, Target, Calendar, BarChart3, Phone, AlertCircle, Play, Eye } from 'lucide-react';
+import { ArrowRight, CheckCircle, Users, Shield, Clock, MessageSquare, FileText, Zap, Star, TrendingUp, Target, Calendar, BarChart3, Phone, AlertCircle, Play, Eye, Sparkles } from 'lucide-react';
 import { Container } from '@/components/ui/container';
 import { Logo } from '@/components/ui/Logo';
 
 export default function LandingPage() {
   const router = useRouter();
+
+  const handleTryDemo = () => {
+    router.push('/auth/sandbox-signup');
+  };
 
   const handleGetStarted = () => {
     router.push('/auth/signup?type=case-manager');
@@ -72,10 +76,11 @@ export default function LandingPage() {
                 Login
               </Button>
               <Button 
-                onClick={handleGetStarted}
+                onClick={handleTryDemo}
                 className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-medium px-6 py-2.5 rounded-xl text-sm transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(34,211,238,0.4)] backdrop-blur-sm"
               >
-                Get Started
+                <Sparkles className="w-4 h-4 mr-2" />
+                Try Demo Free
               </Button>
             </div>
           </div>
@@ -119,10 +124,11 @@ export default function LandingPage() {
               {/* CTAs - Improved Hierarchy */}
               <div className="flex flex-col sm:flex-row gap-6 pt-8">
                 <Button 
-                  onClick={handleGetStarted}
+                  onClick={handleTryDemo}
                   className="group bg-gradient-to-r from-secondary-500 to-secondary-600 hover:from-secondary-400 hover:to-secondary-500 text-white text-xl px-12 py-5 rounded-2xl font-bold transition-all duration-300 hover:scale-105 hover:shadow-[0_0_50px_rgba(109,205,210,0.4)] relative overflow-hidden shadow-2xl"
                 >
-                  <span className="relative z-10">Get Clients Placed Faster →</span>
+                  <Sparkles className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform duration-300" />
+                  <span className="relative z-10">Try Interactive Demo Free →</span>
                   <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </Button>
                 <Button 
@@ -131,8 +137,24 @@ export default function LandingPage() {
                   className="group text-white hover:bg-white/10 text-xl px-12 py-5 rounded-2xl font-semibold transition-all duration-300 hover:scale-105 border-2 border-white/30 hover:border-white/50 backdrop-blur-sm"
                 >
                   <Play className="w-6 h-6 mr-3 fill-current group-hover:scale-110 transition-transform duration-300" />
-                  See Referra in Action
+                  Watch Video
                 </Button>
+              </div>
+              
+              {/* Demo Benefits */}
+              <div className="flex flex-wrap gap-6 text-white/70 text-sm">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-secondary-400" />
+                  <span>2-minute setup</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-secondary-400" />
+                  <span>No credit card required</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-secondary-400" />
+                  <span>Full platform access</span>
+                </div>
               </div>
 
               {/* Trust Section - Moved Up & Enhanced */}

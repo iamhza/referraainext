@@ -108,7 +108,7 @@ const authOptions: NextAuthOptions = {
             });
             console.log('Provider lookup result:', user ? 'Found' : 'Not found');
           } else {
-            // Platform admin login (no org restriction)
+            // Try platform admin first
             user = await db.collection("users").findOne({
               email: credentials.email.toLowerCase(),
               $or: [
@@ -120,6 +120,15 @@ const authOptions: NextAuthOptions = {
             // Map legacy admin role to platform_admin
             if (user && user.role === "admin") {
               user.role = "platform_admin";
+            }
+            
+            // If not admin, try to find ANY user with this email (sandbox users, users without org yet)
+            if (!user) {
+              console.log('Not a platform admin, checking for sandbox/org-less user');
+              user = await db.collection("users").findOne({
+                email: credentials.email.toLowerCase()
+              });
+              console.log('Sandbox/general user lookup:', user ? `Found (${user.role})` : 'Not found');
             }
           }
 
@@ -278,4 +287,5 @@ const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
+export { authOptions };
 export default authOptions;

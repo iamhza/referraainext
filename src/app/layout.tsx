@@ -5,6 +5,8 @@ import { TourProvider } from "@/contexts/TourContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Toaster } from "@/components/ui/toaster";
 import InitDatabase from "./init-db";
+import { SandboxBanner } from "@/components/sandbox/SandboxBanner";
+import { ConversionModalProvider } from "@/components/sandbox/ConversionModalProvider";
 
 export const metadata: Metadata = {
   title: "Referra - AI-Powered Referrals",
@@ -23,9 +25,12 @@ export default function RootLayout({
         <InitDatabase />
         <Providers>
           <ThemeProvider>
-            <TourProvider>
-              {children}
-            </TourProvider>
+            <ConversionModalProvider>
+              <TourProvider>
+                <SandboxBanner />
+                {children}
+              </TourProvider>
+            </ConversionModalProvider>
           </ThemeProvider>
         </Providers>
         <Toaster />

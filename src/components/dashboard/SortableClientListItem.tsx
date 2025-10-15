@@ -83,15 +83,10 @@ export function SortableClientListItem({
           isSelected={isSelected}
           className={`
             ${className}
-            ${isDragging ? 'opacity-50 scale-95' : isSelected ? 'ring-2 ring-blue-500 shadow-lg bg-white relative z-[60]' : 'hover:shadow-md'}
+            ${isDragging ? 'opacity-50 scale-95' : 'hover:shadow-md'}
             transition-all duration-500 ease-in-out relative z-20
           `}
         />
-        
-        {/* Selected state indicator - positioned AFTER to be on top */}
-        {isSelected && !isDragging && (
-          <div className="absolute top-1/2 -translate-y-1/2 -left-1 w-3 h-3 bg-blue-600 rounded-full shadow-2xl animate-pulse border-2 border-white z-[70] pointer-events-none" />
-        )}
       </div>
     </div>
   );

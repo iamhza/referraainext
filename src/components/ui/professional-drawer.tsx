@@ -421,7 +421,7 @@ export function DrawerTabs({ tabs, activeTab, onTabChange, className }: DrawerTa
               )}
               
               <span className={cn(
-                "transition-all duration-300",
+                "transition-all duration-300 whitespace-nowrap",
                 isActive && "font-semibold",
                 (isHovered || isActive) && "tracking-wide"
               )}>

@@ -92,15 +92,10 @@ export function SortableClientCard({
           shouldHideDetails={shouldHideDetails}
           className={`
             ${className}
-            ${isDragging ? 'shadow-2xl ring-2 ring-blue-400' : isSelected ? 'ring-2 ring-blue-500 shadow-2xl scale-[1.03] bg-white relative z-[60]' : 'hover:shadow-lg hover:scale-[1.01]'}
+            ${isDragging ? 'shadow-2xl ring-2 ring-blue-400' : 'hover:shadow-lg hover:scale-[1.01]'}
             transition-all duration-500 ease-in-out relative z-20
           `}
         />
-        
-        {/* Selected state indicator - positioned AFTER card to be on top */}
-        {isSelected && !isDragging && (
-          <div className="absolute -top-2 -right-2 w-4 h-4 bg-blue-600 rounded-full shadow-2xl animate-pulse border-2 border-white z-[70] pointer-events-none" />
-        )}
       </div>
     </div>
   );
