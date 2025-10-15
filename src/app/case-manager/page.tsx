@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useClientRefresh } from '@/hooks/use-client-refresh';
 import { BoardView } from '@/components/dashboard/BoardView';
@@ -16,6 +16,8 @@ export default function CaseManagerBoardPage() {
   const [totalClients, setTotalClients] = useState(0);
   const [viewDensity, setViewDensity] = useState<'comfortable' | 'compact'>('comfortable');
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
+  const [clientToOpen, setClientToOpen] = useState<{ clientId: string; actionId?: string } | null>(null);
+  const [allClients, setAllClients] = useState<ClientType[]>([]);
 
   // Handle client card clicks
   const handleClientClick = (client: ClientType) => {
@@ -62,6 +64,23 @@ export default function CaseManagerBoardPage() {
     triggerRefresh();
   };
 
+  // Handle client selection from Priority Hub
+  const handleClientSelectFromPriorityHub = (clientId: string, actionId?: string) => {
+    setClientToOpen({ clientId, actionId });
+  };
+
+  // Effect to open client when Priority Hub selects one
+  useEffect(() => {
+    if (clientToOpen && allClients.length > 0) {
+      const client = allClients.find(c => c._id === clientToOpen.clientId);
+      if (client) {
+        handleClientClick(client);
+        // TODO: Focus on specific action if actionId is provided
+      }
+      setClientToOpen(null);
+    }
+  }, [clientToOpen, allClients]);
+
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -84,13 +103,17 @@ export default function CaseManagerBoardPage() {
         onAddClient={handleAddClient}
         selectedClient={selectedClient}
         onReferralCreated={handleReferralCreated}
+        onClientSelect={handleClientSelectFromPriorityHub}
       />
 
       {/* Board View - takes full remaining height */}
       <div className="flex-1 h-[calc(100vh-80px)]">
         <BoardView
           onClientClick={handleClientClick}
-          onClientsLoaded={handleClientsLoaded}
+          onClientsLoaded={(count, clients) => {
+            setTotalClients(count);
+            if (clients) setAllClients(clients);
+          }}
           refreshTrigger={refreshTrigger}
           viewDensity={viewDensity}
           className="h-full"

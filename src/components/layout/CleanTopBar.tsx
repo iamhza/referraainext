@@ -8,7 +8,9 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { ProviderDirectoryIntegration } from '@/components/providers/ProviderDirectoryIntegration';
+import { PriorityHub } from '@/components/dashboard/PriorityHub';
 import type { Client as ClientType } from '@/types';
 import { Logo } from '@/components/ui/Logo';
 import {
@@ -43,6 +45,7 @@ interface CleanTopBarProps {
   onAddClient?: () => void;
   selectedClient?: ClientType | null;
   onReferralCreated?: () => void;
+  onClientSelect?: (clientId: string, actionId?: string) => void;
 }
 
 export function CleanTopBar({ 
@@ -52,7 +55,8 @@ export function CleanTopBar({
   onViewDensityChange,
   onAddClient,
   selectedClient,
-  onReferralCreated
+  onReferralCreated,
+  onClientSelect
 }: CleanTopBarProps) {
   const router = useRouter();
   const { user, signOut } = useAuth();
@@ -60,6 +64,8 @@ export function CleanTopBar({
   const [searchQuery, setSearchQuery] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showPriorityHub, setShowPriorityHub] = useState(false);
+  const [pendingActionsCount, setPendingActionsCount] = useState(0);
 
   // Load avatar URL from user data
   useEffect(() => {
@@ -87,6 +93,28 @@ export function CleanTopBar({
     };
 
     loadUserAvatar();
+  }, [user]);
+
+  // Load pending actions count
+  useEffect(() => {
+    const loadPendingActionsCount = async () => {
+      try {
+        const response = await fetch('/api/actions/pending');
+        if (response.ok) {
+          const data = await response.json();
+          setPendingActionsCount(data.count || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching pending actions count:', error);
+      }
+    };
+
+    if (user) {
+      loadPendingActionsCount();
+      // Refresh count every 30 seconds
+      const interval = setInterval(loadPendingActionsCount, 30000);
+      return () => clearInterval(interval);
+    }
   }, [user]);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -261,15 +289,20 @@ export function CleanTopBar({
             onReferralCreated={onReferralCreated}
           />
 
-          {/* Triage Feed POC Button */}
+          {/* Priority Hub Button */}
           <Button 
             variant="default" 
             size="sm"
-            onClick={() => router.push('/case-manager/triage-feed')}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0"
+            onClick={() => setShowPriorityHub(true)}
+            className="relative bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white border-0"
           >
             <Zap className="w-4 h-4 mr-2" />
-            Triage Feed POC
+            Priority Hub
+            {pendingActionsCount > 0 && (
+              <Badge className="ml-2 bg-red-500 text-white text-xs px-1.5 py-0.5 min-w-[20px] h-5">
+                {pendingActionsCount}
+              </Badge>
+            )}
           </Button>
 
           {/* Report Dropdown */}
@@ -491,6 +524,17 @@ export function CleanTopBar({
           </DropdownMenu>
         </div>
       </div>
+
+      {/* Priority Hub Panel */}
+      <PriorityHub 
+        isOpen={showPriorityHub}
+        onClose={() => setShowPriorityHub(false)}
+        onClientSelect={(clientId, actionId) => {
+          if (onClientSelect) {
+            onClientSelect(clientId, actionId);
+          }
+        }}
+      />
     </div>
   );
 }

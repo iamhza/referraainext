@@ -647,17 +647,22 @@ export function ServiceFeedTab({ clientId }: ServiceFeedTabProps) {
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Plus className="w-8 h-8 text-blue-600" />
                 </div>
-                <p className="text-sm text-slate-600 mb-4">Create a new workflow action</p>
+                <p className="text-sm text-slate-600 mb-4">
+                  {serviceContexts.length > 0 
+                    ? 'Create a new workflow action' 
+                    : 'No active services yet. Create a general client action.'}
+                </p>
                 <Button 
                   onClick={() => setIsAddActionModalOpen(true)}
-                  disabled={!selectedContextId}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Create Action
                 </Button>
-                {!selectedContextId && (
-                  <p className="text-xs text-slate-500 mt-2">Select a context above to create actions</p>
+                {serviceContexts.length === 0 && (
+                  <p className="text-xs text-slate-500 mt-2">
+                    You can create general actions like notes, follow-ups, or documentation requests
+                  </p>
                 )}
               </div>
             )}
@@ -744,6 +749,28 @@ export function ServiceFeedTab({ clientId }: ServiceFeedTabProps) {
                   
                   {action.description && (
                     <p className="text-sm text-slate-700 leading-relaxed mb-4 break-words whitespace-pre-wrap">{action.description}</p>
+                  )}
+                  
+                  {/* Custom Data Fields */}
+                  {action.data && Object.keys(action.data).length > 0 && (
+                    <div className="space-y-2 mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                      {Object.entries(action.data).map(([key, value]) => {
+                        if (!value || key === 'notes') return null;
+                        const label = key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                        return (
+                          <div key={key} className="flex items-start gap-2 text-sm">
+                            <span className="font-semibold text-slate-900 min-w-[100px]">{label}:</span>
+                            <span className="text-slate-700 break-words">{String(value)}</span>
+                          </div>
+                        );
+                      })}
+                      {action.notes && (
+                        <div className="flex items-start gap-2 text-sm pt-2 border-t border-slate-200">
+                          <span className="font-semibold text-slate-900 min-w-[100px]">Notes:</span>
+                          <span className="text-slate-700 break-words whitespace-pre-wrap">{action.notes}</span>
+                        </div>
+                      )}
+                    </div>
                   )}
           </div>
             </div>

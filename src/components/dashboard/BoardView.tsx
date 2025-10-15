@@ -44,7 +44,7 @@ import {
 interface BoardViewProps {
   onClientClick?: (client: ClientType) => void;
   onRequestUpdate?: (client: ClientType) => void;
-  onClientsLoaded?: (count: number) => void;
+  onClientsLoaded?: (count: number, clients?: ClientType[]) => void;
   refreshTrigger?: number;
   viewDensity?: 'comfortable' | 'compact';
   className?: string;
@@ -259,9 +259,9 @@ export function BoardView({
   // Notify parent of client count
   useEffect(() => {
     if (clients.length > 0 && onClientsLoaded) {
-      onClientsLoaded(clients.length);
+      onClientsLoaded(clients.length, clients);
     }
-  }, [clients.length, onClientsLoaded]);
+  }, [clients.length, onClientsLoaded, clients]);
 
   // Load custom order from localStorage on mount
   useEffect(() => {

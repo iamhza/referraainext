@@ -389,8 +389,8 @@ export function AddActionModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col bg-white border border-slate-200 shadow-2xl rounded-2xl">
+    <Dialog open={isOpen} onOpenChange={onClose} modal={true}>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col bg-white border border-slate-200 shadow-2xl rounded-2xl z-[9999] pointer-events-auto">
         <DialogHeader className="pb-6 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white flex-shrink-0">
           <DialogTitle className="flex items-center gap-4 text-2xl font-semibold text-slate-900">
             <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-sm">
@@ -406,95 +406,111 @@ export function AddActionModal({
           </p>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto bg-white p-6 min-h-0">
+        <div className="flex-1 overflow-y-auto bg-white p-6 min-h-0 pointer-events-auto">
           {!selectedAction ? (
             // Action Selection View
             <div className="space-y-6">
-              {/* Context Selection */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-6">
-                <h3 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-3">
-                  <div className="w-6 h-6 bg-primary-100 rounded-lg flex items-center justify-center">
-                    <Users className="w-4 h-4 text-primary-600" />
-                  </div>
-                  Choose Context
-                </h3>
-                <p className="text-sm text-slate-600 mb-6 leading-relaxed">
-                  Select which service or referral this action relates to:
-                </p>
-                
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <label className="text-sm font-semibold text-slate-700 min-w-[100px]">Context:</label>
-                    <select
-                      value={selectedContext?.id || 'general'}
-                      onChange={(e) => {
-                        const contextId = e.target.value;
-                        if (contextId === 'general') {
-                          setSelectedContext(null);
-                        } else {
-                          const context = serviceContexts.find(ctx => ctx.id === contextId);
-                          setSelectedContext(context || null);
-                        }
-                      }}
-                      className="flex-1 px-4 py-3 border border-slate-300 rounded-lg bg-white hover:border-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all text-sm"
-                    >
-                      <option value="general">General Client Actions</option>
-                      {serviceContexts.length > 0 && (
-                        <optgroup label="Referrals">
-                          {serviceContexts
-                            .filter(ctx => ctx.type === 'referral')
-                            .map(context => (
-                              <option key={context.id} value={context.id}>
-                                📄 {context.label} ({context.status})
-                              </option>
-                            ))}
-                        </optgroup>
-                      )}
-                      {serviceContexts.filter(ctx => ctx.type === 'connection').length > 0 && (
-                        <optgroup label="Active Connections">
-                          {serviceContexts
-                            .filter(ctx => ctx.type === 'connection')
-                            .map(context => (
-                              <option key={context.id} value={context.id}>
-                                👥 {context.label} ({context.status})
-                              </option>
-                            ))}
-                        </optgroup>
-                      )}
-                    </select>
-                  </div>
+              {/* Context Selection - Only show if there are contexts available */}
+              {serviceContexts.length > 0 ? (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-6">
+                  <h3 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-3">
+                    <div className="w-6 h-6 bg-primary-100 rounded-lg flex items-center justify-center">
+                      <Users className="w-4 h-4 text-primary-600" />
+                    </div>
+                    Choose Context
+                  </h3>
+                  <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+                    Select which service or referral this action relates to:
+                  </p>
                   
-                  {/* Selected Context Display */}
-                  {selectedContext && (
-                    <div className="bg-white border border-slate-200 rounded-lg p-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                          selectedContext.type === 'referral' ? 'bg-blue-100' : 'bg-green-100'
-                        }`}>
-                          {selectedContext.type === 'referral' ? (
-                            <FileText className="w-4 h-4 text-blue-600" />
-                          ) : (
-                            <Users className="w-4 h-4 text-green-600" />
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <label className="text-sm font-semibold text-slate-700 min-w-[100px]">Context:</label>
+                      <select
+                        value={selectedContext?.id || 'general'}
+                        onChange={(e) => {
+                          const contextId = e.target.value;
+                          if (contextId === 'general') {
+                            setSelectedContext(null);
+                          } else {
+                            const context = serviceContexts.find(ctx => ctx.id === contextId);
+                            setSelectedContext(context || null);
+                          }
+                        }}
+                        className="flex-1 px-4 py-3 border border-slate-300 rounded-lg bg-white hover:border-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all text-sm"
+                      >
+                        <option value="general">General Client Actions</option>
+                        {serviceContexts.filter(ctx => ctx.type === 'referral').length > 0 && (
+                          <optgroup label="Referrals">
+                            {serviceContexts
+                              .filter(ctx => ctx.type === 'referral')
+                              .map(context => (
+                                <option key={context.id} value={context.id}>
+                                  {context.label} ({context.status})
+                                </option>
+                              ))}
+                          </optgroup>
+                        )}
+                        {serviceContexts.filter(ctx => ctx.type === 'connection').length > 0 && (
+                          <optgroup label="Active Connections">
+                            {serviceContexts
+                              .filter(ctx => ctx.type === 'connection')
+                              .map(context => (
+                                <option key={context.id} value={context.id}>
+                                  {context.label} ({context.status})
+                                </option>
+                              ))}
+                          </optgroup>
+                        )}
+                      </select>
+                    </div>
+                    
+                    {/* Selected Context Display */}
+                    {selectedContext && (
+                      <div className="bg-white border border-slate-200 rounded-lg p-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                            selectedContext.type === 'referral' ? 'bg-blue-100' : 'bg-green-100'
+                          }`}>
+                            {selectedContext.type === 'referral' ? (
+                              <FileText className="w-4 h-4 text-blue-600" />
+                            ) : (
+                              <Users className="w-4 h-4 text-green-600" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium text-slate-900">{selectedContext.label}</div>
+                            <div className="text-sm text-slate-500">
+                              {selectedContext.serviceType || 'Service'} • {selectedContext.status}
+                            </div>
+                          </div>
+                          {selectedContext.pendingActionsCount > 0 && (
+                            <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                              {selectedContext.pendingActionsCount} pending
+                            </Badge>
                           )}
                         </div>
-                        <div className="flex-1">
-                          <div className="font-medium text-slate-900">{selectedContext.label}</div>
-                          <div className="text-sm text-slate-500">
-                            {selectedContext.serviceType || 'Service'} • {selectedContext.status}
-                          </div>
-                        </div>
-                        {selectedContext.pendingActionsCount > 0 && (
-                          <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
-                            {selectedContext.pendingActionsCount} pending
-                          </Badge>
-                        )}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* No referrals/connections - Show info message */
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-blue-900 mb-1">General Client Actions</h4>
+                      <p className="text-xs text-blue-700">
+                        This client has no active referrals or provider connections yet. 
+                        You can still create general actions like notes, follow-ups, or documentation requests.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-              <p className="text-slate-600 text-center mb-8 text-base">
+              <p className="text-slate-600 text-center mb-6 text-base font-medium">
                 Select an action to add to this client's workflow:
               </p>
 
@@ -510,8 +526,13 @@ export function AddActionModal({
                   {actionCategories.priority.map(action => (
                     <button
                       key={action.id}
-                      onClick={() => handleActionSelect(action)}
-                      className="flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-primary-300 hover:bg-primary-50 hover:shadow-sm transition-all duration-200 text-left group"
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleActionSelect(action);
+                      }}
+                      className="flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-primary-300 hover:bg-primary-50 hover:shadow-sm transition-all duration-200 text-left group cursor-pointer"
                     >
                       <div className="text-2xl group-hover:scale-110 transition-transform duration-200">{action.icon}</div>
                       <div className="flex-1">
@@ -546,8 +567,13 @@ export function AddActionModal({
                     {actionCategories.authorization.map(action => (
                       <button
                         key={action.id}
-                        onClick={() => handleActionSelect(action)}
-                        className="flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-primary-300 hover:bg-primary-50 hover:shadow-sm transition-all duration-200 text-left group"
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleActionSelect(action);
+                        }}
+                        className="flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-primary-300 hover:bg-primary-50 hover:shadow-sm transition-all duration-200 text-left group cursor-pointer"
                       >
                         <div className="text-2xl group-hover:scale-110 transition-transform duration-200">{action.icon}</div>
                         <div className="flex-1">
@@ -573,8 +599,13 @@ export function AddActionModal({
                     {actionCategories.general.map(action => (
                       <button
                         key={action.id}
-                        onClick={() => handleActionSelect(action)}
-                        className="flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-primary-300 hover:bg-primary-50 hover:shadow-sm transition-all duration-200 text-left group"
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleActionSelect(action);
+                        }}
+                        className="flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-primary-300 hover:bg-primary-50 hover:shadow-sm transition-all duration-200 text-left group cursor-pointer"
                       >
                         <div className="text-2xl group-hover:scale-110 transition-transform duration-200">{action.icon}</div>
                         <div className="flex-1">
@@ -586,26 +617,6 @@ export function AddActionModal({
                   </div>
                 </div>
               )}
-
-              {/* General Actions */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">General</h3>
-                <div className="grid grid-cols-1 gap-2">
-                  {actionCategories.general.map(action => (
-                    <button
-                      key={action.id}
-                      onClick={() => handleActionSelect(action)}
-                      className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
-                    >
-                      <span className="text-lg">{action.icon}</span>
-                      <div className="flex-1">
-                        <span className="font-medium text-gray-900">{action.label}</span>
-                        <p className="text-sm text-gray-600 mt-1">{action.description}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
           ) : (
             // Action Form View

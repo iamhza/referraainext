@@ -81,87 +81,74 @@ export function PriorityPanel({
         : 'bg-gradient-to-r from-orange-50 via-orange-50/80 to-yellow-50/50 border-orange-200',
       className
     )}>
-      <div className="max-w-7xl mx-auto px-6 py-4">
-        <div className="flex items-start justify-between gap-4">
-          {/* Left: Content */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-              <div className={cn(
-                'flex h-9 w-9 items-center justify-center rounded-lg',
-                isOverdue ? 'bg-red-100' : 'bg-orange-100'
-              )}>
-                <AlertCircle 
-                  className={cn(
-                    'h-5 w-5',
-                    isOverdue ? 'text-red-600' : 'text-orange-600'
-                  )} 
-                  strokeWidth={2.5} 
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2 flex-wrap">
-                  <h3 className={cn(
-                    'text-sm font-bold tracking-tight',
-                    isOverdue ? 'text-red-900' : 'text-orange-900'
-                  )}>
-                    NEXT ACTION
-                  </h3>
-                  {status.subtext && (
-                    <span className={cn(
-                      'inline-flex items-center gap-1 text-xs font-semibold',
-                      isOverdue ? 'text-red-700' : 'text-orange-700'
-                    )}>
-                      <Clock className="h-3 w-3" strokeWidth={2.5} />
-                      {status.subtext}
-                    </span>
-                  )}
-                </div>
-              </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2">
+        <div className="flex items-center justify-between gap-3">
+          {/* Left: Compact Content */}
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className={cn(
+              'flex h-7 w-7 items-center justify-center rounded-md flex-shrink-0',
+              isOverdue ? 'bg-red-100' : 'bg-orange-100'
+            )}>
+              <AlertCircle 
+                className={cn(
+                  'h-4 w-4',
+                  isOverdue ? 'text-red-600' : 'text-orange-600'
+                )} 
+                strokeWidth={2.5} 
+              />
             </div>
-
-            <div className="ml-11 space-y-1">
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className={cn(
+                  'text-xs font-bold uppercase tracking-wide',
+                  isOverdue ? 'text-red-900' : 'text-orange-900'
+                )}>
+                  Next Action
+                </span>
+                {status.subtext && (
+                  <span className={cn(
+                    'inline-flex items-center gap-1 text-xs font-medium',
+                    isOverdue ? 'text-red-700' : 'text-orange-700'
+                  )}>
+                    <Clock className="h-3 w-3" />
+                    {status.subtext}
+                  </span>
+                )}
+              </div>
               <p className={cn(
-                'text-base font-semibold',
+                'text-sm font-semibold truncate',
                 isOverdue ? 'text-red-950' : 'text-orange-950'
               )}>
-                {urgentClient.firstName} {urgentClient.lastName}
-              </p>
-              <p className={cn(
-                'text-sm font-medium',
-                isOverdue ? 'text-red-800' : 'text-orange-800'
-              )}>
-                {status.text}
+                {urgentClient.firstName} {urgentClient.lastName}: {status.text}
                 {status.serviceContext && (
-                  <span className="ml-2 opacity-75">
-                    ({status.serviceContext})
+                  <span className="ml-1 opacity-75">
+                    • {status.serviceContext}
                   </span>
                 )}
               </p>
             </div>
           </div>
 
-          {/* Right: Actions */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Right: Compact Actions */}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             <Button
               size="sm"
               onClick={handleComplete}
               disabled={isCompleting}
               className={cn(
-                'font-semibold shadow-sm',
+                'h-7 text-xs font-semibold px-3',
                 isOverdue 
                   ? 'bg-red-600 hover:bg-red-700 text-white' 
                   : 'bg-orange-600 hover:bg-orange-700 text-white'
               )}
             >
               {isCompleting ? (
-                <>
-                  <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  Completing...
-                </>
+                <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <CheckCircle2 className="h-4 w-4 mr-2" strokeWidth={2.5} />
-                  Mark Complete
+                  <CheckCircle2 className="h-3 w-3 mr-1.5" />
+                  Complete
                 </>
               )}
             </Button>
@@ -171,29 +158,14 @@ export function PriorityPanel({
               variant="outline"
               onClick={() => onViewClient(urgentClient._id!)}
               className={cn(
-                'font-semibold border-2',
+                'h-7 text-xs font-semibold px-3',
                 isOverdue 
-                  ? 'border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400' 
-                  : 'border-orange-300 text-orange-700 hover:bg-orange-50 hover:border-orange-400'
+                  ? 'border-red-300 text-red-700 hover:bg-red-50' 
+                  : 'border-orange-300 text-orange-700 hover:bg-orange-50'
               )}
             >
-              <Eye className="h-4 w-4 mr-2" strokeWidth={2.5} />
-              View Client
-            </Button>
-
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={onSkip}
-              className={cn(
-                'font-semibold',
-                isOverdue 
-                  ? 'text-red-700 hover:bg-red-100' 
-                  : 'text-orange-700 hover:bg-orange-100'
-              )}
-            >
-              <SkipForward className="h-4 w-4 mr-2" strokeWidth={2.5} />
-              Skip
+              <Eye className="h-3 w-3 mr-1.5" />
+              View
             </Button>
 
             <Button
@@ -201,12 +173,13 @@ export function PriorityPanel({
               variant="ghost"
               onClick={onDismiss}
               className={cn(
+                'h-7 w-7 p-0',
                 isOverdue 
                   ? 'text-red-600 hover:bg-red-100' 
                   : 'text-orange-600 hover:bg-orange-100'
               )}
             >
-              <X className="h-4 w-4" strokeWidth={2} />
+              <X className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
