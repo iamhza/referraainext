@@ -261,15 +261,15 @@ export function CleanTopBar({
             onReferralCreated={onReferralCreated}
           />
 
-          {/* Triage Feed POC Button */}
+          {/* Caseload Hub Button */}
           <Button 
             variant="default" 
             size="sm"
-            onClick={() => router.push('/case-manager/triage-feed')}
+            onClick={() => router.push('/case-manager/caseload-hub')}
             className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0"
           >
-            <Zap className="w-4 h-4 mr-2" />
-            Triage Feed POC
+            <Users className="w-4 h-4 mr-2" />
+            Caseload Hub
           </Button>
 
           {/* Report Dropdown */}
