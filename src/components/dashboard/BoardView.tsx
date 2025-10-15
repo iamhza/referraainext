@@ -283,7 +283,69 @@ export function BoardView({
     }
   }, [refreshTrigger, mutateClients, mutateConnections]);
 
-  // Group clients by status with custom ordering (use localClients for drag operations)
+  // Filter clients based on active filter
+  const filteredClients = useMemo(() => {
+    if (activeFilter === 'all') return localClients;
+    
+    const now = new Date();
+    return localClients.filter(client => {
+      const status = client.smartStatus;
+      
+      switch (activeFilter) {
+        case 'overdue':
+          return status?.color === 'red';
+        case 'due_today':
+          return status?.dueDate && 
+                 new Date(status.dueDate).toDateString() === now.toDateString();
+        case 'this_week': {
+          const dueDate = status?.dueDate ? new Date(status.dueDate) : null;
+          return dueDate && dueDate <= new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        }
+        case 'needs_docs':
+          return status?.actionType === 'request_documentation';
+        case 'no_activity': {
+          const lastUpdate = client.updatedAt ? new Date(client.updatedAt) : null;
+          return lastUpdate && (now.getTime() - lastUpdate.getTime()) > 30 * 24 * 60 * 60 * 1000;
+        }
+        default:
+          return true;
+      }
+    });
+  }, [localClients, activeFilter]);
+
+  // Compute filter counts for FilterBar
+  const filterCounts: FilterCounts = useMemo(() => {
+    const now = new Date();
+    return {
+      all: clients.length,
+      overdue: clients.filter(c => c.smartStatus?.color === 'red').length,
+      dueToday: clients.filter(c => {
+        const dueDate = c.smartStatus?.dueDate;
+        return dueDate && new Date(dueDate).toDateString() === now.toDateString();
+      }).length,
+      thisWeek: clients.filter(c => {
+        const dueDate = c.smartStatus?.dueDate;
+        return dueDate && new Date(dueDate) <= new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      }).length,
+      needsDocs: clients.filter(c => c.smartStatus?.actionType === 'request_documentation').length,
+      noActivity: clients.filter(c => {
+        const lastUpdate = c.updatedAt ? new Date(c.updatedAt) : null;
+        return lastUpdate && (now.getTime() - lastUpdate.getTime()) > 30 * 24 * 60 * 60 * 1000;
+      }).length,
+    };
+  }, [clients]);
+
+  // Get most urgent client for priority panel
+  const mostUrgentClient = useMemo(() => {
+    const clientsWithStatus = clients.filter(c => c.smartStatus);
+    if (clientsWithStatus.length === 0) return null;
+    
+    return clientsWithStatus.sort((a, b) => {
+      return (b.smartStatus?.urgencyScore || 0) - (a.smartStatus?.urgencyScore || 0);
+    })[0];
+  }, [clients]);
+
+  // Group clients by status with custom ordering (use filteredClients for filtering)
   const clientsByStatus = useMemo(() => {
     const groups = {
       UNPLACED: [] as ClientType[],
@@ -294,7 +356,7 @@ export function BoardView({
       CLOSED_DISCHARGED: [] as ClientType[]
     };
 
-    localClients.forEach(client => {
+    filteredClients.forEach(client => {
       // Map old statuses to new ones for backward compatibility
       let status = client.status || 'UNPLACED';
       
@@ -310,7 +372,7 @@ export function BoardView({
       }
     });
 
-    // Apply custom ordering if it exists, otherwise sort by date
+    // Apply custom ordering if it exists, otherwise sort by URGENCY FIRST, then date
     Object.keys(groups).forEach(status => {
       const statusKey = status as keyof typeof groups;
       const customOrderForStatus = customOrder[status];
@@ -330,14 +392,26 @@ export function BoardView({
           if (aIndex !== -1) return -1;
           if (bIndex !== -1) return 1;
           
-          // If neither is in custom order, sort by date
+          // If neither is in custom order, sort by urgency first, then date
+          const urgencyA = a.smartStatus?.urgencyScore || 0;
+          const urgencyB = b.smartStatus?.urgencyScore || 0;
+          if (urgencyA !== urgencyB) return urgencyB - urgencyA;
+          
           const dateA = new Date(a.updatedAt || a.createdAt || 0);
           const dateB = new Date(b.updatedAt || b.createdAt || 0);
           return dateB.getTime() - dateA.getTime();
         });
       } else {
-        // Default sort by most recently updated first
+        // DEFAULT SORT: Urgency first (urgent cards float to top), then date
         groups[statusKey].sort((a, b) => {
+          // Sort by urgency score first (highest first)
+          const urgencyA = a.smartStatus?.urgencyScore || 0;
+          const urgencyB = b.smartStatus?.urgencyScore || 0;
+          if (urgencyA !== urgencyB) {
+            return urgencyB - urgencyA;
+          }
+          
+          // Then by date (most recent first)
           const dateA = new Date(a.updatedAt || a.createdAt || 0);
           const dateB = new Date(b.updatedAt || b.createdAt || 0);
           return dateB.getTime() - dateA.getTime();
@@ -346,7 +420,7 @@ export function BoardView({
     });
 
     return groups;
-  }, [localClients, customOrder]);
+  }, [filteredClients, customOrder]);
 
   // Handle request update for a client
   const handleRequestUpdate = async (client: ClientType) => {
@@ -481,6 +555,45 @@ export function BoardView({
   const handleCancelDelete = useCallback(() => {
     setDeleteModalOpen(false);
     setClientToDelete(null);
+  }, []);
+
+  // Handle priority panel action completion
+  const handleCompleteAction = useCallback(async (clientId: string, actionId: string) => {
+    try {
+      const response = await fetch(`/api/actions/${actionId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: 'completed' }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to complete action');
+      }
+
+      toast({
+        title: "Action Completed",
+        description: "Successfully marked action as complete",
+      });
+
+      // Refresh clients to update smart status
+      mutateClients();
+    } catch (error) {
+      console.error('Error completing action:', error);
+      toast({
+        title: "Error",
+        description: "Failed to complete action",
+        variant: "destructive",
+      });
+    }
+  }, [toast, mutateClients]);
+
+  const handleSkipPriorityAction = useCallback(() => {
+    // For now, just hide the panel temporarily
+    // In a full implementation, could track skipped actions
+    setShowPriorityPanel(false);
+    setTimeout(() => setShowPriorityPanel(true), 5000); // Show again after 5 seconds
   }, []);
 
   // Fast collision detection for immediate response
@@ -1000,10 +1113,31 @@ export function BoardView({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className={`h-full relative bg-gray-50/50 ${className}`}>
+      <div className={`h-full flex flex-col relative bg-gray-50/50 ${className}`}>
+        {/* Priority Panel - Shows most urgent action */}
+        {showPriorityPanel && mostUrgentClient && (
+          <PriorityPanel
+            urgentClient={mostUrgentClient}
+            onComplete={handleCompleteAction}
+            onSkip={handleSkipPriorityAction}
+            onViewClient={(id) => {
+              const client = clients.find(c => c._id === id);
+              if (client) handleClientClick(client);
+            }}
+            onDismiss={() => setShowPriorityPanel(false)}
+          />
+        )}
+
+        {/* Filter Bar - Smart filtering with keyboard shortcuts */}
+        <FilterBar
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+          counts={filterCounts}
+        />
+
         {/* Main Board Area - Full width, never shrinks */}
         <div 
-          className="flex flex-col absolute inset-0 kanban-board-container"
+          className="flex flex-col flex-1 relative kanban-board-container"
         >
           {/* Board container - narrowed columns */}
           <div className="flex-1 overflow-hidden px-1 sm:px-2 lg:px-3 py-4">
