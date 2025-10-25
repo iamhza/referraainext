@@ -18,42 +18,42 @@ export function ColumnHeader({ status, count, onAddClient, className = '', heade
     switch (status) {
       case 'UNPLACED':
         return {
-          title: 'Unplaced',
+          title: 'Seeking Services',
           textColor: 'text-slate-900',
           countBg: 'bg-slate-200/80',
           countText: 'text-slate-700'
         };
       case 'REFERRAL_SENT':
         return {
-          title: 'Referral Sent',
+          title: 'Referrals Pending',
           textColor: 'text-slate-900',
           countBg: 'bg-blue-200/80',
           countText: 'text-blue-700'
         };
       case 'IN_PROCESS':
         return {
-          title: 'In Process',
+          title: 'Getting Connected',
           textColor: 'text-slate-900',
           countBg: 'bg-purple-200/80',
           countText: 'text-purple-700'
         };
       case 'ACTIVE_STABLE':
         return {
-          title: 'Active',
+          title: 'Services Active',
           textColor: 'text-slate-900',
           countBg: 'bg-emerald-200/80',
           countText: 'text-emerald-700'
         };
       case 'ACTIVE_NEEDS_ATTENTION':
         return {
-          title: 'Needs Attention',
+          title: 'Services At Risk',
           textColor: 'text-slate-900',
           countBg: 'bg-amber-200/80',
           countText: 'text-amber-700'
         };
       case 'CLOSED_DISCHARGED':
         return {
-          title: 'Closed',
+          title: 'Case Closed',
           textColor: 'text-slate-900',
           countBg: 'bg-gray-200/80',
           countText: 'text-gray-600'
@@ -61,14 +61,14 @@ export function ColumnHeader({ status, count, onAddClient, className = '', heade
       // Legacy support
       case 'UNPLACED_NEW':
         return {
-          title: 'Unplaced',
+          title: 'Seeking Services',
           textColor: 'text-slate-900',
           countBg: 'bg-slate-200/80',
           countText: 'text-slate-700'
         };
       case 'ACTIVE_FRUSTRATED':
         return {
-          title: 'Needs Attention',
+          title: 'Services At Risk',
           textColor: 'text-slate-900',
           countBg: 'bg-amber-200/80',
           countText: 'text-amber-700'

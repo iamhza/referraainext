@@ -8,13 +8,14 @@ import clientPromise from "./mongodb";
 import bcrypt from 'bcryptjs';
 import { ObjectId } from 'mongodb';
 
-// Extend NextAuth types for multi-tenant organization system
+// v1.1 Data Model - Updated for org_members junction table
 declare module "next-auth" {
   interface User {
     id: string;
-    role: 'platform_admin' | 'org_admin' | 'supervisor' | 'case_manager' | 'provider';
-    org_id?: string | null;
-    team_id?: string | null;
+    role: 'PLATFORM_ADMIN' | 'ORG_ADMIN' | 'SUPERVISOR' | 'CASE_MANAGER' | 'PROVIDER_USER';
+    organizationId?: string | null;
+    teamId?: string | null;
+    providerId?: string | null;
     permissions?: string[];
     organization?: {
       id: string;
@@ -25,7 +26,6 @@ declare module "next-auth" {
     team?: {
       id: string;
       name: string;
-      specializations: string[];
     } | null;
   }
   
@@ -33,8 +33,9 @@ declare module "next-auth" {
     user: User & {
       id: string;
       role: string;
-      org_id?: string | null;
-      team_id?: string | null;
+      organizationId?: string | null;
+      teamId?: string | null;
+      providerId?: string | null;
       permissions?: string[];
       organization?: any;
       team?: any;
@@ -46,8 +47,9 @@ declare module "next-auth/jwt" {
   interface JWT {
     id: string;
     role: string;
-    org_id?: string | null;
-    team_id?: string | null;
+    organizationId?: string | null;
+    teamId?: string | null;
+    providerId?: string | null;
     permissions?: string[];
     organization?: any;
     team?: any;
@@ -78,7 +80,7 @@ const authOptions: NextAuthOptions = {
           
           let user;
 
-          // Multi-tenant login logic
+          // Multi-tenant login logic (v1.1: org membership in org_members, not on user)
           if (credentials.org_domain) {
             console.log('Looking for organization with domain/slug:', credentials.org_domain);
             // Organization-specific login
@@ -91,45 +93,44 @@ const authOptions: NextAuthOptions = {
             
             if (organization) {
               console.log('Found organization:', organization.name, 'ID:', organization._id);
+              
+              // v1.1: Find user by email only (org_id removed from users)
               user = await db.collection("users").findOne({
-                email: credentials.email.toLowerCase(),
-                org_id: organization._id.toString()
+                email: credentials.email.toLowerCase()
               });
-              console.log('User lookup result:', user ? 'Found' : 'Not found');
+              
+              if (user) {
+                // v1.1: Verify user belongs to this organization via org_members
+                const orgMember = await db.collection("org_members").findOne({
+                  userId: user._id.toString(),
+                  organizationId: organization._id.toString()
+                });
+                
+                if (!orgMember) {
+                  console.log('User not member of organization:', organization.name);
+                  return null;
+                }
+                console.log('User lookup result: Found, verified org membership');
+              } else {
+                console.log('User lookup result: Not found');
+              }
             } else {
               console.log('Organization not found for domain:', credentials.org_domain);
             }
           } else if (credentials.login_type === 'provider') {
-            // Provider login (no org restriction)
+            // v1.1: Provider login (role is in org_members now)
             console.log('Provider login attempt for:', credentials.email);
             user = await db.collection("users").findOne({
-              email: credentials.email.toLowerCase(),
-              role: "provider"
+              email: credentials.email.toLowerCase()
             });
             console.log('Provider lookup result:', user ? 'Found' : 'Not found');
           } else {
-            // Try platform admin first
+            // v1.1: Just find user by email (role is in org_members)
+            console.log('General login attempt for:', credentials.email);
             user = await db.collection("users").findOne({
-              email: credentials.email.toLowerCase(),
-              $or: [
-                { role: "platform_admin" },
-                { role: "admin" } // Support existing admin role
-              ]
+              email: credentials.email.toLowerCase()
             });
-            
-            // Map legacy admin role to platform_admin
-            if (user && user.role === "admin") {
-              user.role = "platform_admin";
-            }
-            
-            // If not admin, try to find ANY user with this email (sandbox users, users without org yet)
-            if (!user) {
-              console.log('Not a platform admin, checking for sandbox/org-less user');
-              user = await db.collection("users").findOne({
-                email: credentials.email.toLowerCase()
-              });
-              console.log('Sandbox/general user lookup:', user ? `Found (${user.role})` : 'Not found');
-            }
+            console.log('User lookup result:', user ? 'Found' : 'Not found');
           }
 
           if (!user) {
@@ -150,70 +151,53 @@ const authOptions: NextAuthOptions = {
             return null;
           }
 
-          // Get organization data if user has org_id
-          let organizationData = null;
-          if (user.org_id) {
-            try {
-              // Try string ID first since our org IDs are stored as strings
-              organizationData = await db.collection("organizations").findOne({
-                _id: user.org_id
-              });
-              
-              // If not found, try ObjectId conversion
-              if (!organizationData && typeof user.org_id === 'string') {
-                try {
-                  const orgObjectId = new ObjectId(user.org_id);
-                  organizationData = await db.collection("organizations").findOne({
-                    _id: orgObjectId
-                  });
-                } catch (objIdError) {
-                  console.log('ObjectId conversion failed:', objIdError);
-                }
-              }
-              
-              console.log('Found organization for user:', organizationData?.name);
-            } catch (error) {
-              console.log('Error fetching organization:', error);
-            }
+          // v1.1: Get org membership from org_members junction table
+          const orgMember = await db.collection("org_members").findOne({
+            userId: user._id.toString()
+          });
+
+          if (!orgMember) {
+            console.log('No org_member record found for user:', user.email);
+            return null;
           }
 
-          // Get team data if user has team_id
+          console.log('Found org_member:', orgMember.role, 'for org:', orgMember.organizationId);
+
+          // Get organization data (organizationId is a UUID string, not ObjectId)
+          let organizationData = null;
+          try {
+            organizationData = await db.collection("organizations").findOne({
+              _id: orgMember.organizationId
+            });
+            console.log('Found organization:', organizationData?.name);
+          } catch (error) {
+            console.log('Error fetching organization:', error);
+          }
+
+          // Get team data if user has teamId (teamId is also a UUID string)
           let teamData = null;
-          if (user.team_id) {
+          if (orgMember.teamId) {
             try {
-              // Try string ID first since our team IDs are stored as strings
               teamData = await db.collection("teams").findOne({
-                _id: user.team_id
+                _id: orgMember.teamId
               });
-              
-              // If not found, try ObjectId conversion
-              if (!teamData && typeof user.team_id === 'string') {
-                try {
-                  const teamObjectId = new ObjectId(user.team_id);
-                  teamData = await db.collection("teams").findOne({
-                    _id: teamObjectId
-                  });
-                } catch (objIdError) {
-                  console.log('Team ObjectId conversion failed:', objIdError);
-                }
-              }
-              
-              console.log('Found team for user:', teamData?.name);
+              console.log('Found team:', teamData?.name);
             } catch (error) {
               console.log('Error fetching team:', error);
             }
           }
 
-          console.log('Login successful for:', credentials.email, 'Role:', user.role);
+          console.log('Login successful for:', credentials.email, 'Role:', orgMember.role);
 
           return {
             id: user._id.toString(),
-            name: user.full_name || user.name || user.email,
+            name: user.name || user.email,
             email: user.email,
-            role: user.role,
-            org_id: user.org_id,
-            team_id: user.team_id,
-            permissions: user.permissions || [],
+            role: orgMember.role,
+            organizationId: orgMember.organizationId,
+            teamId: orgMember.teamId || null,
+            providerId: orgMember.providerId || null,
+            permissions: [],
             organization: organizationData ? {
               id: organizationData._id.toString(),
               name: organizationData.name,
@@ -223,8 +207,7 @@ const authOptions: NextAuthOptions = {
             } : null,
             team: teamData ? {
               id: teamData._id.toString(),
-              name: teamData.name,
-              specializations: teamData.specializations || []
+              name: teamData.name
             } : null
           };
 
@@ -238,11 +221,12 @@ const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        // Store all user data in JWT for multi-tenant support
+        // v1.1: Store all user data in JWT for multi-tenant support
         token.id = user.id;
         token.role = user.role;
-        token.org_id = user.org_id;
-        token.team_id = user.team_id;
+        token.organizationId = user.organizationId;
+        token.teamId = user.teamId;
+        token.providerId = user.providerId;
         token.permissions = user.permissions;
         token.organization = user.organization;
         token.team = user.team;
@@ -251,11 +235,12 @@ const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (token) {
-        // Pass all data to session for client use
+        // v1.1: Pass all data to session for client use
         session.user.id = token.id as string;
-        session.user.role = token.role as 'platform_admin' | 'org_admin' | 'supervisor' | 'case_manager' | 'provider';
-        session.user.org_id = token.org_id as string;
-        session.user.team_id = token.team_id as string;
+        session.user.role = token.role as 'PLATFORM_ADMIN' | 'ORG_ADMIN' | 'SUPERVISOR' | 'CASE_MANAGER' | 'PROVIDER_USER';
+        session.user.organizationId = token.organizationId as string;
+        session.user.teamId = token.teamId as string;
+        session.user.providerId = token.providerId as string;
         session.user.permissions = token.permissions as string[];
         session.user.organization = token.organization;
         session.user.team = token.team;

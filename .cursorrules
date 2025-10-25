@@ -729,6 +729,39 @@ import { Label } from '@/components/ui/label';
 <input className="..." />  // No, use <Input>
 ```
 
+### Component Styling Standards (CRITICAL)
+
+**ALWAYS refer to `UI_COMPONENT_STANDARDS.md` for proper styling of:**
+- Select dropdowns (must have `bg-white border-2` on Trigger and Content)
+- AlertDialog/Modal dialogs (must have `z-[9999] bg-white border-2 shadow-2xl` on Content)
+- Inputs/Textareas (must have `bg-white border-2`)
+
+**Key Rules:**
+1. **All AlertDialog/Dialog components** MUST use `z-[9999]` on the Content to appear above overlays
+2. **All Select dropdowns** MUST have `bg-white` on both Trigger and Content
+3. **All SelectItem components** MUST have `cursor-pointer` class
+4. **Never use z-index between 100-9999** (use 50 for dropdowns, 9999 for modals)
+
+**Example (correct):**
+```typescript
+// AlertDialog - ALWAYS use these classes
+<AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+  <AlertDialogContent className="z-[9999] bg-white border-2 shadow-2xl">
+    {/* ... */}
+  </AlertDialogContent>
+</AlertDialog>
+
+// Select - ALWAYS use these classes
+<Select>
+  <SelectTrigger className="h-9 text-sm bg-white border-2 hover:border-slate-300">
+    <SelectValue />
+  </SelectTrigger>
+  <SelectContent className="bg-white border-2 shadow-lg z-50">
+    <SelectItem value="x" className="cursor-pointer">X</SelectItem>
+  </SelectContent>
+</Select>
+```
+
 ### Responsive Design
 
 **Mobile-first approach:**

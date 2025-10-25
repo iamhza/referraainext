@@ -193,43 +193,43 @@ export const STATUS_FLOW = {
 // Client status configuration for board columns
 export const CLIENT_STATUS_CONFIG = {
   UNPLACED: {
-    label: 'Unplaced',
-    description: 'No referrals sent yet',
+    label: 'Seeking Services',
+    description: 'Client needs services, no referrals sent yet',
     color: 'red',
     icon: AlertCircle,
     className: 'bg-red-100 text-red-800 border-red-200'
   },
   REFERRAL_SENT: {
-    label: 'Referral Sent',
-    description: 'Referrals sent but not yet in process',
+    label: 'Referrals Pending',
+    description: 'Waiting for provider response',
     color: 'blue',
     icon: Clock,
     className: 'bg-blue-100 text-blue-800 border-blue-200'
   },
   IN_PROCESS: {
-    label: 'In Process',
-    description: 'Referrals being processed',
+    label: 'Getting Connected',
+    description: 'Provider accepted, intake in progress',
     color: 'purple',
     icon: Activity,
     className: 'bg-purple-100 text-purple-800 border-purple-200'
   },
   ACTIVE_STABLE: {
-    label: 'Active',
-    description: 'Receiving services, stable',
+    label: 'Services Active',
+    description: 'Client is successfully receiving services',
     color: 'green',
     icon: CheckCircle,
     className: 'bg-green-100 text-green-800 border-green-200'
   },
   ACTIVE_NEEDS_ATTENTION: {
-    label: 'Needs Attention',
-    description: 'Receiving services but needs attention',
+    label: 'Services At Risk',
+    description: 'Services broken down or stalled, intervention needed',
     color: 'yellow',
     icon: AlertCircle,
     className: 'bg-yellow-100 text-yellow-800 border-yellow-200'
   },
   CLOSED_DISCHARGED: {
-    label: 'Closed/Discharged',
-    description: 'Services completed or discharged',
+    label: 'Case Closed',
+    description: 'Services completed or client discharged',
     color: 'gray',
     icon: XCircle,
     className: 'bg-gray-100 text-gray-800 border-gray-200'

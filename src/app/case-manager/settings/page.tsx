@@ -22,6 +22,9 @@ export default function SettingsPage() {
     user?.name || 
     ''
   );
+  const [phone, setPhone] = useState(
+    user?.user_metadata?.phone || ''
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   // Debug: Log user data to see what we have
@@ -42,7 +45,10 @@ export default function SettingsPage() {
 
     setIsLoading(true);
     try {
-      await updateProfile({ name: name.trim() });
+      await updateProfile({ 
+        name: name.trim(),
+        phone: phone.trim()
+      });
       toast({
         title: "Success",
         description: "Your profile has been updated successfully",
@@ -93,6 +99,24 @@ export default function SettingsPage() {
                 />
                 <p className="text-xs text-gray-500">
                   This name will be displayed in your dashboard and profile.
+                </p>
+              </div>
+
+              {/* Phone Field */}
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
+                  Phone Number
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="(555) 123-4567"
+                  className="w-full max-w-md"
+                />
+                <p className="text-xs text-gray-500">
+                  Your contact phone number for client communication.
                 </p>
               </div>
 

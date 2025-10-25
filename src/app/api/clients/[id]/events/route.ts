@@ -244,7 +244,7 @@ export async function GET(
 
     // 5. Add connection events from connections collection
     try {
-      const connections = await db.collection('connections').find({
+      const connections = await db.collection('service_relationships').find({
         $or: [
           { 'clientInfo.firstName': clientDoc.firstName, 'clientInfo.lastName': clientDoc.lastName },
           { clientId: clientId }

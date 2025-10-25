@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       caseManagerId: caseManagerId 
     });
     
-    const connectionsResult = await db.collection('connections').deleteMany({ 
+    const connectionsResult = await db.collection('service_relationships').deleteMany({ 
       // Connections might not have caseManagerId, so we'll clear all for safety
       // In production, you'd want more specific filtering
     });

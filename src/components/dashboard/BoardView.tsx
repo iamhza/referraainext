@@ -48,6 +48,8 @@ interface BoardViewProps {
   refreshTrigger?: number;
   viewDensity?: 'comfortable' | 'compact';
   className?: string;
+  clientToOpen?: { clientId: string; actionId?: string } | null;
+  onClientOpened?: () => void;
 }
 
 // Smart fetcher for SWR - handles all data fetching logic
@@ -63,7 +65,9 @@ export function BoardView({
   onClientsLoaded,
   refreshTrigger = 0,
   viewDensity = 'comfortable',
-  className = '' 
+  className = '',
+  clientToOpen,
+  onClientOpened
 }: BoardViewProps) {
   
   // Simplified responsive hook - CSS Grid handles all sizing now!
@@ -262,6 +266,26 @@ export function BoardView({
       onClientsLoaded(clients.length, clients);
     }
   }, [clients.length, onClientsLoaded, clients]);
+
+  // Handle opening client from external trigger (e.g., Priority Hub)
+  useEffect(() => {
+    if (clientToOpen && clients.length > 0) {
+      const client = clients.find(c => c._id === clientToOpen.clientId);
+      if (client) {
+        setSelectedClient(client);
+        setIsDrawerOpen(true);
+        // TODO: Navigate to specific action if actionId provided
+        console.log('📂 Opening client from Priority Hub:', client.firstName, client.lastName);
+        if (clientToOpen.actionId) {
+          console.log('   Action ID:', clientToOpen.actionId);
+        }
+      }
+      // Notify parent that we've handled the open request
+      if (onClientOpened) {
+        onClientOpened();
+      }
+    }
+  }, [clientToOpen, clients, onClientOpened]);
 
   // Load custom order from localStorage on mount
   useEffect(() => {

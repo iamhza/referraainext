@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ProviderDirectoryIntegration } from '@/components/providers/ProviderDirectoryIntegration';
-import { PriorityHub } from '@/components/dashboard/PriorityHub';
 import type { Client as ClientType } from '@/types';
 import { Logo } from '@/components/ui/Logo';
 import {
@@ -22,7 +21,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Search, 
   Plus,
   ChevronDown,
   FileText,
@@ -61,11 +59,8 @@ export function CleanTopBar({
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { theme } = useTheme();
-  const [searchQuery, setSearchQuery] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [showPriorityHub, setShowPriorityHub] = useState(false);
-  const [pendingActionsCount, setPendingActionsCount] = useState(0);
 
   // Load avatar URL from user data
   useEffect(() => {
@@ -95,35 +90,6 @@ export function CleanTopBar({
     loadUserAvatar();
   }, [user]);
 
-  // Load pending actions count
-  useEffect(() => {
-    const loadPendingActionsCount = async () => {
-      try {
-        const response = await fetch('/api/actions/pending');
-        if (response.ok) {
-          const data = await response.json();
-          setPendingActionsCount(data.count || 0);
-        }
-      } catch (error) {
-        console.error('Error fetching pending actions count:', error);
-      }
-    };
-
-    if (user) {
-      loadPendingActionsCount();
-      // Refresh count every 30 seconds
-      const interval = setInterval(loadPendingActionsCount, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [user]);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      console.log('Searching for:', searchQuery);
-      // TODO: Implement search functionality
-    }
-  };
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -185,32 +151,37 @@ export function CleanTopBar({
     }`}>
       <div className="flex items-center justify-between px-6 py-3">
         
-        {/* Left: Logo */}
-        <div className="flex items-center">
-          <Link href="/case-manager" className="flex items-center">
-            <Logo className="h-8" />
-          </Link>
-        </div>
+        {/* Left: Logo - Premium Subtle Styling */}
+          <div className="flex items-center gap-4">
+            <Link 
+              href="/case-manager" 
+              className="flex items-center px-3 py-2 -ml-3 rounded-lg 
+                         relative overflow-hidden
+                         hover:bg-slate-50/80
+                         hover:shadow-sm
+                         hover:-translate-y-0.5
+                         active:translate-y-0 active:scale-[0.98]
+                         transition-all duration-300 ease-out
+                         group
+                         before:absolute before:inset-0 before:rounded-lg
+                         before:bg-gradient-to-r before:from-transparent before:via-white/50 before:to-transparent
+                         before:-translate-x-full before:transition-transform before:duration-700
+                         hover:before:translate-x-full"
+            >
+              <Logo 
+                className="h-6 relative z-10 
+                           group-hover:brightness-105
+                           transition-all duration-300 ease-out" 
+                size="sm" 
+              />
+            </Link>
+            
+            {/* Subtle Divider */}
+            <div className="h-6 w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent opacity-60" />
+          </div>
 
-        {/* Center: Search */}
-        <div className="flex-1 max-w-md mx-8">
-          <form onSubmit={handleSearch} className="relative">
-            <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${
-              theme === 'dark' ? 'text-gray-400' : 'text-slate-400'
-            }`} />
-            <Input
-              type="text"
-              placeholder="Search clients, referrals, tasks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={`pl-10 pr-4 w-full rounded-lg border transition-colors ${
-                theme === 'dark' 
-                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:border-gray-600' 
-                  : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-500 focus:border-slate-300'
-              }`}
-            />
-          </form>
-        </div>
+        {/* Center: Spacer */}
+        <div className="flex-1" />
 
         {/* Right: View Toggle, Action Buttons + Profile */}
         <div className="flex items-center gap-3">
@@ -288,22 +259,6 @@ export function CleanTopBar({
             prefilledCounty={user?.user_metadata?.county || 'Hennepin'}
             onReferralCreated={onReferralCreated}
           />
-
-          {/* Priority Hub Button */}
-          <Button 
-            variant="default" 
-            size="sm"
-            onClick={() => setShowPriorityHub(true)}
-            className="relative bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white border-0"
-          >
-            <Zap className="w-4 h-4 mr-2" />
-            Priority Hub
-            {pendingActionsCount > 0 && (
-              <Badge className="ml-2 bg-red-500 text-white text-xs px-1.5 py-0.5 min-w-[20px] h-5">
-                {pendingActionsCount}
-              </Badge>
-            )}
-          </Button>
 
           {/* Report Dropdown */}
           <DropdownMenu>
@@ -524,17 +479,6 @@ export function CleanTopBar({
           </DropdownMenu>
         </div>
       </div>
-
-      {/* Priority Hub Panel */}
-      <PriorityHub 
-        isOpen={showPriorityHub}
-        onClose={() => setShowPriorityHub(false)}
-        onClientSelect={(clientId, actionId) => {
-          if (onClientSelect) {
-            onClientSelect(clientId, actionId);
-          }
-        }}
-      />
     </div>
   );
 }

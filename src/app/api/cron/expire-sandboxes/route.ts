@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
     
     const twoDaysFromNow = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
     
-    const expiringS oon = await db.collection('sandbox_organizations')
+    const expiringSoon = await db.collection('sandbox_organizations')
       .find({
         status: 'active',
         expiresAt: {

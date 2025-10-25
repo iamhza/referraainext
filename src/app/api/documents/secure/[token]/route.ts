@@ -258,7 +258,7 @@ async function verifyClientAccess(user: any, clientId: string, db: any): Promise
 
     // Providers can access clients they have connections with
     if (user.role === 'provider') {
-      const connection = await db.collection('connections').findOne({
+      const connection = await db.collection('service_relationships').findOne({
         clientId: new ObjectId(clientId),
         providerId: new ObjectId(user.id),
         status: { $in: ['active', 'pending'] }

@@ -8,13 +8,15 @@ import authOptions from "@/lib/auth-minimal";
 import { NextRequest, NextResponse } from "next/server";
 import { createAuditLog } from "./hipaa-audit";
 
+// v1.1 Data Model - Updated for org_members junction table
 export interface AuthenticatedUser {
   id: string;
   email: string;
   name?: string;
-  role: 'platform_admin' | 'org_admin' | 'supervisor' | 'case_manager' | 'provider';
-  org_id?: string | null;
-  team_id?: string | null;
+  role: 'PLATFORM_ADMIN' | 'ORG_ADMIN' | 'SUPERVISOR' | 'CASE_MANAGER' | 'PROVIDER_USER';
+  organizationId?: string | null;
+  teamId?: string | null;
+  providerId?: string | null;
   permissions: string[];
   organization?: {
     id: string;
@@ -25,7 +27,6 @@ export interface AuthenticatedUser {
   team?: {
     id: string;
     name: string;
-    specializations: string[];
   } | null;
 }
 
@@ -41,13 +42,15 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> 
       return null;
     }
 
+    // v1.1: Return user with org_members data
     return {
       id: session.user.id,
       email: session.user.email || '',
       name: session.user.name,
       role: session.user.role,
-      org_id: session.user.org_id,
-      team_id: session.user.team_id,
+      organizationId: session.user.organizationId,
+      teamId: session.user.teamId,
+      providerId: session.user.providerId,
       permissions: session.user.permissions || [],
       organization: session.user.organization,
       team: session.user.team
@@ -82,7 +85,7 @@ export async function requireRole(
   const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
   
   // Platform admin has access to everything
-  if (user.role === 'platform_admin') {
+  if (user.role === 'PLATFORM_ADMIN') {
     return user;
   }
   
@@ -118,12 +121,12 @@ export async function requireOrgAccess(orgId: string): Promise<AuthenticatedUser
   }
 
   // Platform admin can access all orgs
-  if (user.role === 'platform_admin') {
+  if (user.role === 'PLATFORM_ADMIN') {
     return user;
   }
 
-  // User must belong to the organization
-  if (user.org_id !== orgId) {
+  // v1.1: User must belong to the organization
+  if (user.organizationId !== orgId) {
     // Create audit log for cross-org access attempt
     await createAuditLog({
       userId: user.id,
@@ -133,7 +136,7 @@ export async function requireOrgAccess(orgId: string): Promise<AuthenticatedUser
       resourceId: orgId,
       success: false,
       details: { 
-        user_org_id: user.org_id,
+        user_organizationId: user.organizationId,
         requested_org_id: orgId
       }
     });
@@ -155,7 +158,7 @@ export async function requirePermission(permission: string): Promise<Authenticat
   }
 
   // Platform admin has all permissions
-  if (user.role === 'platform_admin') {
+  if (user.role === 'PLATFORM_ADMIN') {
     return user;
   }
 

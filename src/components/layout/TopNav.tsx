@@ -130,11 +130,33 @@ export function TopNav() {
       <div className="container mx-auto px-8 md:px-12 lg:px-16 xl:px-24 max-w-screen-2xl">
         {/* Main navigation bar */}
         <div className="flex h-20 items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center">
-              <Logo className="h-10" />
+          {/* Logo - Premium Subtle Styling */}
+          <div className="flex items-center gap-4">
+            <Link 
+              href="/" 
+              className="flex items-center px-3 py-2 -ml-3 rounded-lg 
+                         relative overflow-hidden
+                         hover:bg-slate-50/80
+                         hover:shadow-sm
+                         hover:-translate-y-0.5
+                         active:translate-y-0 active:scale-[0.98]
+                         transition-all duration-300 ease-out
+                         group
+                         before:absolute before:inset-0 before:rounded-lg
+                         before:bg-gradient-to-r before:from-transparent before:via-white/50 before:to-transparent
+                         before:-translate-x-full before:transition-transform before:duration-700
+                         hover:before:translate-x-full"
+            >
+              <Logo 
+                className="h-10 relative z-10 
+                           group-hover:brightness-105
+                           transition-all duration-300 ease-out" 
+                size="lg" 
+              />
             </Link>
+            
+            {/* Subtle Divider */}
+            <div className="h-8 w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent opacity-60" />
           </div>
 
           {/* Desktop Navigation */}
@@ -237,7 +259,9 @@ export function TopNav() {
           >
             <div className="p-5 border-b">
               <div className="flex items-center justify-between">
-                <Logo className="h-8" />
+                <div className="px-2 py-1 rounded-lg hover:bg-slate-50 transition-colors">
+                  <Logo className="h-8" size="md" />
+                </div>
                 <Button variant="ghost" size="icon" onClick={toggleMobileMenu} className="text-gray-500 hover:text-gray-700">
                   <ChevronDown className="h-5 w-5" />
                 </Button>

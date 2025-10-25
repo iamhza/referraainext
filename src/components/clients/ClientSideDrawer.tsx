@@ -79,7 +79,7 @@ interface ClientSideDrawerProps {
   onViewProfile?: () => void;
 }
 
-type TabType = 'overview' | 'referrals' | 'timeline' | 'actions' | 'documents';
+type TabType = 'profile' | 'actions' | 'documents';
 
 export function ClientSideDrawer({ 
   client, 
@@ -90,7 +90,7 @@ export function ClientSideDrawer({
   onViewProfile
 }: ClientSideDrawerProps) {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [activeTab, setActiveTab] = useState<TabType>('profile');
   const [isAnimating, setIsAnimating] = useState(false);
   const [isReferralDetailsPanelOpen, setIsReferralDetailsPanelOpen] = useState(false);
   const [selectedReferral, setSelectedReferral] = useState<any>(null);
@@ -157,7 +157,7 @@ export function ClientSideDrawer({
   // Reset tab when drawer opens
   useEffect(() => {
     if (isOpen) {
-      setActiveTab('overview');
+      setActiveTab('profile');
       setSelectedServiceFeedContextId(undefined);
     }
   }, [isOpen]);
@@ -200,10 +200,8 @@ export function ClientSideDrawer({
   };
 
   const tabs = [
-    { id: 'overview' as TabType, label: 'Overview', icon: User },
-    { id: 'referrals' as TabType, label: 'Referrals', icon: FileText },
-    { id: 'timeline' as TabType, label: 'Timeline', icon: Calendar },
-    { id: 'actions' as TabType, label: 'Service Feed', icon: List },
+    { id: 'profile' as TabType, label: 'Full Profile', icon: User },
+    { id: 'actions' as TabType, label: 'Actions', icon: List },
     { id: 'documents' as TabType, label: 'Documents', icon: FolderOpen },
   ];
 
@@ -222,16 +220,32 @@ export function ClientSideDrawer({
                       {client.firstName} {client.lastName}
                     </h1>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <div 
-                        className={`w-2 h-2 rounded-full ring-2 ring-white shadow-sm ${getStatusDotColor(client.status)}`} 
-                        title={statusConfig.label} 
-                      />
-                      <Badge 
-                        variant="secondary" 
-                        className="text-[11px] font-semibold px-2 py-0.5 bg-slate-100 border border-slate-200/60"
-                      >
-                        {statusConfig.label}
-                      </Badge>
+                      {(() => {
+                        const variants: Record<string, string> = {
+                          'Seeking Services': 'bg-gradient-to-br from-purple-50 to-purple-100/50 text-purple-700 border-purple-200/60',
+                          'Referrals Pending': 'bg-gradient-to-br from-blue-50 to-blue-100/50 text-blue-700 border-blue-200/60',
+                          'Getting Connected': 'bg-gradient-to-br from-amber-50 to-amber-100/50 text-amber-700 border-amber-200/60',
+                          'Services Active': 'bg-gradient-to-br from-green-50 to-green-100/50 text-green-700 border-green-200/60',
+                          'Services At Risk': 'bg-gradient-to-br from-orange-50 to-orange-100/50 text-orange-700 border-orange-200/60',
+                          'Case Closed': 'bg-gradient-to-br from-slate-50 to-slate-100/50 text-slate-700 border-slate-200/60',
+                        };
+                        const dotColors: Record<string, string> = {
+                          'red': 'bg-red-500',
+                          'blue': 'bg-blue-500',
+                          'purple': 'bg-purple-500',
+                          'green': 'bg-green-500',
+                          'orange': 'bg-orange-500',
+                          'slate': 'bg-slate-400',
+                        };
+                        const variant = variants[statusConfig.label] || 'bg-gradient-to-br from-slate-50 to-slate-100/50 text-slate-700 border-slate-200/60';
+                        const dotColor = dotColors[statusConfig.color] || 'bg-slate-400';
+                        return (
+                          <div className={cn('inline-flex items-center gap-2 px-2.5 py-1 rounded-md border-2 text-xs font-semibold transition-all duration-200', variant)}>
+                            <span className={cn('inline-block w-2 h-2 rounded-full', dotColor)} />
+                            <span>{statusConfig.label}</span>
+                          </div>
+                        );
+                      })()}
                       {client.assignedBy && (
                         <Badge className="text-[11px] font-medium px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200/60">
                           Supervisor
@@ -322,23 +336,13 @@ export function ClientSideDrawer({
 
           {/* Tab Content */}
           <DrawerBody>
-            {activeTab === 'overview' && (
-              <OverviewTab 
+            {activeTab === 'profile' && (
+              <FullProfileTab 
                 client={client} 
                 connection={getClientConnection()} 
                 onConnectProvider={handleConnectProvider}
                 onViewProfile={onViewProfile}
               />
-            )}
-            {activeTab === 'referrals' && (
-              <ReferralsTab 
-                clientId={client._id} 
-                onViewReferralDetails={handleViewReferralDetails}
-                onNavigateToServiceFeed={handleNavigateToServiceFeed}
-              />
-            )}
-            {activeTab === 'timeline' && (
-              <TimelineTab clientId={client._id} />
             )}
             {activeTab === 'actions' && (
               <ServiceFeedTab 
@@ -374,7 +378,7 @@ export function ClientSideDrawer({
 }
 
 // World-Class Overview Tab with Advanced Micro-interactions
-function OverviewTab({ 
+function FullProfileTab({ 
   client, 
   connection, 
   onConnectProvider,
@@ -627,11 +631,34 @@ function ReferralsTab({
 
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center">
-        <div className="flex items-center space-x-2 text-gray-500">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span>Loading referrals...</span>
-        </div>
+      <div className="p-6 space-y-4 animate-in fade-in duration-300">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="relative overflow-hidden rounded-xl border-2 border-slate-100 bg-gradient-to-br from-slate-50 to-white p-4">
+            {/* Shimmer effect */}
+            <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+            
+            {/* Header skeleton */}
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1 space-y-2">
+                <div className="h-5 w-32 bg-slate-200 rounded-md animate-pulse" />
+                <div className="h-4 w-48 bg-slate-100 rounded-md animate-pulse" />
+              </div>
+              <div className="h-6 w-20 bg-slate-100 rounded-full animate-pulse" />
+            </div>
+
+            {/* Content skeleton */}
+            <div className="space-y-2">
+              <div className="h-3 w-full bg-slate-100 rounded animate-pulse" />
+              <div className="h-3 w-3/4 bg-slate-100 rounded animate-pulse" />
+            </div>
+
+            {/* Footer skeleton */}
+            <div className="flex gap-2 mt-4">
+              <div className="h-8 w-24 bg-slate-100 rounded-lg animate-pulse" />
+              <div className="h-8 w-24 bg-slate-100 rounded-lg animate-pulse" />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -1702,11 +1729,38 @@ function DocumentsTab({ clientId }: { clientId: string }) {
       {/* Documents List - Scrollable with proper padding */}
       <div className="flex-1 overflow-y-auto px-6 py-5">
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="text-center">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-3" />
-              <span className="text-sm text-slate-500 font-medium">Loading documents...</span>
-            </div>
+          <div className="space-y-4 animate-in fade-in duration-300">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="relative overflow-hidden rounded-lg border-2 border-slate-100 bg-gradient-to-br from-slate-50 to-white p-4">
+                {/* Shimmer effect */}
+                <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+                
+                <div className="flex gap-3">
+                  {/* Icon skeleton */}
+                  <div className="w-10 h-10 bg-slate-200 rounded-lg animate-pulse shrink-0" />
+                  
+                  <div className="flex-1 space-y-2">
+                    {/* Title skeleton */}
+                    <div className="h-4 w-48 bg-slate-200 rounded animate-pulse" />
+                    {/* Description skeleton */}
+                    <div className="h-3 w-full bg-slate-100 rounded animate-pulse" />
+                    <div className="h-3 w-2/3 bg-slate-100 rounded animate-pulse" />
+                    
+                    {/* Metadata skeleton */}
+                    <div className="flex gap-2 pt-2">
+                      <div className="h-5 w-20 bg-slate-100 rounded-full animate-pulse" />
+                      <div className="h-5 w-16 bg-slate-100 rounded-full animate-pulse" />
+                    </div>
+                  </div>
+                  
+                  {/* Actions skeleton */}
+                  <div className="flex gap-2 shrink-0">
+                    <div className="w-8 h-8 bg-slate-100 rounded-md animate-pulse" />
+                    <div className="w-8 h-8 bg-slate-100 rounded-md animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : Object.keys(groupedDocuments).length === 0 ? (
           <div className="flex items-center justify-center py-16">

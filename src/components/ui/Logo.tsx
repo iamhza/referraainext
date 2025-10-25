@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 interface LogoProps {
@@ -8,6 +9,7 @@ interface LogoProps {
 }
 
 export function Logo({ className, size = 'md', variant = 'full' }: LogoProps) {
+  const [isLoading, setIsLoading] = useState(true);
   const iconSizeClasses = {
     sm: 'h-6 w-6',
     md: 'h-8 w-8', 
@@ -15,70 +17,86 @@ export function Logo({ className, size = 'md', variant = 'full' }: LogoProps) {
     xl: 'h-12 w-12'
   };
 
-  const iconTextSizeClasses = {
-    sm: 'text-lg',
-    md: 'text-xl',
-    lg: 'text-2xl', 
-    xl: 'text-3xl'
+  const iconPixelSizes = {
+    sm: 24,
+    md: 32,
+    lg: 40,
+    xl: 48
   };
 
-  const logoTextSizeClasses = {
-    sm: 'text-lg',
-    md: 'text-xl',
-    lg: 'text-2xl',
-    xl: 'text-3xl'
+  const logoHeightClasses = {
+    sm: 'h-6',
+    md: 'h-8',
+    lg: 'h-9',
+    xl: 'h-14'
+  };
+
+  const logoPixelHeights = {
+    sm: 24,
+    md: 32,
+    lg: 40,
+    xl: 56
+  };
+
+  const logoPixelWidths = {
+    sm: 120,
+    md: 160,
+    lg: 200,
+    xl: 280
   };
 
   if (variant === 'icon') {
     return (
       <div className={cn(
-        "flex items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 shadow-sm",
+        "flex items-center justify-center rounded-lg overflow-hidden relative",
         iconSizeClasses[size],
         className
       )}>
-        <span className={cn(
-          "font-suisse font-bold text-white",
-          iconTextSizeClasses[size]
-        )}>
-          R
-        </span>
+        {isLoading && (
+          <div className={cn(
+            "absolute inset-0 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 animate-shimmer bg-[length:200%_100%]",
+            "rounded-lg"
+          )} />
+        )}
+        <Image
+          src="/icon.png"
+          alt="Referra"
+          width={iconPixelSizes[size]}
+          height={iconPixelSizes[size]}
+          className={cn(
+            "object-contain transition-opacity duration-300",
+            isLoading ? "opacity-0" : "opacity-100"
+          )}
+          onLoad={() => setIsLoading(false)}
+        />
       </div>
     );
   }
 
   return (
-    <div className={cn("flex items-center", className)}>
-      <div className="flex items-center">
-        {/* Icon */}
+    <div className={cn("flex items-center relative", className)}>
+      {isLoading && (
         <div className={cn(
-          "flex items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 shadow-sm mr-3",
-          iconSizeClasses[size]
-        )}>
-          <span className={cn(
-            "font-suisse font-bold text-white",
-            iconTextSizeClasses[size]
-          )}>
-            R
-          </span>
-        </div>
-        
-        {/* Wordmark */}
-        <div className="flex items-center">
-          <span 
-            className={cn(
-              "font-suisse font-semibold tracking-tight",
-              logoTextSizeClasses[size],
-              "bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent"
-            )}
-            style={{ 
-              fontFamily: 'var(--font-suisse)',
-              letterSpacing: '-0.02em'
-            }}
-          >
-            Referra
-          </span>
-        </div>
-      </div>
+          "absolute inset-0 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 animate-shimmer bg-[length:200%_100%]",
+          "rounded-lg",
+          logoHeightClasses[size]
+        )} 
+        style={{ width: logoPixelWidths[size] }}
+        />
+      )}
+      <Image
+        src="/referra-logo.png"
+        alt="Referra"
+        width={logoPixelWidths[size]}
+        height={logoPixelHeights[size]}
+        className={cn(
+          "object-contain transition-opacity duration-300",
+          logoHeightClasses[size],
+          isLoading ? "opacity-0" : "opacity-100"
+        )}
+        priority
+        onLoad={() => setIsLoading(false)}
+      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, AlertCircle, FileText, Calendar, Clock, MessageSquare, Zap, ChevronRight, Loader2 } from 'lucide-react';
+import { X, AlertCircle, FileText, Calendar, Clock, MessageSquare, Zap, ChevronRight, Loader2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -14,20 +14,19 @@ interface PriorityHubProps {
   onClientSelect: (clientId: string, actionId?: string) => void;
 }
 
-type ActionGroup = 'urgent' | 'documentation' | 'service_management' | 'follow_ups' | 'messages';
-
-interface GroupedActions {
-  urgent: Action[];
-  documentation: Action[];
-  service_management: Action[];
-  follow_ups: Action[];
-  messages: Action[];
+interface ClientGroup {
+  clientId: string;
+  clientName: string;
+  actions: Action[];
+  urgentCount: number;
+  maxUrgency: 'issue' | 'urgent' | 'normal';
+  overdueCount: number;
 }
 
 export function PriorityHub({ isOpen, onClose, onClientSelect }: PriorityHubProps) {
   const [actions, setActions] = useState<Action[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedGroups, setExpandedGroups] = useState<Set<ActionGroup>>(new Set(['urgent']));
+  const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (isOpen) {
@@ -50,76 +49,82 @@ export function PriorityHub({ isOpen, onClose, onClientSelect }: PriorityHubProp
     }
   };
 
-  const groupedActions = useMemo<GroupedActions>(() => {
-    const groups: GroupedActions = {
-      urgent: [],
-      documentation: [],
-      service_management: [],
-      follow_ups: [],
-      messages: []
-    };
+  const clientGroups = useMemo<ClientGroup[]>(() => {
+    const clientMap = new Map<string, ClientGroup>();
+    const now = new Date();
 
     actions.forEach(action => {
-      // Urgent: flag_concern, urgent_alert, report_incident, or overdue
+      const clientId = action.clientId;
+      const clientName = (action as any).clientName || 'Unknown Client';
+      
+      if (!clientMap.has(clientId)) {
+        clientMap.set(clientId, {
+          clientId,
+          clientName,
+          actions: [],
+          urgentCount: 0,
+          maxUrgency: 'normal',
+          overdueCount: 0
+        });
+      }
+      
+      const group = clientMap.get(clientId)!;
+      group.actions.push(action);
+      
+      // Count urgent actions
       if (
         action.type === 'flag_concern' ||
         action.type === 'urgent_alert' ||
-        action.type === 'report_incident' ||
         action.urgency === 'issue' ||
-        (action.targetDate && new Date(action.targetDate) < new Date())
+        action.urgency === 'urgent'
       ) {
-        groups.urgent.push(action);
+        group.urgentCount++;
       }
-      // Documentation: request_documentation, submit_documentation, authorization_submitted, authorization_approved
-      else if (
-        action.type === 'request_documentation' ||
-        action.type === 'submit_documentation' ||
-        action.type === 'authorization_submitted' ||
-        action.type === 'authorization_approved' ||
-        action.type === 'roi_request' ||
-        action.type === 'roi_approved'
-      ) {
-        groups.documentation.push(action);
+      
+      // Track max urgency
+      if (action.urgency === 'issue' && group.maxUrgency !== 'issue') {
+        group.maxUrgency = 'issue';
+      } else if (action.urgency === 'urgent' && group.maxUrgency === 'normal') {
+        group.maxUrgency = 'urgent';
       }
-      // Service Management: intake, status updates, service changes
-      else if (
-        action.type === 'request_intake_date' ||
-        action.type === 'request_status_update' ||
-        action.type === 'confirm_intake_scheduled' ||
-        action.type === 'confirm_service_started' ||
-        action.type === 'service_update' ||
-        action.type === 'switch_transfer_request' ||
-        action.type === 'services_paused' ||
-        action.type === 'services_resumed' ||
-        action.type === 'services_ended'
-      ) {
-        groups.service_management.push(action);
+      
+      // Count overdue
+      if (action.targetDate && new Date(action.targetDate) < now) {
+        group.overdueCount++;
       }
-      // Follow-ups: follow_up_reminder, request_auth_update
-      else if (
-        action.type === 'follow_up_reminder' ||
-        action.type === 'request_auth_update'
-      ) {
-        groups.follow_ups.push(action);
+    });
+
+    // Convert to array and sort by urgency, then by action count
+    const groups = Array.from(clientMap.values());
+    
+    // Sort: Issues first, then urgent, then by number of actions
+    groups.sort((a, b) => {
+      const urgencyOrder = { issue: 3, urgent: 2, normal: 1 };
+      const urgencyDiff = urgencyOrder[b.maxUrgency] - urgencyOrder[a.maxUrgency];
+      if (urgencyDiff !== 0) return urgencyDiff;
+      
+      // Then by overdue count
+      if (b.overdueCount !== a.overdueCount) {
+        return b.overdueCount - a.overdueCount;
       }
-      // Messages: general_message
-      else if (action.type === 'general_message') {
-        groups.messages.push(action);
-      }
+      
+      // Then by total action count
+      return b.actions.length - a.actions.length;
     });
 
     return groups;
   }, [actions]);
 
   const totalPendingActions = actions.length;
+  const totalClients = clientGroups.length;
 
-  const toggleGroup = (group: ActionGroup) => {
-    setExpandedGroups(prev => {
+  const toggleClient = (clientId: string) => {
+    setExpandedClients(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(group)) {
-        newSet.delete(group);
+      if (newSet.has(clientId)) {
+        newSet.delete(clientId);
       } else {
-        newSet.add(group);
+        newSet.add(clientId);
       }
       return newSet;
     });
@@ -178,7 +183,7 @@ export function PriorityHub({ isOpen, onClose, onClientSelect }: PriorityHubProp
             <div>
               <h2 className="text-xl font-semibold text-slate-900">Priority Hub</h2>
               <p className="text-sm text-slate-600">
-                {totalPendingActions} pending {totalPendingActions === 1 ? 'action' : 'actions'}
+                {totalPendingActions} {totalPendingActions === 1 ? 'action' : 'actions'} across {totalClients} {totalClients === 1 ? 'client' : 'clients'}
               </p>
             </div>
           </div>
@@ -209,86 +214,18 @@ export function PriorityHub({ isOpen, onClose, onClientSelect }: PriorityHubProp
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {/* Urgent Issues */}
-              {groupedActions.urgent.length > 0 && (
-                <ActionGroup
-                  icon={AlertCircle}
-                  title="Urgent Issues"
-                  count={groupedActions.urgent.length}
-                  color="red"
-                  expanded={expandedGroups.has('urgent')}
-                  onToggle={() => toggleGroup('urgent')}
-                  actions={groupedActions.urgent}
+            <div className="space-y-3">
+              {clientGroups.map(clientGroup => (
+                <ClientGroupCard
+                  key={clientGroup.clientId}
+                  clientGroup={clientGroup}
+                  expanded={expandedClients.has(clientGroup.clientId)}
+                  onToggle={() => toggleClient(clientGroup.clientId)}
                   onActionClick={handleActionClick}
                   getUrgencyColor={getUrgencyColor}
                   formatDate={formatDate}
                 />
-              )}
-
-              {/* Documentation */}
-              {groupedActions.documentation.length > 0 && (
-                <ActionGroup
-                  icon={FileText}
-                  title="Documentation"
-                  count={groupedActions.documentation.length}
-                  color="blue"
-                  expanded={expandedGroups.has('documentation')}
-                  onToggle={() => toggleGroup('documentation')}
-                  actions={groupedActions.documentation}
-                  onActionClick={handleActionClick}
-                  getUrgencyColor={getUrgencyColor}
-                  formatDate={formatDate}
-                />
-              )}
-
-              {/* Service Management */}
-              {groupedActions.service_management.length > 0 && (
-                <ActionGroup
-                  icon={Calendar}
-                  title="Service Management"
-                  count={groupedActions.service_management.length}
-                  color="purple"
-                  expanded={expandedGroups.has('service_management')}
-                  onToggle={() => toggleGroup('service_management')}
-                  actions={groupedActions.service_management}
-                  onActionClick={handleActionClick}
-                  getUrgencyColor={getUrgencyColor}
-                  formatDate={formatDate}
-                />
-              )}
-
-              {/* Follow-ups */}
-              {groupedActions.follow_ups.length > 0 && (
-                <ActionGroup
-                  icon={Clock}
-                  title="Follow-ups"
-                  count={groupedActions.follow_ups.length}
-                  color="orange"
-                  expanded={expandedGroups.has('follow_ups')}
-                  onToggle={() => toggleGroup('follow_ups')}
-                  actions={groupedActions.follow_ups}
-                  onActionClick={handleActionClick}
-                  getUrgencyColor={getUrgencyColor}
-                  formatDate={formatDate}
-                />
-              )}
-
-              {/* Messages */}
-              {groupedActions.messages.length > 0 && (
-                <ActionGroup
-                  icon={MessageSquare}
-                  title="Messages"
-                  count={groupedActions.messages.length}
-                  color="slate"
-                  expanded={expandedGroups.has('messages')}
-                  onToggle={() => toggleGroup('messages')}
-                  actions={groupedActions.messages}
-                  onActionClick={handleActionClick}
-                  getUrgencyColor={getUrgencyColor}
-                  formatDate={formatDate}
-                />
-              )}
+              ))}
             </div>
           )}
         </ScrollArea>
@@ -297,70 +234,83 @@ export function PriorityHub({ isOpen, onClose, onClientSelect }: PriorityHubProp
   );
 }
 
-// Action Group Component
-interface ActionGroupProps {
-  icon: React.ElementType;
-  title: string;
-  count: number;
-  color: 'red' | 'blue' | 'purple' | 'orange' | 'slate';
+// Client Group Component
+interface ClientGroupCardProps {
+  clientGroup: ClientGroup;
   expanded: boolean;
   onToggle: () => void;
-  actions: Action[];
   onActionClick: (action: Action) => void;
   getUrgencyColor: (action: Action) => string;
   formatDate: (dateString?: string) => string | null;
 }
 
-function ActionGroup({
-  icon: Icon,
-  title,
-  count,
-  color,
+function ClientGroupCard({
+  clientGroup,
   expanded,
   onToggle,
-  actions,
   onActionClick,
   getUrgencyColor,
   formatDate
-}: ActionGroupProps) {
-  const colorClasses = {
-    red: 'from-red-500 to-red-600',
-    blue: 'from-blue-500 to-blue-600',
-    purple: 'from-purple-500 to-purple-600',
-    orange: 'from-orange-500 to-orange-600',
-    slate: 'from-slate-500 to-slate-600'
+}: ClientGroupCardProps) {
+  const getColorFromUrgency = (urgency: 'issue' | 'urgent' | 'normal') => {
+    if (urgency === 'issue') return 'from-red-500 to-red-600';
+    if (urgency === 'urgent') return 'from-orange-500 to-orange-600';
+    return 'from-slate-500 to-slate-600';
+  };
+
+  const getBorderColor = (urgency: 'issue' | 'urgent' | 'normal') => {
+    if (urgency === 'issue') return 'border-red-200';
+    if (urgency === 'urgent') return 'border-orange-200';
+    return 'border-slate-200';
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      {/* Group Header */}
+    <div className={cn(
+      'rounded-xl border bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow',
+      getBorderColor(clientGroup.maxUrgency)
+    )}>
+      {/* Client Header */}
       <button
         onClick={onToggle}
         className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           <div className={cn(
-            'w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br shadow-sm',
-            colorClasses[color]
+            'w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br shadow-sm shrink-0',
+            getColorFromUrgency(clientGroup.maxUrgency)
           )}>
-            <Icon className="w-4 h-4 text-white" />
+            <Users className="w-5 h-5 text-white" />
           </div>
-          <div className="text-left">
-            <h3 className="font-semibold text-slate-900">{title}</h3>
-            <p className="text-sm text-slate-600">{count} {count === 1 ? 'action' : 'actions'}</p>
+          <div className="text-left flex-1 min-w-0">
+            <h3 className="font-semibold text-slate-900 truncate">{clientGroup.clientName}</h3>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-sm text-slate-600">
+                {clientGroup.actions.length} {clientGroup.actions.length === 1 ? 'action' : 'actions'}
+              </p>
+              {clientGroup.urgentCount > 0 && (
+                <Badge variant="destructive" className="text-xs px-1.5 py-0">
+                  {clientGroup.urgentCount} urgent
+                </Badge>
+              )}
+              {clientGroup.overdueCount > 0 && (
+                <Badge variant="secondary" className="text-xs px-1.5 py-0 bg-orange-100 text-orange-700">
+                  {clientGroup.overdueCount} overdue
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
         <ChevronRight className={cn(
-          'w-5 h-5 text-slate-400 transition-transform',
+          'w-5 h-5 text-slate-400 transition-transform shrink-0',
           expanded && 'rotate-90'
         )} />
       </button>
 
-      {/* Group Content */}
+      {/* Actions List */}
       {expanded && (
         <div className="border-t border-slate-200 bg-slate-50/50">
           <div className="p-3 space-y-2">
-            {actions.map(action => (
+            {clientGroup.actions.map(action => (
               <button
                 key={action._id}
                 onClick={() => onActionClick(action)}
@@ -371,7 +321,7 @@ function ActionGroup({
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="font-medium text-sm leading-tight truncate">
+                    <p className="font-medium text-sm leading-tight">
                       {action.title}
                     </p>
                     {formatDate(action.targetDate) && (
@@ -380,16 +330,13 @@ function ActionGroup({
                       </Badge>
                     )}
                   </div>
-                  <p className="text-xs text-slate-600 mb-1">
-                    Client: {(action as any).clientName || 'Unknown'}
-                  </p>
                   {action.description && (
-                    <p className="text-xs text-slate-500 line-clamp-2">
+                    <p className="text-xs text-slate-600 line-clamp-2 mb-2">
                       {action.description}
                     </p>
                   )}
                   {action.serviceType && (
-                    <Badge variant="outline" className="text-xs mt-2">
+                    <Badge variant="outline" className="text-xs">
                       {action.serviceType}
                     </Badge>
                   )}

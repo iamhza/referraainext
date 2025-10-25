@@ -20,9 +20,7 @@ declare module '@/hooks/use-mobile' {
   export const useIsMobile: () => boolean;
 }
 
-declare module 'sonner' {
-  export const Toaster: any;
-}
+// sonner is properly installed with types, no need for declaration
 
 declare module '@next-auth/mongodb-adapter' {
   export const MongoDBAdapter: any;

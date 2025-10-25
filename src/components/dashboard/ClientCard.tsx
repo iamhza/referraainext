@@ -249,15 +249,15 @@ export function ClientCard({
       }}
       onClick={onClick}
     >
-      {/* Smart Status Bar - NEW: Shows urgent actions from actions library */}
+      {/* Smart Status Bar - Tiered visual weight based on urgency */}
       {client.smartStatus && (
-        <div className={viewDensity === 'compact' ? 'mb-2' : 'mb-3'}>
+        <div className={viewDensity === 'compact' ? 'mb-1.5' : 'mb-2'}>
           <SmartStatusBar 
             status={client.smartStatus} 
             compact={viewDensity === 'compact'}
-            onClick={(e) => {
-              e?.stopPropagation?.();
-              // Could open action completion modal here
+            onClick={() => {
+              // Open client drawer to handle action
+              if (onClick) onClick();
             }}
           />
         </div>

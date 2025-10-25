@@ -34,11 +34,177 @@ export async function GET(
       return NextResponse.json({ error: 'Client not found' }, { status: 404 });
     }
 
-    // Fetch actions for this client
+    // Fetch actions for this client with dynamic creator name lookup
+    // Support both v1.1 (subjectType/subjectId) and legacy (clientId) data models
     const actions = await db.collection('actions')
-      .find({ clientId })
-      .sort({ createdAt: -1 })
+      .aggregate([
+        {
+          $match: {
+            $or: [
+              { clientId }, // Legacy: direct client match
+              { subjectType: 'SERVICE_RELATIONSHIP' }, // v1.1: match service relationships (we'll filter by client later)
+              { subjectType: 'REFERRAL' } // v1.1: match referrals
+            ]
+          }
+        },
+        // For v1.1 actions, lookup the service_relationship to get clientId
+        {
+          $lookup: {
+            from: 'service_relationships',
+            let: { subjectId: '$subjectId', subjectType: '$subjectType' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ['$$subjectType', 'SERVICE_RELATIONSHIP'] },
+                      { $eq: [{ $toString: '$_id' }, '$$subjectId'] }
+                    ]
+                  }
+                }
+              }
+            ],
+            as: 'serviceRelationship'
+          }
+        },
+        {
+          $unwind: {
+            path: '$serviceRelationship',
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        // Filter to only actions for this client
+        {
+          $match: {
+            $or: [
+              { clientId }, // Legacy direct match
+              { 'serviceRelationship.clientId': clientId } // v1.1 via service relationship
+            ]
+          }
+        },
+        // Lookup user who created the action
+        // v1.1 uses createdByMemberId (org_members), legacy uses createdBy (users)
+        {
+          $lookup: {
+            from: 'org_members',
+            let: { memberId: '$createdByMemberId' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $or: [
+                      { $eq: [{ $toString: '$_id' }, '$$memberId'] },
+                      { $eq: ['$_id', '$$memberId'] }
+                    ]
+                  }
+                }
+              },
+              // Join with users to get name
+              {
+                $lookup: {
+                  from: 'users',
+                  localField: 'userId',
+                  foreignField: '_id',
+                  as: 'user'
+                }
+              },
+              {
+                $unwind: {
+                  path: '$user',
+                  preserveNullAndEmptyArrays: true
+                }
+              }
+            ],
+            as: 'memberInfo'
+          }
+        },
+        {
+          $unwind: {
+            path: '$memberInfo',
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        // Also lookup legacy createdBy field
+        {
+          $lookup: {
+            from: 'users',
+            let: { creatorId: '$createdBy' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $or: [
+                      { $eq: [{ $toString: '$_id' }, '$$creatorId'] },
+                      { $eq: ['$_id', '$$creatorId'] }
+                    ]
+                  }
+                }
+              }
+            ],
+            as: 'creator'
+          }
+        },
+        {
+          $unwind: {
+            path: '$creator',
+            preserveNullAndEmptyArrays: true
+          }
+        },
+        // Dynamically set createdByName from user document
+        // v1.1 uses memberInfo.user, legacy uses creator
+        {
+          $addFields: {
+            createdByName: {
+              $ifNull: [
+                '$memberInfo.user.name', // v1.1 from org_members -> users
+                { $ifNull: [
+                  '$memberInfo.user.user_metadata.full_name',
+                  { $ifNull: [
+                    '$memberInfo.user.email',
+                    { $ifNull: [
+                      '$creator.user_metadata.full_name', // Legacy from users
+                      { $ifNull: [
+                        '$creator.user_metadata.fullName',
+                        { $ifNull: [
+                          '$creator.user_metadata.name',
+                          { $ifNull: [
+                            '$creator.name',
+                            '$creator.email'
+                          ]}
+                        ]}
+                      ]}
+                    ]}
+                  ]}
+                ]}
+              ]
+            }
+          }
+        },
+        {
+          $sort: { createdAt: -1 }
+        },
+        {
+          $project: {
+            creator: 0, // Remove full creator object
+            serviceRelationship: 0, // Remove lookup data
+            memberInfo: 0 // Remove v1.1 member info
+          }
+        }
+      ])
       .toArray();
+
+    console.log(`✅ Found ${actions.length} actions for client ${clientId}`);
+    if (actions.length > 0) {
+      console.log('📋 Sample action:', {
+        id: actions[0]._id,
+        type: actions[0].type,
+        subjectType: actions[0].subjectType,
+        subjectId: actions[0].subjectId,
+        contextId: actions[0].contextId,
+        status: actions[0].status,
+        createdByName: actions[0].createdByName
+      });
+    }
 
     // Attach secure comments to each action
     const actionsWithComments = await Promise.all(
@@ -173,7 +339,7 @@ export async function POST(
       urgency,
       createdBy: user.id,
       createdByRole: user.role as 'case_manager' | 'provider',
-      createdByName: user.email,
+      createdByName: '', // Will be dynamically looked up from users collection
       createdAt: now,
       updatedAt: now,
       targetDate,

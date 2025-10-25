@@ -68,34 +68,36 @@ export default function SignInPage() {
         console.log('User role:', userRole);
         console.log('User object:', session.user);
         
-        // Role-based redirect with NextAuth
+        // Role-based redirect with NextAuth (v1.1: uppercase roles)
         switch (userRole as string) {
-          case 'platform_admin':
+          case 'PLATFORM_ADMIN':
+          case 'platform_admin': // Legacy support
+          case 'admin': // Legacy support
             console.log('Redirecting to platform admin...');
             router.push('/admin');
             break;
-          case 'admin': // Legacy role support
-            console.log('Redirecting to platform admin (legacy)...');
-            router.push('/admin');
-            break;
-          case 'org_admin':
+          case 'ORG_ADMIN':
+          case 'org_admin': // Legacy support
             console.log('Redirecting to org admin...');
             router.push('/org-admin');
             break;
-          case 'supervisor':
+          case 'SUPERVISOR':
+          case 'supervisor': // Legacy support
             console.log('Redirecting to supervisor dashboard...');
             router.push('/supervisor');
             break;
-          case 'case_manager':
+          case 'CASE_MANAGER':
+          case 'case_manager': // Legacy support
             console.log('Redirecting to case manager dashboard...');
             router.push('/case-manager');
             break;
-          case 'provider':
+          case 'PROVIDER_USER':
+          case 'provider': // Legacy support
             console.log('Redirecting to provider dashboard...');
             router.push('/provider');
             break;
           default:
-            console.log('Unknown role, redirecting to home...');
+            console.log('Unknown role:', userRole, '- redirecting to home...');
             router.push('/');
         }
         

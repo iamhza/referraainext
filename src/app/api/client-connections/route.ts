@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const db = client.db('referradb');
     
     // Get all client-provider connections from our mock data
-    const connections = await db.collection('connections')
+    const connections = await db.collection('service_relationships')
       .find({})
       .toArray();
 

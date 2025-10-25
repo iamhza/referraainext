@@ -1,36 +1,18 @@
 {
-  // Tell IDE to treat these files as markdown (not TypeScript)
+  "css.validate": true,
+  "css.lint.unknownAtRules": "ignore",
+  "less.validate": true,
+  "less.lint.unknownAtRules": "ignore",
+  "scss.validate": true,
+  "scss.lint.unknownAtRules": "ignore",
   "files.associations": {
-    ".cursorrules": "plaintext",
-    "*.md": "markdown"
+    "*.css": "tailwindcss"
   },
-  
-  // Exclude from validation
-  "files.exclude": {},
-  "search.exclude": {},
-  
-  // Disable TypeScript checking for these files
-  "typescript.tsdk": "node_modules/typescript/lib",
-  "typescript.enablePromptUseWorkspaceTsdk": true,
-  "typescript.validate.enable": true,
-  
-  // Exclude from all language servers
-  "javascript.validate.enable": true,
-  "[plaintext]": {
-    "editor.quickSuggestions": {
-      "comments": "off",
-      "strings": "off",
-      "other": "off"
-    },
-    "editor.suggest.showWords": false
+  "editor.quickSuggestions": {
+    "strings": true
   },
-  
-  // Don't show errors for documentation files
-  "eslint.options": {
-    "ignore": [".cursorrules", "ai-dev-tasks/**", "tasks/**", "*.md"]
-  },
-  
-  // Disable validation for .cursorrules specifically
-  "eslint.enable": true,
-  "typescript.tsserver.experimental.enableProjectDiagnostics": false
+  "tailwindCSS.experimental.classRegex": [
+    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+  ]
 }

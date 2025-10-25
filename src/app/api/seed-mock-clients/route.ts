@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
     }
     
     if (mockConnections.length > 0) {
-      await db.collection('connections').insertMany(mockConnections);
+      await db.collection('service_relationships').insertMany(mockConnections);
     }
     
     // Calculate distribution

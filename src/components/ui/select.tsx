@@ -4,7 +4,16 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-const Select = SelectPrimitive.Root
+// Extend Select to properly support modal prop for nested modals
+interface SelectProps extends React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root> {
+  modal?: boolean;
+}
+
+const Select = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Root>,
+  SelectProps
+>((props, ref) => <SelectPrimitive.Root {...props} />)
+Select.displayName = "Select"
 
 const SelectGroup = SelectPrimitive.Group
 

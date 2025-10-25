@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useClientRefresh } from '@/hooks/use-client-refresh';
-import { BoardView } from '@/components/dashboard/BoardView';
+import { ClientTableView } from '@/components/dashboard/ClientTableView';
 import { CleanTopBar } from '@/components/layout/CleanTopBar';
 import { AddClientModal } from '@/components/modals/AddClientModal';
 import type { Client as ClientType } from '@/types';
@@ -69,17 +69,10 @@ export default function CaseManagerBoardPage() {
     setClientToOpen({ clientId, actionId });
   };
 
-  // Effect to open client when Priority Hub selects one
-  useEffect(() => {
-    if (clientToOpen && allClients.length > 0) {
-      const client = allClients.find(c => c._id === clientToOpen.clientId);
-      if (client) {
-        handleClientClick(client);
-        // TODO: Focus on specific action if actionId is provided
-      }
-      setClientToOpen(null);
-    }
-  }, [clientToOpen, allClients]);
+  // Handler to clear clientToOpen after BoardView processes it
+  const handleClientOpened = () => {
+    setClientToOpen(null);
+  };
 
   if (!user) {
     return (
@@ -106,17 +99,17 @@ export default function CaseManagerBoardPage() {
         onClientSelect={handleClientSelectFromPriorityHub}
       />
 
-      {/* Board View - takes full remaining height */}
-      <div className="flex-1 h-[calc(100vh-80px)]">
-        <BoardView
-          onClientClick={handleClientClick}
+      {/* Client Table View - takes full remaining height */}
+      <div className="flex-1 h-[calc(100vh-80px)] px-6">
+        <ClientTableView
           onClientsLoaded={(count, clients) => {
             setTotalClients(count);
             if (clients) setAllClients(clients);
           }}
           refreshTrigger={refreshTrigger}
-          viewDensity={viewDensity}
           className="h-full"
+          clientToOpen={clientToOpen}
+          onClientOpened={handleClientOpened}
         />
       </div>
 

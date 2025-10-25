@@ -199,17 +199,17 @@ function getStatusColor(action: Action, urgencyScore: number): 'red' | 'orange' 
  */
 function generateStatusText(action: Action): string {
   const textMap: Record<string, string> = {
-    'request_status_update': 'FOLLOW-UP NEEDED',
-    'request_documentation': 'DOC NEEDED',
-    'flag_concern': 'ISSUE FLAGGED',
-    'request_intake_date': 'INTAKE PENDING',
-    'request_progress_update': 'UPDATE REQUESTED',
-    'schedule_meeting': 'MEETING NEEDED',
-    'approve_service': 'APPROVAL PENDING',
-    'complete_assessment': 'ASSESSMENT DUE',
+    'request_status_update': 'Follow-up needed',
+    'request_documentation': 'Documentation needed',
+    'flag_concern': 'Issue flagged',
+    'request_intake_date': 'Intake pending',
+    'request_progress_update': 'Update requested',
+    'schedule_meeting': 'Meeting needed',
+    'approve_service': 'Approval pending',
+    'complete_assessment': 'Assessment due',
   };
   
-  return textMap[action.type] || 'ACTION NEEDED';
+  return textMap[action.type] || 'Action needed';
 }
 
 /**

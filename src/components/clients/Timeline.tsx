@@ -231,11 +231,34 @@ export function Timeline({ clientId, events }: TimelineProps) {
   // Loading state
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center">
-        <div className="flex items-center space-x-2 text-gray-500">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span>Loading timeline...</span>
-        </div>
+      <div className="p-6 space-y-4 animate-in fade-in duration-300">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="flex gap-4">
+            {/* Timeline dot skeleton */}
+            <div className="relative flex flex-col items-center">
+              <div className="w-3 h-3 rounded-full bg-slate-200 animate-pulse shrink-0" />
+              {i < 5 && <div className="w-0.5 h-16 bg-slate-100 mt-2" />}
+            </div>
+            
+            {/* Content skeleton */}
+            <div className="flex-1 pb-8">
+              <div className="relative overflow-hidden rounded-lg border-2 border-slate-100 bg-gradient-to-br from-slate-50 to-white p-4">
+                {/* Shimmer effect */}
+                <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+                
+                <div className="space-y-2">
+                  {/* Title skeleton */}
+                  <div className="h-4 w-40 bg-slate-200 rounded animate-pulse" />
+                  {/* Description skeleton */}
+                  <div className="h-3 w-full bg-slate-100 rounded animate-pulse" />
+                  <div className="h-3 w-3/4 bg-slate-100 rounded animate-pulse" />
+                  {/* Timestamp skeleton */}
+                  <div className="h-3 w-24 bg-slate-100 rounded animate-pulse mt-3" />
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
