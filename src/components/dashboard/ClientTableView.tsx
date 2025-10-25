@@ -22,6 +22,7 @@ import { CreateIssueDialog } from '@/components/issues/CreateIssueDialog';
 import { ServiceDetailDrawer } from '@/components/services/ServiceDetailDrawer';
 import { AuthorizationModal } from '@/components/authorizations/AuthorizationModal';
 import { TableSkeleton } from '@/components/skeletons/TableSkeleton';
+import { ClientDrawer } from '@/components/clients/drawer/ClientDrawer';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -119,6 +120,8 @@ export function ClientTableView({
   const [selectedServiceForDrawer, setSelectedServiceForDrawer] = useState<string | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [selectedServiceForAuth, setSelectedServiceForAuth] = useState<ServiceRelationshipWithDetails | null>(null);
+  const [clientDrawerOpen, setClientDrawerOpen] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
   const { data: serviceRelationshipsData, isLoading, mutate } = useSWR(
     '/api/case-manager/service-relationships',
@@ -413,12 +416,19 @@ export function ClientTableView({
                         <div className="flex items-center gap-3">
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <div className={cn(
-                                'font-bold text-slate-900 text-base leading-tight',
-                                isExpanded && 'text-blue-900'
-                              )}>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedClientId(group.client._id);
+                                  setClientDrawerOpen(true);
+                                }}
+                                className={cn(
+                                  'font-bold text-slate-900 text-base leading-tight hover:text-blue-600 transition-colors cursor-pointer text-left',
+                                  isExpanded && 'text-blue-900'
+                                )}
+                              >
                                 {group.client.firstName} {group.client.lastName}
-                              </div>
+                              </button>
                               <span className="text-slate-400 text-sm">•</span>
                               <Badge variant="outline" className="text-xs px-2 py-0.5 font-medium text-slate-600 border-slate-300">
                                 {group.totalServices} {group.totalServices === 1 ? 'Service' : 'Services'}
@@ -1032,6 +1042,18 @@ export function ClientTableView({
           onSuccess={() => {
             mutate(); // Refresh table data
             setSelectedServiceForAuth(null);
+          }}
+        />
+      )}
+
+      {/* Client Drawer */}
+      {selectedClientId && (
+        <ClientDrawer
+          clientId={selectedClientId}
+          open={clientDrawerOpen}
+          onClose={() => {
+            setClientDrawerOpen(false);
+            setSelectedClientId(null);
           }}
         />
       )}
