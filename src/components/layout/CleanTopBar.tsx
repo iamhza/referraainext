@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ProviderDirectoryIntegration } from '@/components/providers/ProviderDirectoryIntegration';
+// import { ProviderDirectoryIntegration } from '@/components/providers/ProviderDirectoryIntegration'; // DELETED
 import type { Client as ClientType } from '@/types';
 import { Logo } from '@/components/ui/Logo';
 import {
@@ -253,12 +253,12 @@ export function CleanTopBar({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Provider Directory */}
-          <ProviderDirectoryIntegration 
+          {/* Provider Directory - DISABLED (component deleted) */}
+          {/* <ProviderDirectoryIntegration 
             selectedClient={selectedClient}
             prefilledCounty={user?.user_metadata?.county || 'Hennepin'}
             onReferralCreated={onReferralCreated}
-          />
+          /> */}
 
           {/* Report Dropdown */}
           <DropdownMenu>
