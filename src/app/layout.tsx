@@ -14,7 +14,7 @@ import { SandboxBanner } from "@/components/sandbox/SandboxBanner";
 const manrope = localFont({
   src: [
     {
-      path: '../../Manrope/Manrope-VariableFont_wght.ttf',
+      path: '../../public/fonts/Manrope/Manrope-VariableFont_wght.ttf',
       weight: '200 800',
       style: 'normal',
     },

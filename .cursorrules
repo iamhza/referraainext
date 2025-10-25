@@ -1,5 +1,33 @@
 # Referra Platform - Cursor AI Development Rules
 
+> **CRITICAL**: This is a PRODUCTION application handling sensitive client data (HIPAA-adjacent).
+> Security, data isolation, and code quality are NON-NEGOTIABLE.
+
+## 🔖 Quick Reference for AI
+
+**When citing rules, use these reference tags:**
+
+- `[CRITICAL: SECURITY-FIRST]` - Security requirements (non-negotiable)
+- `[RULE: SCRIPTS-SECURITY]` - Never commit secrets in scripts
+- `[PATTERN: SAFE-SCRIPT]` - Secure script template
+- `[ANTI-PATTERN: UNSAFE-SCRIPT]` - Never do this in scripts
+- `[RULE: GITIGNORE-SCRIPTS]` - Protecting risky scripts
+- `[RULE: NO-CONSOLE-IN-PRODUCTION]` - Logging best practices
+- `[REFERENCE: PROJECT-STRUCTURE]` - File organization
+- `[PATTERN: API-ROUTE]` - Standard API route pattern
+- `[PATTERN: SERVER-ACTION]` - Server action pattern
+- `[RULE: RLS-REQUIRED]` - Row Level Security requirements
+
+**Priority Order for Development:**
+1. 🔒 **Security** - Authentication, authorization, RLS, no secrets
+2. ✅ **Functionality** - Feature works as specified
+3. 🎨 **UX** - Loading, empty, error states
+4. 📱 **Responsive** - Mobile-first design
+5. ♿ **Accessible** - WCAG 2.1 AA compliance
+6. 🧪 **Tested** - E2E tests passing
+
+---
+
 ## Project Context
 
 You are working on **Referra**, a multi-tenant referral management platform for social services organizations. This is a PRODUCTION application serving case managers, service providers, supervisors, and organization admins.
@@ -61,11 +89,316 @@ You are working on **Referra**, a multi-tenant referral management platform for 
 
 ---
 
+## 🔐 SCRIPTS & UTILITIES - SECURITY CRITICAL
+
+### **[RULE: SCRIPTS-SECURITY]** Never Commit Secrets
+
+**ABSOLUTE RULES:**
+1. ❌ **NEVER hardcode credentials** in any script file
+2. ❌ **NEVER commit** database connection strings
+3. ❌ **NEVER commit** API keys, tokens, or passwords
+4. ✅ **ALWAYS use** `process.env` for sensitive values
+5. ✅ **ALWAYS add** risky scripts to `.gitignore`
+
+### Production-Grade Script Structure
+
+**Location: `/scripts/` (organized by purpose)**
+
+```
+scripts/
+├── dev/                    # Development & debugging utilities
+│   ├── debug-clients.js
+│   ├── analyze-usage.js
+│   └── health-check.js
+│
+├── migrations/             # One-time data migrations & seeding
+│   ├── migrate-*.js
+│   ├── seed-*.js
+│   └── README.md          # Migration log
+│
+├── tools/                 # Reusable utilities
+│   ├── csv-importer.js
+│   └── data-validator.js
+│
+└── test-data/            # Test fixtures & generators
+    ├── *.csv
+    └── generate-test-data.js
+```
+
+### **[PATTERN: SAFE-SCRIPT]** Template for Secure Scripts
+
+```javascript
+// scripts/migrations/seed-example.js
+
+/**
+ * @description Seeds example data for testing
+ * @requires MONGODB_URI environment variable
+ * @usage node scripts/migrations/seed-example.js
+ */
+
+const { MongoClient } = require('mongodb');
+require('dotenv').config({ path: '.env.local' });
+
+// ✅ CORRECT: Use environment variables
+const MONGODB_URI = process.env.MONGODB_URI;
+
+// ✅ CORRECT: Validate before proceeding
+if (!MONGODB_URI) {
+  console.error('❌ Error: MONGODB_URI not found in environment');
+  console.log('Set MONGODB_URI in your .env.local file');
+  process.exit(1);
+}
+
+async function seedData() {
+  const client = new MongoClient(MONGODB_URI);
+  
+  try {
+    await client.connect();
+    console.log('✅ Connected to database');
+    
+    const db = client.db('referradb');
+    
+    // Your seeding logic here
+    const result = await db.collection('test').insertOne({
+      name: 'Test',
+      createdAt: new Date()
+    });
+    
+    console.log(`✅ Seeded ${result.insertedId}`);
+    
+  } catch (error) {
+    console.error('❌ Seeding failed:', error.message);
+    process.exit(1);
+  } finally {
+    await client.close();
+    console.log('✅ Database connection closed');
+  }
+}
+
+// Only run if executed directly
+if (require.main === module) {
+  seedData();
+}
+
+module.exports = { seedData };
+```
+
+### **[ANTI-PATTERN: UNSAFE-SCRIPT]** NEVER Do This
+
+```javascript
+// ❌ WRONG: Hardcoded credentials
+const uri = "mongodb+srv://username:password@cluster.mongodb.net/db";
+
+// ❌ WRONG: Hardcoded API keys
+const STRIPE_SECRET = "sk_live_abc123xyz456";
+
+// ❌ WRONG: Hardcoded passwords
+const adminPassword = "SuperSecret123!";
+
+// ❌ WRONG: Production URLs hardcoded
+const apiUrl = "https://api.referra.com/v1";
+```
+
+### Script Security Checklist
+
+**Before committing ANY script:**
+- [ ] No hardcoded credentials or connection strings
+- [ ] Uses `process.env` for ALL sensitive values
+- [ ] Validates environment variables before use
+- [ ] Has clear error messages (no secrets in errors)
+- [ ] Includes documentation header
+- [ ] Uses `require('dotenv').config()` if needed
+- [ ] Has proper try/catch error handling
+- [ ] Closes database connections in `finally` block
+
+### **[RULE: GITIGNORE-SCRIPTS]** Protect Risky Scripts
+
+If a script MUST contain test credentials (local dev only):
+
+1. **Add to `.gitignore`:**
+   ```gitignore
+   # Scripts with hardcoded test credentials (DO NOT COMMIT)
+   scripts/migrations/seed-mock-*.js
+   scripts/dev/*-with-credentials.js
+   ```
+
+2. **Create `.env.example` template:**
+   ```bash
+   # .env.example
+   MONGODB_URI=mongodb://localhost:27017/referradb
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_ANON_KEY=your-anon-key
+   ```
+
+3. **Document in README:**
+   ```markdown
+   ## Running Scripts
+   
+   1. Copy `.env.example` to `.env.local`
+   2. Fill in your credentials
+   3. Run: `node scripts/migrations/seed-data.js`
+   ```
+
+### Script Naming Conventions
+
+```bash
+# Development/Debugging
+debug-[feature].js          # Debug specific feature
+analyze-[metric].js         # Analyze data/metrics
+check-[status].js          # Health/status checks
+
+# Migrations
+migrate-[description].js    # One-time data migrations
+seed-[entity].js           # Seed test data
+
+# Utilities
+generate-[output].js       # Generate files/data
+import-[source].js         # Import from external sources
+export-[format].js         # Export to external formats
+```
+
+### Common Script Patterns
+
+#### 1. Database Migration Script
+```javascript
+const { MongoClient } = require('mongodb');
+require('dotenv').config({ path: '.env.local' });
+
+async function migrate() {
+  const client = new MongoClient(process.env.MONGODB_URI);
+  
+  try {
+    await client.connect();
+    const db = client.db('referradb');
+    
+    // Migration logic with transaction
+    const session = client.startSession();
+    await session.withTransaction(async () => {
+      // Your migration steps
+    });
+    
+    console.log('✅ Migration completed');
+  } catch (error) {
+    console.error('❌ Migration failed:', error);
+    process.exit(1);
+  } finally {
+    await client.close();
+  }
+}
+
+if (require.main === module) migrate();
+```
+
+#### 2. CSV Import Script
+```javascript
+const fs = require('fs');
+const csv = require('csv-parser');
+const { MongoClient } = require('mongodb');
+require('dotenv').config({ path: '.env.local' });
+
+async function importCSV(filePath) {
+  const client = new MongoClient(process.env.MONGODB_URI);
+  const records = [];
+  
+  // Read CSV
+  await new Promise((resolve, reject) => {
+    fs.createReadStream(filePath)
+      .pipe(csv())
+      .on('data', (row) => records.push(row))
+      .on('end', resolve)
+      .on('error', reject);
+  });
+  
+  // Insert to database
+  try {
+    await client.connect();
+    const db = client.db('referradb');
+    await db.collection('imports').insertMany(records);
+    console.log(`✅ Imported ${records.length} records`);
+  } finally {
+    await client.close();
+  }
+}
+
+if (require.main === module) {
+  const filePath = process.argv[2];
+  if (!filePath) {
+    console.error('Usage: node import-csv.js <file.csv>');
+    process.exit(1);
+  }
+  importCSV(filePath);
+}
+```
+
+#### 3. Development Debug Script
+```javascript
+require('dotenv').config({ path: '.env.local' });
+const { MongoClient } = require('mongodb');
+
+async function debugUser(email) {
+  const client = new MongoClient(process.env.MONGODB_URI);
+  
+  try {
+    await client.connect();
+    const db = client.db('referradb');
+    
+    const user = await db.collection('users').findOne({ email });
+    
+    if (!user) {
+      console.log(`❌ User not found: ${email}`);
+      return;
+    }
+    
+    console.log('✅ User found:');
+    console.log(JSON.stringify(user, null, 2));
+    
+    // Don't log sensitive fields
+    delete user.password;
+    delete user.apiKey;
+    
+  } finally {
+    await client.close();
+  }
+}
+
+if (require.main === module) {
+  const email = process.argv[2];
+  if (!email) {
+    console.error('Usage: node debug-user.js <email>');
+    process.exit(1);
+  }
+  debugUser(email);
+}
+```
+
+### **[RULE: NO-CONSOLE-IN-PRODUCTION]** Logging Rules
+
+```javascript
+// ✅ CORRECT: Conditional logging
+const isDev = process.env.NODE_ENV !== 'production';
+if (isDev) {
+  console.log('Debug info:', data);
+}
+
+// ✅ CORRECT: Use proper logger
+const logger = require('./lib/logger');
+logger.info('Operation completed', { userId, action });
+
+// ❌ WRONG: Console logs in production code
+console.log('User data:', user); // Will be in production logs!
+
+// ❌ WRONG: Logging sensitive data
+console.log('Password:', password); // NEVER!
+console.log('API Key:', apiKey); // NEVER!
+```
+
+---
+
 ## 🏗️ Architecture Patterns
 
 ### Database (Supabase)
 
-**ALWAYS implement Row Level Security (RLS):**
+**[RULE: RLS-REQUIRED] ALWAYS implement Row Level Security (RLS):**
 ```sql
 -- Every table MUST have these columns
 CREATE TABLE public.table_name (
@@ -124,7 +457,7 @@ CREATE POLICY "update_own_records" ON public.table_name FOR UPDATE
 
 ### API Routes
 
-**Standard API Route Pattern:**
+**[PATTERN: API-ROUTE] Standard API Route Pattern:**
 ```typescript
 // src/app/api/[resource]/route.ts
 import { createClient } from '@/lib/supabase/server';
@@ -261,7 +594,7 @@ export async function GET(request: Request) {
 
 ### Server Actions
 
-**For mutations, prefer Server Actions over API routes:**
+**[PATTERN: SERVER-ACTION] For mutations, prefer Server Actions over API routes:**
 ```typescript
 // src/lib/actions/client-actions.ts
 'use server';
@@ -498,7 +831,7 @@ export function AddClientModal({ open, onOpenChange }: AddClientModalProps) {
 
 ## 🔒 Security Requirements
 
-### CRITICAL: Security is NON-NEGOTIABLE
+### **[CRITICAL: SECURITY-FIRST]** Security is NON-NEGOTIABLE
 
 **Every feature MUST include:**
 
@@ -1482,19 +1815,57 @@ git commit -m "feat: message"      # Commit
 git push                           # Push to remote
 ```
 
-### File Paths
+### **[REFERENCE: PROJECT-STRUCTURE]** File Paths
 
 ```
-API Routes:        src/app/api/[resource]/route.ts
-Pages:            src/app/[role]/[page]/page.tsx
-Components:       src/components/[category]/[Component].tsx
-Server Actions:   src/lib/actions/[resource]-actions.ts
-Types:            src/types/[category].ts
-Utilities:        src/lib/utils/[util].ts
-Tests:            tests/[feature].spec.ts
-Migrations:       supabase/migrations/[timestamp]_[name].sql
-Tasks:            tasks/[n]-prd-[name].md
-                  tasks/tasks-[n]-prd-[name].md
+📁 Production-Grade Project Structure
+
+Root Level (keep minimal):
+├── src/                           # Application code
+├── docs/                          # ALL documentation
+├── scripts/                       # ALL utility scripts
+├── ai-dev-tasks/                 # AI development workflow
+├── tasks/                        # PRDs and task lists
+├── tests/                        # E2E tests
+├── public/                       # Static assets
+├── .cursorrules                  # THIS FILE - team coding standards
+├── package.json
+└── [config files only]
+
+Application Code (src/):
+├── app/api/[resource]/route.ts          # API routes
+├── app/[role]/[page]/page.tsx           # Pages
+├── components/[category]/[Component].tsx # React components
+├── lib/actions/[resource]-actions.ts    # Server actions
+├── lib/utils/[util].ts                  # Utilities
+├── types/[category].ts                  # TypeScript types
+└── hooks/[use-feature].ts               # Custom hooks
+
+Documentation (docs/):
+├── architecture/                  # System design, data models
+├── planning/                     # Product plans, roadmaps
+├── development/                  # Dev guides, workflows
+├── user-flows/                   # User stories, personas
+├── testing/                      # QA guides, test plans
+└── archived/                     # Legacy docs
+
+Scripts (scripts/):
+├── dev/                          # Development utilities
+├── migrations/                   # Data migrations & seeding
+├── tools/                        # Reusable utilities
+└── test-data/                    # Test fixtures
+
+Tasks & Planning:
+├── ai-dev-tasks/                 # AI workflow templates
+│   ├── create-prd.md
+│   ├── generate-tasks.md
+│   └── process-task-list.md
+└── tasks/                        # Project tasks
+    ├── [n]-prd-[feature].md     # PRDs
+    └── tasks-[n]-prd-[feature].md # Task lists
+
+Tests:
+└── tests/[feature].spec.ts       # Playwright E2E tests
 ```
 
 ---

@@ -51,3 +51,6 @@ next-env.d.ts
 *.tmp
 *~
 .vscode/settings.json
+
+# scripts with hardcoded credentials (DO NOT COMMIT)
+scripts/migrations/seed-mock-referral.js
