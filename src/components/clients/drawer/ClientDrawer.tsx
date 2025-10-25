@@ -14,6 +14,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, User, Briefcase, FileText, Clock } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useClientDrawer } from './hooks/use-client-drawer';
+import { ClientProfileSection } from './ClientProfileSection';
+import { ClientServicesList } from './ClientServicesList';
 import type { ClientDrawerProps } from './types';
 
 export function ClientDrawer({ clientId, open, onClose }: ClientDrawerProps) {
@@ -70,11 +72,11 @@ export function ClientDrawer({ clientId, open, onClose }: ClientDrawerProps) {
               </TabsList>
 
               <TabsContent value="profile" className="space-y-6">
-                <ProfilePlaceholder client={client} />
+                <ClientProfileSection client={client} />
               </TabsContent>
 
               <TabsContent value="services" className="space-y-4">
-                <ServicesPlaceholder clientId={client._id} />
+                <ClientServicesList clientId={client._id} />
               </TabsContent>
 
               <TabsContent value="documents" className="space-y-4">
@@ -100,48 +102,6 @@ function LoadingSkeleton() {
       <Skeleton className="h-4 w-1/2" />
       <Skeleton className="h-32 w-full" />
       <Skeleton className="h-32 w-full" />
-    </div>
-  );
-}
-
-function ProfilePlaceholder({ client }: { client: any }) {
-  return (
-    <div className="space-y-6">
-      <div className="p-4 border rounded-lg">
-        <h3 className="font-semibold mb-3">Contact Information</h3>
-        <div className="space-y-2 text-sm">
-          <p><span className="text-muted-foreground">Email:</span> {client.contact?.email || 'N/A'}</p>
-          <p><span className="text-muted-foreground">Phone:</span> {client.contact?.phone || 'N/A'}</p>
-          <p><span className="text-muted-foreground">Address:</span> {client.contact?.address?.line1}, {client.contact?.address?.city}, {client.contact?.address?.state} {client.contact?.address?.zip}</p>
-        </div>
-      </div>
-
-      <div className="p-4 border rounded-lg">
-        <h3 className="font-semibold mb-3">Insurance</h3>
-        <div className="space-y-2 text-sm">
-          <p><span className="text-muted-foreground">Type:</span> {client.insurance?.type || 'N/A'}</p>
-          <p><span className="text-muted-foreground">Provider:</span> {client.insurance?.provider || 'N/A'}</p>
-          <p><span className="text-muted-foreground">Number:</span> {client.insurance?.number || 'N/A'}</p>
-        </div>
-      </div>
-
-      <div className="p-4 border rounded-lg">
-        <h3 className="font-semibold mb-3">Clinical Information</h3>
-        <div className="space-y-2 text-sm">
-          <p><span className="text-muted-foreground">Primary Diagnosis:</span> {client.clinical?.primaryDiagnosis || 'N/A'}</p>
-          <p><span className="text-muted-foreground">Mental Health Needs:</span> {client.clinical?.mentalHealthNeeds || 'N/A'}</p>
-          <p><span className="text-muted-foreground">Physical Limitations:</span> {client.clinical?.physicalLimitations || 'N/A'}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ServicesPlaceholder({ clientId }: { clientId: string }) {
-  return (
-    <div className="p-6 border rounded-lg text-center text-muted-foreground">
-      <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-50" />
-      <p>Service relationships will be loaded here (Phase C)</p>
     </div>
   );
 }
