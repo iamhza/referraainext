@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useClientRefresh } from '@/hooks/use-client-refresh';
 import { ClientTableView } from '@/components/dashboard/ClientTableView';
 import { CleanTopBar } from '@/components/layout/CleanTopBar';
-import { AddClientModal } from '@/components/modals/AddClientModal';
+// import { AddClientModal } from '@/components/modals/AddClientModal'; // DELETED
 import type { Client as ClientType } from '@/types';
 
 export default function CaseManagerBoardPage() {
@@ -113,12 +113,12 @@ export default function CaseManagerBoardPage() {
         />
       </div>
 
-      {/* Add Client Modal */}
-      <AddClientModal
+      {/* Add Client Modal - DISABLED (AddClientModal deleted) */}
+      {/* <AddClientModal
         isOpen={isAddClientModalOpen}
         onClose={handleCloseAddClientModal}
         onClientAdded={handleClientAdded}
-      />
+      /> */}
     </div>
   );
 }

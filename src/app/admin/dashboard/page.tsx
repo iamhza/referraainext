@@ -109,7 +109,7 @@ export default function AdminDashboard() {
                 <h3 className="text-lg font-medium mb-2">Referral Client Migration</h3>
                 <p className="text-gray-500 mb-4">
                   This tool will scan all referrals in the database and create client records for any clients
-                  that don't already exist in the clients collection.
+                  that don&apos;t already exist in the clients collection.
                 </p>
                 
                 <Button 

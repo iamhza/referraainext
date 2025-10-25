@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ImportClientsModal } from '@/components/shared/ImportClientsModal';
+// import { ImportClientsModal } from '@/components/shared/ImportClientsModal'; // DELETED
 import { ClientsTable } from '@/components/tables/ClientsTable';
 import { useToast } from '@/hooks/use-toast';
 
@@ -21,13 +21,13 @@ export default function ProviderClientsPage() {
 
   return (
     <div className="w-full max-w-none py-10 px-6 animate-fade-in">
-      {/* Import Modal */}
-      <ImportClientsModal 
+      {/* Import Modal - DISABLED (ImportClientsModal deleted) */}
+      {/* <ImportClientsModal 
         isOpen={showImportModal} 
         onClose={() => setShowImportModal(false)} 
         onComplete={handleImportComplete}
         role="provider"
-      />
+      /> */}
 
       {/* Shared Clients Table */}
       <ClientsTable 

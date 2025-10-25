@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Database } from 'lucide-react';
-import { ImportClientsModal } from '@/components/shared/ImportClientsModal';
+// import { ImportClientsModal } from '@/components/shared/ImportClientsModal'; // DELETED
 import { ClientsTable } from '@/components/tables/ClientsTable';
 import { useToast } from '@/hooks/use-toast';
 
@@ -64,13 +64,13 @@ export default function ClientsPage() {
 
   return (
     <div className="w-full max-w-none py-10 px-6 animate-fade-in">
-      {/* Import Modal */}
-      <ImportClientsModal 
+      {/* Import Modal - DISABLED (ImportClientsModal deleted) */}
+      {/* <ImportClientsModal 
         isOpen={showImportModal} 
         onClose={() => setShowImportModal(false)} 
         onComplete={handleImportComplete}
         role="case_manager"
-      />
+      /> */}
 
       {/* Migration Results Alert */}
       {migrationResults && (
