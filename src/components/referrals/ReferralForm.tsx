@@ -505,7 +505,7 @@ export function ReferralForm({ onComplete, prefilledClient, draftId, draftData }
                             </div>
                             <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                               <FileText className="w-3 h-3" />
-                              Client's legal first name
+                              Client&apos;s legal first name
                             </p>
                           </div>
 
@@ -532,7 +532,7 @@ export function ReferralForm({ onComplete, prefilledClient, draftId, draftData }
                             </div>
                             <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                               <FileText className="w-3 h-3" />
-                              Client's legal last name
+                              Client&apos;s legal last name
                             </p>
                           </div>
                           </div>
