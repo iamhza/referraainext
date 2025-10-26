@@ -151,7 +151,7 @@ export default function WorkspacePage() {
 
         // Get org_member ID for ownership checks
         try {
-          const response = await fetch(`/api/org-members/current`);
+          const response = await fetch(`/api/org/members/current`);
           if (response.ok) {
             const data = await response.json();
             setCurrentMemberId(data.memberId);
