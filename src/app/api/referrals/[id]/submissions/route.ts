@@ -69,6 +69,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
       { $set: update },
       { returnDocument: 'after' }
     );
+    
+    if (!res || !res.value) {
+      return NextResponse.json(
+        { error: 'Failed to update submission' },
+        { status: 500 }
+      );
+    }
+    
     return NextResponse.json({ submission: res.value });
   }
 
