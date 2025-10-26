@@ -28,10 +28,15 @@
 **Code Patterns:**
 - `[PATTERN: API-ROUTE]` - Standard API route implementation
 - `[PATTERN: SERVER-ACTION]` - Server action pattern
-- `[RULE: RLS-REQUIRED]` - Row Level Security requirements
+- `[RULE: DATA-ISOLATION-REQUIRED]` - Organization data isolation requirements
+
+**Code Philosophy:**
+- `[PHILOSOPHY: NO-OVER-ENGINEERING]` - Production-grade WITHOUT fragmentation
+- `[RULE: EXTRACT-WISELY]` - When to extract vs keep inline
+- `[RULE: PERFORMANCE-CONSCIOUS]` - Fast, secure, cost-effective code
 
 **Priority Order for Development:**
-1. 🔒 **Security** - Authentication, authorization, RLS, no secrets
+1. 🔒 **Security** - Authentication, authorization, data isolation, no secrets
 2. ✅ **Functionality** - Feature works as specified
 3. 🎨 **UX** - Loading, empty, error states
 4. 📱 **Responsive** - Mobile-first design
@@ -96,11 +101,14 @@ src/
 │   │   ├── actions.ts           # Server actions
 │   │   ├── utils.ts             # Domain utilities
 │   │   └── validation.ts        # Zod schemas
-│   ├── supabase/                # Supabase clients
-│   │   ├── client.ts            # Client-side
-│   │   ├── server.ts            # Server-side
-│   │   └── middleware.ts        # Middleware
-│   └── [utility].ts             # Shared utilities (auth, email, etc.)
+│   ├── mongodb/                 # MongoDB clients
+│   │   ├── client.ts            # MongoDB connection
+│   │   └── nextauth-adapter.ts  # NextAuth MongoDB adapter
+│   ├── auth/                    # Authentication
+│   │   ├── auth-minimal.ts      # NextAuth config
+│   │   ├── helpers.ts           # Auth utilities
+│   │   └── api-auth.ts          # API auth helpers
+│   └── [utility].ts             # Shared utilities (email, etc.)
 │
 ├── hooks/                       # Global React hooks
 │   └── use-[feature].ts         # Custom hooks
@@ -195,7 +203,7 @@ export default async function ProviderPage() {
 - [ ] Add API routes in `src/app/api/[role]/` if needed
 - [ ] Update `CleanTopBar.tsx` with role-specific navigation
 - [ ] Add types in `src/types/[role].ts`
-- [ ] Implement RLS policies for role in database
+- [ ] Implement data isolation (organizationId filtering) for role in database
 - [ ] Add E2E tests in `tests/[role]/`
 
 ---
@@ -404,7 +412,7 @@ lib/[domain]/
    ✅ Create: src/app/vendor/page.tsx
    ✅ Create: src/components/vendor/
    ✅ Update: CleanTopBar.tsx with vendor nav
-   ✅ Add: RLS policies for vendor role
+   ✅ Add: Data isolation (organizationId filtering) for vendor role
    ```
 
 3. **New Complex Component** (e.g., `AppointmentScheduler`):
@@ -672,8 +680,8 @@ If a script MUST contain test credentials (local dev only):
    ```bash
    # .env.example
    MONGODB_URI=mongodb://localhost:27017/referradb
-   SUPABASE_URL=https://your-project.supabase.co
-   SUPABASE_ANON_KEY=your-anon-key
+   NEXTAUTH_URL=http://localhost:3000
+   NEXTAUTH_SECRET=your-secret-key-here
    ```
 
 3. **Document in README:**
@@ -842,63 +850,78 @@ console.log('API Key:', apiKey); // NEVER!
 
 ## 🏗️ Architecture Patterns
 
-### Database (Supabase)
+### Database (MongoDB)
 
-**[RULE: RLS-REQUIRED] ALWAYS implement Row Level Security (RLS):**
-```sql
--- Every table MUST have these columns
-CREATE TABLE public.table_name (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  organization_id UUID NOT NULL REFERENCES public.organizations(id),
-  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  created_by UUID REFERENCES auth.users(id),
-  deleted_at TIMESTAMPTZ  -- Soft deletes
-);
+**[RULE: DATA-ISOLATION-REQUIRED] ALWAYS implement Organization Data Isolation:**
 
--- ALWAYS enable RLS
-ALTER TABLE public.table_name ENABLE ROW LEVEL SECURITY;
+**MongoDB Collection Structure:**
+```javascript
+// Every document MUST have these fields
+{
+  _id: ObjectId,
+  organizationId: ObjectId,  // REQUIRED for data isolation
+  createdAt: Date,
+  updatedAt: Date,
+  createdBy: ObjectId,
+  deletedAt: Date | null  // Soft deletes
+}
 
--- ALWAYS create organization isolation policy
-CREATE POLICY "org_isolation_policy" ON public.table_name
-  USING (organization_id IN (
-    SELECT organization_id FROM public.user_profiles 
-    WHERE user_id = auth.uid()
-  ));
+// Example: clients collection
+db.clients.insertOne({
+  _id: new ObjectId(),
+  organizationId: new ObjectId(profile.organizationId),
+  firstName: "John",
+  lastName: "Doe",
+  createdBy: new ObjectId(session.user.id),
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  deletedAt: null
+});
 ```
 
-**Database Best Practices:**
-- Use UUIDs for all primary keys
-- Add indexes on foreign keys and frequently queried columns
-- Use `TIMESTAMPTZ` for all timestamps
-- Include `updated_at` trigger for auto-updates
-- Soft delete with `deleted_at` instead of hard deletes
-- Use `jsonb` for flexible metadata columns
-- Always add descriptive comments to migrations
+**MongoDB Indexes for Performance:**
+```javascript
+// ALWAYS create compound index for organization isolation
+db.clients.createIndex({ organizationId: 1, deletedAt: 1 });
+db.clients.createIndex({ organizationId: 1, createdAt: -1 });
+```
 
-**RLS Policy Patterns:**
-```sql
--- Read access (organization members)
-CREATE POLICY "org_members_select" ON public.table_name FOR SELECT
-  USING (organization_id IN (
-    SELECT organization_id FROM public.user_profiles 
-    WHERE user_id = auth.uid()
-  ));
+**MongoDB Best Practices:**
+- Use ObjectId for all _id fields
+- Add indexes on frequently queried fields (organizationId, createdAt, etc.)
+- Use Date objects for all timestamps (createdAt, updatedAt, deletedAt)
+- Soft delete with `deletedAt` instead of hard deletes
+- Use nested objects for flexible metadata
+- Always add comments to migration scripts
+- Use aggregation pipelines for complex queries
 
--- Write access (specific roles only)
-CREATE POLICY "case_managers_insert" ON public.table_name FOR INSERT
-  WITH CHECK (
-    organization_id IN (
-      SELECT organization_id FROM public.user_profiles 
-      WHERE user_id = auth.uid() 
-      AND role IN ('case_manager', 'supervisor', 'org_admin')
-    )
-  );
+**Data Isolation Query Patterns:**
+```javascript
+// Read access (organization members) - ALWAYS filter by organizationId
+const clients = await db.collection('clients').find({
+  organizationId: profile.organizationId,
+  deletedAt: { $exists: false }  // Exclude soft-deleted
+}).toArray();
 
--- Update own records only
-CREATE POLICY "update_own_records" ON public.table_name FOR UPDATE
-  USING (created_by = auth.uid())
-  WITH CHECK (created_by = auth.uid());
+// Write access (specific roles only) - check role in API route
+if (!['case_manager', 'supervisor', 'org_admin'].includes(profile.role)) {
+  throw new Error('Insufficient permissions');
+}
+await db.collection('clients').insertOne({
+  organizationId: profile.organizationId,
+  createdBy: new ObjectId(session.user.id),
+  // ... other fields
+});
+
+// Update own records only
+await db.collection('clients').updateOne(
+  { 
+    _id: new ObjectId(clientId),
+    organizationId: profile.organizationId,
+    createdBy: new ObjectId(session.user.id)  // Only own records
+  },
+  { $set: { ...updates, updatedAt: new Date() } }
+);
 ```
 
 ### API Routes
@@ -906,9 +929,12 @@ CREATE POLICY "update_own_records" ON public.table_name FOR UPDATE
 **[PATTERN: API-ROUTE] Standard API Route Pattern:**
 ```typescript
 // src/app/api/[resource]/route.ts
-import { createClient } from '@/lib/supabase/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth-minimal';
+import { connectToDatabase } from '@/lib/mongodb/client';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { ObjectId } from 'mongodb';
 
 // Define request schema
 const requestSchema = z.object({
@@ -918,26 +944,24 @@ const requestSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    // 1. Create Supabase client
-    const supabase = createClient();
-    
-    // 2. Verify authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    // 1. Verify authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' }, 
         { status: 401 }
       );
     }
 
-    // 3. Get user profile and organization
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('organization_id, role')
-      .eq('user_id', user.id)
-      .single();
+    // 2. Connect to database
+    const { db } = await connectToDatabase();
 
-    if (profileError || !profile) {
+    // 3. Get user profile and organization
+    const profile = await db.collection('user_profiles').findOne({
+      userId: new ObjectId(session.user.id),
+    });
+
+    if (!profile) {
       return NextResponse.json(
         { error: 'Profile not found' }, 
         { status: 404 }
@@ -956,21 +980,21 @@ export async function POST(request: Request) {
       );
     }
 
-    // 6. Perform database operation (RLS handles organization isolation)
-    const { data, error } = await supabase
-      .from('resource')
-      .insert({
-        ...validated,
-        organization_id: profile.organization_id,
-        created_by: user.id,
-      })
-      .select()
-      .single();
+    // 6. Perform database operation
+    const result = await db.collection('resources').insertOne({
+      ...validated,
+      organizationId: profile.organizationId,
+      createdBy: new ObjectId(session.user.id),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
-    if (error) throw error;
+    const inserted = await db.collection('resources').findOne({
+      _id: result.insertedId,
+    });
 
     // 7. Return success response
-    return NextResponse.json(data, { status: 201 });
+    return NextResponse.json(inserted, { status: 201 });
 
   } catch (error) {
     // 8. Handle errors appropriately
@@ -993,29 +1017,39 @@ export async function POST(request: Request) {
 // GET pattern with query params
 export async function GET(request: Request) {
   try {
-    const supabase = createClient();
-    const { searchParams } = new URL(request.url);
-    
-    // Auth check...
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { db } = await connectToDatabase();
+    const { searchParams } = new URL(request.url);
+
+    // Get user's organization
+    const profile = await db.collection('user_profiles').findOne({
+      userId: new ObjectId(session.user.id),
+    });
+
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
     // Build query with filters
-    let query = supabase
-      .from('resource')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const filter: any = { 
+      organizationId: profile.organizationId,
+      deletedAt: { $exists: false },
+    };
 
     // Apply filters from query params
     const status = searchParams.get('status');
     if (status) {
-      query = query.eq('status', status);
+      filter.status = status;
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
+    const data = await db.collection('resources')
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .toArray();
 
     return NextResponse.json(data);
   } catch (error) {
@@ -1035,7 +1069,7 @@ export async function GET(request: Request) {
 - [ ] Input validation with Zod schemas
 - [ ] Proper error handling and logging
 - [ ] Appropriate HTTP status codes
-- [ ] RLS policies enforce data isolation
+- [ ] MongoDB queries filter by organizationId (enforce data isolation)
 - [ ] Rate limiting considerations for public endpoints
 
 ### Server Actions
@@ -1045,9 +1079,12 @@ export async function GET(request: Request) {
 // src/lib/actions/client-actions.ts
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth-minimal';
+import { connectToDatabase } from '@/lib/mongodb/client';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { ObjectId } from 'mongodb';
 
 const createClientSchema = z.object({
   first_name: z.string().min(1),
@@ -1064,20 +1101,19 @@ export async function createClient(
   formData: FormData
 ): Promise<ActionResult<{ id: string }>> {
   try {
-    const supabase = createClient();
-    
     // Auth check
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Connect to database
+    const { db } = await connectToDatabase();
+
     // Get profile
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('organization_id, role')
-      .eq('user_id', user.id)
-      .single();
+    const profile = await db.collection('user_profiles').findOne({
+      userId: new ObjectId(session.user.id),
+    });
 
     if (!profile) {
       return { success: false, error: 'Profile not found' };
@@ -1094,23 +1130,19 @@ export async function createClient(
     const validated = createClientSchema.parse(rawData);
 
     // Insert
-    const { data, error } = await supabase
-      .from('clients')
-      .insert({
-        ...validated,
-        organization_id: profile.organization_id,
-        created_by: user.id,
-      })
-      .select('id')
-      .single();
-
-    if (error) throw error;
+    const result = await db.collection('clients').insertOne({
+      ...validated,
+      organizationId: profile.organizationId,
+      createdBy: new ObjectId(session.user.id),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
     // Revalidate relevant paths
     revalidatePath('/case-manager/clients');
     revalidatePath('/case-manager');
 
-    return { success: true, data };
+    return { success: true, data: { id: result.insertedId.toString() } };
   } catch (error) {
     console.error('Create client error:', error);
     return { 
@@ -1126,16 +1158,32 @@ export async function createClient(
 **Server Component (default):**
 ```typescript
 // src/components/clients/ClientList.tsx
-import { createClient } from '@/lib/supabase/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth-minimal';
+import { connectToDatabase } from '@/lib/mongodb/client';
 import { ClientCard } from './ClientCard';
+import { ObjectId } from 'mongodb';
 
 export async function ClientList() {
-  const supabase = createClient();
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return null;
+
+  const { db } = await connectToDatabase();
   
-  const { data: clients } = await supabase
-    .from('clients')
-    .select('*')
-    .order('created_at', { ascending: false });
+  // Get user's organization
+  const profile = await db.collection('user_profiles').findOne({
+    userId: new ObjectId(session.user.id),
+  });
+
+  if (!profile) return null;
+
+  const clients = await db.collection('clients')
+    .find({ 
+      organizationId: profile.organizationId,
+      deletedAt: { $exists: false },
+    })
+    .sort({ createdAt: -1 })
+    .toArray();
 
   if (!clients?.length) {
     return (
@@ -1148,7 +1196,7 @@ export async function ClientList() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {clients.map((client) => (
-        <ClientCard key={client.id} client={client} />
+        <ClientCard key={client._id.toString()} client={client} />
       ))}
     </div>
   );
@@ -1283,30 +1331,29 @@ export function AddClientModal({ open, onOpenChange }: AddClientModalProps) {
 
 1. **Authentication**
    ```typescript
-   const { data: { user } } = await supabase.auth.getUser();
-   if (!user) {
+   const session = await getServerSession(authOptions);
+   if (!session?.user) {
      // Reject request
    }
    ```
 
 2. **Authorization** (organization + role)
    ```typescript
-   const { data: profile } = await supabase
-     .from('user_profiles')
-     .select('organization_id, role')
-     .eq('user_id', user.id)
-     .single();
+   const { db } = await connectToDatabase();
+   const profile = await db.collection('user_profiles').findOne({
+     userId: new ObjectId(session.user.id),
+   });
    
    // Check role if needed
-   if (!['case_manager', 'supervisor'].includes(profile.role)) {
+   if (!['case_manager', 'supervisor'].includes(profile?.role)) {
      // Reject request
    }
    ```
 
-3. **Row Level Security**
-   - EVERY table MUST have RLS enabled
-   - Policies MUST check organization_id
-   - Test RLS policies thoroughly
+3. **Data Isolation**
+   - EVERY query MUST filter by organizationId
+   - Use MongoDB query filters for organization isolation
+   - Test data isolation thoroughly
 
 4. **Input Validation**
    - Use Zod schemas for all inputs
@@ -1321,16 +1368,561 @@ export function AddClientModal({ open, onOpenChange }: AddClientModalProps) {
    - Never commit .env files
 
 **Security Checklist for Every Feature:**
-- [ ] Authentication required
-- [ ] User's organization_id verified
+- [ ] Authentication required (NextAuth session)
+- [ ] User's organizationId verified
 - [ ] Role-based permissions checked (if applicable)
-- [ ] RLS policies prevent cross-org data access
+- [ ] MongoDB queries filter by organizationId (prevent cross-org data access)
 - [ ] All inputs validated with Zod
-- [ ] No SQL injection vulnerabilities
+- [ ] No NoSQL injection vulnerabilities
 - [ ] No XSS vulnerabilities
 - [ ] Sensitive data encrypted at rest
 - [ ] HTTPS enforced in production
 - [ ] Rate limiting considered
+
+---
+
+## 🎯 **[PHILOSOPHY: NO-OVER-ENGINEERING]** Production-Grade Without Fragmentation
+
+### Core Principle: **Simplicity First, Extract When Necessary**
+
+**Production-grade does NOT mean:**
+- ❌ Creating a component for every 20 lines of JSX
+- ❌ Extracting every function into a separate file
+- ❌ Fragmenting readable code into incomprehensible pieces
+- ❌ Premature abstraction "just in case"
+- ❌ Turning 500-line components into 50 tiny files
+
+**Production-grade DOES mean:**
+- ✅ Clean, readable code with clear responsibilities
+- ✅ Extracting when logic is **complex, reusable, or testable**
+- ✅ Keeping related code together when it aids comprehension
+- ✅ Strategic separation that improves maintainability
+- ✅ Balance between organization and practical simplicity
+- ✅ **Highly secure, efficient, optimized, and performance-focused**
+- ✅ **Cost-conscious architecture (don't make things unnecessarily expensive)**
+
+---
+
+### **[RULE: EXTRACT-WISELY]** When to Extract vs Keep Inline
+
+#### ✅ **EXTRACT to a Component When:**
+
+1. **Reusability**: Used in 3+ places
+   ```typescript
+   // ✅ Good: Reused across multiple tables
+   export const StatusBadge = ({ status }) => { /* ... */ };
+   ```
+
+2. **Complexity**: 100+ lines of complex logic
+   ```typescript
+   // ✅ Good: AuthorizationCell had 111 lines of complex tooltip logic
+   export const AuthorizationCell = ({ authorization }) => { /* ... */ };
+   ```
+
+3. **Testability**: Needs isolated unit tests
+   ```typescript
+   // ✅ Good: Complex validation needs testing
+   export const PaymentForm = ({ onSubmit }) => { /* ... */ };
+   ```
+
+4. **Domain Isolation**: Clear single responsibility
+   ```typescript
+   // ✅ Good: Search has its own state and logic
+   export const SearchBar = ({ onSearch }) => { /* ... */ };
+   ```
+
+#### ❌ **KEEP INLINE When:**
+
+1. **Single Use**: Only used once in parent
+   ```typescript
+   // ✅ Good: Keep inline, clear in context
+   return (
+     <div>
+       {items.map(item => (
+         <div key={item.id} className="...">
+           {/* 30 lines of item-specific JSX - KEEP HERE */}
+         </div>
+       ))}
+     </div>
+   );
+   ```
+
+2. **Simple Mapping**: Straightforward data display
+   ```typescript
+   // ✅ Good: Don't extract simple row rendering
+   {services.map(svc => (
+     <TableRow key={svc.id}>
+       <TableCell>{svc.name}</TableCell>
+       <TableCell>{svc.status}</TableCell>
+     </TableRow>
+   ))}
+   ```
+
+3. **Tightly Coupled**: Needs parent's state/context
+   ```typescript
+   // ✅ Good: Keep inline - uses parent's handlers directly
+   <button onClick={() => handleItemAction(item.id, 'approve')}>
+     {item.status === 'pending' ? 'Approve' : 'Re-approve'}
+   </button>
+   ```
+
+4. **Visual Clarity**: Breaking it up reduces readability
+   ```typescript
+   // ❌ Bad: Over-fragmentation
+   <ClientRow client={client} />
+   <ServiceRow service={service} />
+   <ActionRow actions={actions} />
+   
+   // ✅ Good: Keep together for visual flow
+   <div className="client-card">
+     <div className="client-header">{client.name}</div>
+     <div className="client-services">{service.name}</div>
+     <div className="client-actions">{actions}</div>
+   </div>
+   ```
+
+---
+
+### **Extract Utilities/Hooks When:**
+
+#### ✅ **YES - Extract to Utils/Hooks:**
+
+1. **Business Logic**: Calculations, transformations
+   ```typescript
+   // ✅ Good: Complex calculation extracted
+   // utils/calculations.ts
+   export function calculateAuthSummary(services) {
+     // 50 lines of complex logic
+   }
+   ```
+
+2. **Reusable State**: Used in multiple components
+   ```typescript
+   // ✅ Good: Shared state management
+   // hooks/use-table-state.ts
+   export function useTableState() {
+     const [filters, setFilters] = useState(/*...*/);
+     const [sortBy, setSortBy] = useState(/*...*/);
+     return { filters, setFilters, sortBy, setSortBy };
+   }
+   ```
+
+3. **API Calls**: Data fetching logic
+   ```typescript
+   // ✅ Good: Centralized data fetching
+   // hooks/use-clients.ts
+   export function useClients() {
+     return useSWR('/api/clients', fetcher);
+   }
+   ```
+
+#### ❌ **NO - Keep Inline:**
+
+1. **Simple Functions**: 5-line helpers used once
+   ```typescript
+   // ✅ Good: Keep inline
+   const fullName = `${client.firstName} ${client.lastName}`;
+   
+   // ❌ Bad: Don't extract
+   // utils/names.ts
+   export const getFullName = (first, last) => `${first} ${last}`;
+   ```
+
+2. **Single-Use Handlers**: Component-specific logic
+   ```typescript
+   // ✅ Good: Keep in component
+   const handleSubmit = async (e) => {
+     e.preventDefault();
+     await saveData(formData);
+     toast.success('Saved');
+   };
+   ```
+
+---
+
+### **Real-World Example: ClientTableView Refactoring**
+
+**❌ Over-Engineered Approach (AVOID):**
+```
+ClientTableView/
+├── ClientTableView.tsx (50 lines - TOO fragmented)
+├── ClientSummaryRow.tsx
+├── ClientNameCell.tsx
+├── ClientProviderCell.tsx
+├── ClientStatusCell.tsx
+├── ServiceRow.tsx
+├── ServiceNameCell.tsx
+├── ServiceStatusCell.tsx
+├── ServiceAuthCell.tsx
+├── ServiceActionCell.tsx
+└── ... 20 more tiny files
+```
+**Problem**: Component becomes a puzzle. Following logic requires opening 20 files.
+
+**✅ Production-Grade Approach (CORRECT):**
+```
+ClientTableView/
+├── ClientTableView.tsx (1,045 lines - clean, readable)
+│   ↳ Inline: Client rows, service rows (clear in context)
+├── components/
+│   ├── AuthorizationCell.tsx (complex 111-line logic)
+│   ├── ServiceActionsMenu.tsx (reusable dropdown)
+│   └── ClientTableModals.tsx (modal consolidation)
+├── hooks/
+│   ├── use-client-table-data.ts (data fetching)
+│   ├── use-client-table-state.ts (UI state)
+│   └── use-status-updater.ts (API calls)
+└── utils/
+    ├── calculations.ts (business logic)
+    └── colors.ts (constants)
+```
+**Why Better**: Row rendering stays inline (readable), only complex pieces extracted.
+
+---
+
+### **Decision Tree: Should I Extract?**
+
+```
+Is the code complex (100+ lines)?
+├─ YES → Extract to component
+└─ NO → Is it reused 3+ places?
+    ├─ YES → Extract to component
+    └─ NO → Is it pure business logic?
+        ├─ YES → Extract to util function
+        └─ NO → Keep inline (it's clear where it is)
+```
+
+---
+
+### **Anti-Patterns to Avoid**
+
+#### ❌ **Micro-Components** (Every 20 Lines)
+```typescript
+// ❌ BAD: Over-fragmented
+const ClientName = ({ name }) => <span>{name}</span>;
+const ClientEmail = ({ email }) => <span>{email}</span>;
+const ClientPhone = ({ phone }) => <span>{phone}</span>;
+
+// ✅ GOOD: Keep together
+<div className="client-info">
+  <span>{client.name}</span>
+  <span>{client.email}</span>
+  <span>{client.phone}</span>
+</div>
+```
+
+#### ❌ **Premature Abstraction**
+```typescript
+// ❌ BAD: "Future-proofing" that never gets used
+const useGenericTableStateManager = <T extends BaseEntity>() => {
+  // 200 lines of unused abstraction
+};
+
+// ✅ GOOD: Solve current problem simply
+const [filters, setFilters] = useState({ search: '' });
+```
+
+#### ❌ **Utility Explosion**
+```typescript
+// ❌ BAD: Utils for everything
+// utils/string-utils.ts
+export const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+export const lowercase = (s) => s.toLowerCase();
+export const trim = (s) => s.trim();
+
+// ✅ GOOD: Use native methods
+const name = client.name.trim().toLowerCase();
+```
+
+---
+
+### **Guiding Questions Before Extracting**
+
+1. **Readability**: Does extraction make code easier or harder to follow?
+2. **Reusability**: Will this be used in 3+ places realistically?
+3. **Testability**: Does this need isolated unit tests?
+4. **Coupling**: Is this tightly coupled to parent state?
+5. **Size**: Is this 100+ lines of complex logic?
+
+**If 3+ answers are "YES" → Extract. Otherwise → Keep inline.**
+
+---
+
+### **Key Takeaway**
+
+> **"Production-grade" means clean, maintainable, secure code.
+> It does NOT mean fragmenting everything into micro-pieces.
+> Extract strategically, keep code readable, optimize for comprehension."**
+
+**ALWAYS ask: "Does this extraction make the codebase better, or just more complex?"**
+
+---
+
+## ⚡ **Performance & Efficiency Without Over-Engineering**
+
+### Core Principle: **Fast, Secure, Cost-Effective**
+
+**High-quality code should be:**
+- 🔒 **Secure** - Authentication, authorization, input validation (non-negotiable)
+- ⚡ **Performant** - Fast load times, optimized queries, efficient rendering
+- 💰 **Cost-Conscious** - Don't use expensive solutions when simple ones work
+- 🧹 **Clean** - Readable, maintainable, well-structured
+- ✅ **Tested** - Works correctly, handles edge cases
+
+---
+
+### **✅ DO: Smart Performance Optimizations**
+
+#### 1. **Database Queries: Efficient by Default**
+```typescript
+// ✅ GOOD: Single query with aggregation
+const clients = await db.collection('clients').aggregate([
+  { $match: { organizationId } },
+  { $lookup: { from: 'services', localField: '_id', foreignField: 'clientId', as: 'services' } },
+  { $limit: 100 }
+]).toArray();
+
+// ❌ BAD: N+1 queries (expensive, slow)
+const clients = await db.collection('clients').find({ organizationId }).toArray();
+for (const client of clients) {
+  client.services = await db.collection('services').find({ clientId: client._id }).toArray();
+}
+```
+
+#### 2. **React: Memoize Expensive Calculations**
+```typescript
+// ✅ GOOD: Memoize heavy calculations
+const sortedClients = useMemo(() => 
+  clients.sort((a, b) => a.name.localeCompare(b.name)),
+  [clients]
+);
+
+// ✅ GOOD: Memoize callbacks passed to children
+const handleUpdate = useCallback((id: string) => {
+  updateClient(id);
+}, [updateClient]);
+
+// ❌ BAD: Recalculate on every render
+const sortedClients = clients.sort((a, b) => a.name.localeCompare(b.name));
+```
+
+#### 3. **API Routes: Proper Caching & Pagination**
+```typescript
+// ✅ GOOD: Paginated with caching headers
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const page = parseInt(searchParams.get('page') || '1');
+  const limit = 50;
+  
+  const data = await fetchData({ page, limit });
+  
+  return NextResponse.json(data, {
+    headers: {
+      'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+    },
+  });
+}
+
+// ❌ BAD: Load all data, no caching
+export async function GET(request: Request) {
+  const allData = await db.collection('items').find({}).toArray(); // Could be 10,000+ items!
+  return NextResponse.json(allData);
+}
+```
+
+#### 4. **Images: Optimize, Don't Over-Serve**
+```typescript
+// ✅ GOOD: Next.js Image with optimization
+<Image
+  src="/avatar.jpg"
+  alt="Avatar"
+  width={48}
+  height={48}
+  quality={85}
+  placeholder="blur"
+/>
+
+// ❌ BAD: Full resolution image for thumbnail
+<img src="/5mb-photo.jpg" className="w-12 h-12" />
+```
+
+---
+
+### **❌ DON'T: Over-Optimize or Over-Spend**
+
+#### 1. **Don't Use Expensive Services for Simple Tasks**
+```typescript
+// ❌ BAD: Using Redis for session storage (adds cost + complexity)
+// When MongoDB sessions work fine for < 10k users
+import Redis from 'ioredis';
+const redis = new Redis(process.env.REDIS_URL);
+
+// ✅ GOOD: Use existing MongoDB for sessions
+// Simple, cost-effective, already in your stack
+const session = await db.collection('sessions').findOne({ userId });
+```
+
+#### 2. **Don't Premature Optimize**
+```typescript
+// ❌ BAD: Complex caching for infrequently accessed data
+const cache = new Map();
+async function getUser(id: string) {
+  if (cache.has(id)) return cache.get(id);
+  const user = await db.collection('users').findOne({ _id: id });
+  cache.set(id, user);
+  setTimeout(() => cache.delete(id), 60000);
+  return user;
+}
+
+// ✅ GOOD: Simple query first, optimize later if needed
+async function getUser(id: string) {
+  return await db.collection('users').findOne({ _id: id });
+  // MongoDB is already fast with indexes
+}
+```
+
+#### 3. **Don't Over-Engineer State Management**
+```typescript
+// ❌ BAD: Redux for simple local state (adds complexity, bundle size)
+const store = configureStore({
+  reducer: { filters: filtersReducer, sorting: sortingReducer }
+});
+
+// ✅ GOOD: Simple useState for local state
+const [filters, setFilters] = useState({ search: '' });
+const [sortBy, setSortBy] = useState('name');
+```
+
+#### 4. **Don't Use Heavy Libraries for Simple Tasks**
+```typescript
+// ❌ BAD: Import entire lodash (70kb) for one function
+import _ from 'lodash';
+const unique = _.uniq(array);
+
+// ✅ GOOD: Native JS or import specific function
+const unique = [...new Set(array)];
+// OR
+import uniq from 'lodash/uniq'; // Import only what you need
+```
+
+---
+
+### **Performance Checklist**
+
+**Before Adding Any Optimization:**
+- [ ] Is this actually a bottleneck? (Measure first)
+- [ ] Will this noticeably improve user experience?
+- [ ] Is the complexity worth the gain?
+- [ ] Does it add cost (API calls, cloud services, etc.)?
+- [ ] Can I solve this with simpler code?
+
+**Database Queries:**
+- [ ] Using indexes on frequently queried fields
+- [ ] Limiting results with `.limit()`
+- [ ] Using aggregation instead of multiple queries
+- [ ] Selecting only needed fields (`.select()` or `$project`)
+
+**React Components:**
+- [ ] Using `useMemo` for expensive calculations
+- [ ] Using `useCallback` for callbacks passed to children
+- [ ] Using `React.memo` for expensive pure components
+- [ ] Not over-memoizing (adds memory overhead)
+
+**API Routes:**
+- [ ] Proper HTTP caching headers
+- [ ] Pagination for large datasets
+- [ ] Compression enabled (Next.js does this by default)
+- [ ] Rate limiting for public endpoints
+
+**Bundle Size:**
+- [ ] Tree-shaking unused code
+- [ ] Dynamic imports for heavy components
+- [ ] Not importing entire libraries for one function
+- [ ] Using Next.js built-in optimizations
+
+---
+
+### **Real-World Performance Examples**
+
+#### **Before: Slow & Expensive**
+```typescript
+// ❌ 500ms+ load time, 50 API calls
+function ClientDashboard() {
+  const [clients, setClients] = useState([]);
+  
+  useEffect(() => {
+    async function load() {
+      const clients = await fetch('/api/clients').then(r => r.json());
+      for (const client of clients) {
+        client.services = await fetch(`/api/clients/${client.id}/services`).then(r => r.json());
+        client.issues = await fetch(`/api/clients/${client.id}/issues`).then(r => r.json());
+      }
+      setClients(clients);
+    }
+    load();
+  }, []);
+  
+  return <Table data={clients} />;
+}
+```
+
+#### **After: Fast & Efficient**
+```typescript
+// ✅ 50ms load time, 1 API call
+function ClientDashboard() {
+  const { data: clients, isLoading } = useSWR(
+    '/api/clients?include=services,issues',
+    fetcher,
+    { revalidateOnFocus: false }
+  );
+  
+  const sortedClients = useMemo(() => 
+    clients?.sort((a, b) => a.name.localeCompare(b.name)),
+    [clients]
+  );
+  
+  if (isLoading) return <Skeleton />;
+  return <Table data={sortedClients} />;
+}
+```
+
+**What Changed:**
+- Single API call with joined data (server-side)
+- SWR for caching + automatic revalidation
+- Memoized sorting calculation
+- Proper loading state
+
+---
+
+### **Cost-Consciousness Principles**
+
+**Choose Simple Over Complex:**
+- ✅ MongoDB for data + sessions (already have it)
+- ❌ MongoDB + Redis + ElasticSearch (3x the cost)
+
+**Choose Efficient Over Expensive:**
+- ✅ Next.js Image optimization (built-in, free)
+- ❌ External image CDN ($50/month for 10k images)
+
+**Choose Proven Over Shiny:**
+- ✅ SWR for data fetching (battle-tested, lightweight)
+- ❌ New experimental library (unknown reliability)
+
+**Scale When You Need It:**
+- ✅ Start with simple MongoDB queries
+- ✅ Add indexes when queries slow down
+- ✅ Add caching when load increases
+- ❌ Don't architect for 1M users when you have 10
+
+---
+
+### **Key Takeaway**
+
+> **"Performance means fast, secure, and cost-effective.
+> Measure before optimizing. Use simple solutions first.
+> Don't add complexity or cost without clear benefits."**
+
+**ALWAYS ask: "Does this optimization improve the user experience enough to justify the complexity/cost?"**
 
 ---
 
@@ -1778,48 +2370,57 @@ setLoading(true);  // No comment needed
 ### Migration Comments
 
 **ALWAYS comment database migrations:**
-```sql
--- Migration: Add client document management
--- Author: [Your Name]
--- Date: 2025-01-15
--- Description: Adds tables for storing client documents with proper RLS
--- Related PRD: /tasks/0023-prd-client-documents.md
+```javascript
+// Migration: Add client document management
+// Author: [Your Name]
+// Date: 2025-01-15
+// Description: Adds collection for storing client documents with proper data isolation
+// Related PRD: /tasks/0023-prd-client-documents.md
 
-CREATE TABLE public.client_documents (
-  -- Primary key and relationships
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  client_id UUID NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE,
+const { connectToDatabase } = require('../lib/mongodb/client');
+
+async function up() {
+  const { db } = await connectToDatabase();
   
-  -- Document metadata
-  file_name TEXT NOT NULL,
-  file_size INTEGER NOT NULL,
-  file_type TEXT NOT NULL,
-  storage_path TEXT NOT NULL,
+  // Create client_documents collection with schema validation
+  await db.createCollection('client_documents', {
+    validator: {
+      $jsonSchema: {
+        bsonType: 'object',
+        required: ['clientId', 'fileName', 'fileSize', 'fileType', 'storagePath', 'organizationId', 'createdAt', 'createdBy'],
+        properties: {
+          clientId: { bsonType: 'objectId' },
+          fileName: { bsonType: 'string' },
+          fileSize: { bsonType: 'int' },
+          fileType: { bsonType: 'string' },
+          storagePath: { bsonType: 'string' },
+          organizationId: { bsonType: 'objectId' },
+          createdAt: { bsonType: 'date' },
+          updatedAt: { bsonType: 'date' },
+          createdBy: { bsonType: 'objectId' },
+          deletedAt: { bsonType: ['date', 'null'] }
+        }
+      }
+    }
+  });
   
-  -- Standard columns
-  organization_id UUID NOT NULL REFERENCES public.organizations(id),
-  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-  created_by UUID REFERENCES auth.users(id),
-  deleted_at TIMESTAMPTZ
-);
+  // Create indexes for performance and data isolation
+  await db.collection('client_documents').createIndexes([
+    { key: { organizationId: 1, deletedAt: 1 } },
+    { key: { clientId: 1, deletedAt: 1 } },
+    { key: { createdAt: -1 } }
+  ]);
+  
+  console.log('✅ Migration completed: client_documents collection created');
+}
 
--- Index for performance
-CREATE INDEX idx_client_documents_client_id ON public.client_documents(client_id)
-  WHERE deleted_at IS NULL;
+async function down() {
+  const { db } = await connectToDatabase();
+  await db.collection('client_documents').drop();
+  console.log('✅ Rollback completed: client_documents collection dropped');
+}
 
--- Enable RLS
-ALTER TABLE public.client_documents ENABLE ROW LEVEL SECURITY;
-
--- RLS Policies
-CREATE POLICY "org_members_select_documents" 
-  ON public.client_documents FOR SELECT
-  USING (
-    organization_id IN (
-      SELECT organization_id FROM public.user_profiles 
-      WHERE user_id = auth.uid()
-    )
-    AND deleted_at IS NULL
-  );
+module.exports = { up, down };
 ```
 
 ---
@@ -1835,11 +2436,11 @@ function process(data: any) { }
 // ❌ Don't skip authentication checks
 export async function GET(request: Request) {
   // No auth check - SECURITY VULNERABILITY
-  const data = await supabase.from('clients').select();
+  const data = await db.collection('clients').find({}).toArray();
 }
 
-// ❌ Don't disable RLS
-ALTER TABLE public.clients DISABLE ROW LEVEL SECURITY;  // NEVER!
+// ❌ Don't skip organization filtering
+const clients = await db.collection('clients').find({}).toArray();  // NEVER! Missing organizationId filter
 
 // ❌ Don't commit sensitive data
 const API_KEY = 'sk_live_abc123';  // Use env vars!
@@ -1906,8 +2507,8 @@ export async function GET(request: Request) {
   }
 }
 
-// ✅ Always enable RLS
-ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
+// ✅ Always filter by organizationId
+const clients = await db.collection('clients').find({ organizationId: profile.organizationId }).toArray();
 
 // ✅ Use environment variables
 const apiKey = process.env.API_KEY;
@@ -1958,11 +2559,10 @@ export function Dashboard() {
 }
 
 // ✅ Batch database queries
-const clientIds = clients.map(c => c.id);
-const allData = await supabase
-  .from('client_data')
-  .select('*')
-  .in('client_id', clientIds);
+const clientIds = clients.map(c => c._id);
+const allData = await db.collection('client_data')
+  .find({ clientId: { $in: clientIds } })
+  .toArray();
 
 // ✅ Always implement loading states
 const [loading, setLoading] = useState(false);
@@ -1992,20 +2592,22 @@ if (status === REFERRAL_STATUS_ACCEPTED) { }
 ```typescript
 // ❌ Bad: N+1 queries
 for (const referral of referrals) {
-  const provider = await supabase
-    .from('providers')
-    .select('*')
-    .eq('id', referral.provider_id)
-    .single();
+  const provider = await db.collection('providers')
+    .findOne({ _id: referral.providerId });
 }
 
-// ✅ Good: Single query with join
-const { data: referrals } = await supabase
-  .from('referrals')
-  .select(`
-    *,
-    provider:providers(*)
-  `);
+// ✅ Good: Single query with aggregation
+const referrals = await db.collection('referrals').aggregate([
+  {
+    $lookup: {
+      from: 'providers',
+      localField: 'providerId',
+      foreignField: '_id',
+      as: 'provider'
+    }
+  },
+  { $unwind: '$provider' }
+]).toArray();
 ```
 
 ### React Performance
@@ -2137,7 +2739,7 @@ Before deploying to production:
 ### Security
 - [ ] Environment variables set in Vercel
 - [ ] No secrets in code
-- [ ] RLS policies tested
+- [ ] Data isolation tested (organizationId filtering)
 - [ ] CORS configured correctly
 - [ ] Rate limiting enabled
 
@@ -2166,7 +2768,8 @@ Before deploying to production:
 
 ### Official Documentation
 - Next.js: https://nextjs.org/docs
-- Supabase: https://supabase.com/docs
+- MongoDB: https://www.mongodb.com/docs/
+- NextAuth: https://next-auth.js.org/
 - TypeScript: https://www.typescriptlang.org/docs
 - Tailwind CSS: https://tailwindcss.com/docs
 - shadcn/ui: https://ui.shadcn.com
@@ -2217,12 +2820,12 @@ When you encounter problems:
 ```
 ⚠️ Issue with Task 3.2
 
-Problem: The existing `notifications` table doesn't have an `organization_id` column, which breaks RLS isolation.
+Problem: The existing `notifications` collection doesn't have an `organizationId` field, which breaks data isolation.
 
 Options:
-1. Add migration to add `organization_id` to `notifications` table
-2. Create new `notification_recipients` junction table with proper RLS
-3. Use Supabase Realtime pub/sub instead of database notifications
+1. Add migration to add `organizationId` to `notifications` collection
+2. Create new `notification_recipients` collection with proper data isolation
+3. Use MongoDB Change Streams or external pub/sub service
 
 Recommendation: Option 2 (better scalability and security)
 
@@ -2249,10 +2852,10 @@ npm run test:e2e           # Run E2E tests
 npx playwright test --ui    # Run tests in UI mode
 npx playwright show-report  # Show test report
 
-# Database
-npx supabase migration new [name]  # Create migration
-npx supabase db reset              # Reset local DB
-npx supabase db push               # Push migrations
+# Database (MongoDB)
+# Migrations are handled via scripts in scripts/migrations/
+node scripts/migrations/migrate-[name].js  # Run migration
+node scripts/migrations/seed-[name].js     # Seed data
 
 # Git
 git status                         # Check status

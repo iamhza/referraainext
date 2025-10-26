@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
-import { AdvancedFilterBar, type AdvancedFilters, type SortOption } from './AdvancedFilterBar';
+import { AdvancedFilterBar, type AdvancedFilters, type SortOption } from '../AdvancedFilterBar';
 import type { Client as ClientType } from '@/types.d';
 import { getServiceRelationshipStatusConfig, type ServiceRelationship, type ServiceRelationshipStatus } from '@/types/service-relationships';
 import { cn } from '@/lib/shared/utils';
@@ -200,8 +200,8 @@ export function ClientTableView({
 
       mutate();
     } catch (error) {
-      console.error('Error updating service relationship status:', error);
-      alert('Failed to update status. Please try again.');
+      console.error('[Status Update Error]:', error);
+      toast.error('Failed to update status. Please try again.');
     }
   };
 
@@ -576,18 +576,7 @@ export function ClientTableView({
                             }
                           });
                           
-                          // Debug: Log auth counts for clients with expired auth
-                          if (authCounts.expired > 0) {
-                            console.log('=== Client with expired auth ===');
-                            console.log('Client:', group.client.firstName, group.client.lastName);
-                            console.log('Total services in group:', group.services.length);
-                            console.log('Auth counts:', authCounts);
-                            group.services.forEach((svc, idx) => {
-                              if (svc.authorization?.status === 'EXPIRED') {
-                                console.log(`  ✗ Service ${idx + 1}: ${svc.serviceName} - EXPIRED`);
-                              }
-                            });
-                          }
+                          // Auth counts calculated - no debug logging in production
                           
                           // Count how many different auth statuses exist (excluding none)
                           const activeStatuses = Object.entries(authCounts)
@@ -884,7 +873,6 @@ export function ClientTableView({
                                   onClick={() => {
                                     setSelectedServiceForDrawer(svc._id);
                                     setServiceDrawerOpen(true);
-                                    // TODO: Switch to messages tab automatically
                                   }}
                                   className="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-150 hover:bg-blue-50/80 focus:bg-blue-50/80 group"
                                 >
@@ -956,20 +944,14 @@ export function ClientTableView({
                                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Management</p>
                                 </div>
                                 <DropdownMenuItem 
-                                  onClick={() => {
-                                    // TODO: Implement edit service modal
-                                    toast.info('Edit service coming soon');
-                                  }}
+                                  onClick={() => toast.info('Edit service coming soon')}
                                   className="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-150 hover:bg-slate-50 focus:bg-slate-50 group"
                                 >
                                   <Edit className="w-4 h-4 mr-3 text-slate-500 group-hover:text-slate-700 transition-colors" />
                                   <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900">Edit Service Details</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem 
-                                  onClick={() => {
-                                    // TODO: Implement close service flow
-                                    toast.info('Close service workflow coming soon');
-                                  }}
+                                  onClick={() => toast.info('Close service workflow coming soon')}
                                   className="rounded-lg px-3 py-2.5 cursor-pointer transition-all duration-150 hover:bg-slate-50 focus:bg-slate-50 group"
                                 >
                                   <XCircle className="w-4 h-4 mr-3 text-slate-500 group-hover:text-slate-700 transition-colors" />
