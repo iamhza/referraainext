@@ -1,6 +1,6 @@
-import clientPromise from './mongodb';
+import clientPromise from '../mongodb/client';
 import { AuditLog, AuditLogAction } from '@/types';
-import { getRequestIp } from './server-utils'; // We will create this helper next
+import { getRequestIp } from '../shared/server-utils';
 
 const COLLECTION = 'audit_logs';
 

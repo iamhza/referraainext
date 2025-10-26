@@ -12,7 +12,7 @@ import { ArrowRight, ArrowLeft, CalendarIcon, Loader2, Sparkles, CheckCircle2, A
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -21,7 +21,7 @@ import { useInView } from 'react-intersection-observer';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { WAIVER_TYPE_OPTIONS, formatWaiverTypeShort } from '@/lib/formatting';
+import { WAIVER_TYPE_OPTIONS, formatWaiverTypeShort } from '@/lib/shared/formatting';
 import { useReferralForm } from './hooks/use-referral-form';
 import type { ReferralFormProps } from './ReferralFormTypes';
 

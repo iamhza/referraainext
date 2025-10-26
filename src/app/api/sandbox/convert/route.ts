@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-minimal';
+import { authOptions } from '@/lib/auth/auth-minimal';
 import { convertSandboxToProduction } from '@/lib/sandbox/sandbox-manager';
 import { z } from 'zod';
 

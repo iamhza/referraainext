@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
+import clientPromise from '@/lib/mongodb/client';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
 
 export async function GET(request: NextRequest) {
   try {

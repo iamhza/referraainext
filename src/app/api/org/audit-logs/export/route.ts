@@ -4,8 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withOrgAuth } from '@/lib/api-auth';
-import clientPromise from '@/lib/mongodb';
+import { withOrgAuth } from '@/lib/auth/api-auth';
+import clientPromise from '@/lib/mongodb/client';
 
 // GET /api/org/audit-logs/export - Export audit logs as CSV
 export const GET = withOrgAuth(async (user, request: NextRequest) => {

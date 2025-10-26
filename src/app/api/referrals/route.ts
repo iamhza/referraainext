@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId } from 'mongodb';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
 
 const COLLECTION = 'referrals';
 

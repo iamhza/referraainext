@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-minimal';
-import clientPromise from '@/lib/mongodb';
+import { authOptions } from '@/lib/auth/auth-minimal';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId } from 'mongodb';
 
 export async function POST(

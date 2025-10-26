@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
-import { encryptPHI } from '@/lib/encryption';
-import { createAuditLog } from '@/lib/hipaa-audit';
+import clientPromise from '@/lib/mongodb/client';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { encryptPHI } from '@/lib/shared/encryption';
+import { createAuditLog } from '@/lib/audit/hipaa';
 
 export async function POST(request: Request) {
   try {

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId, GridFSBucket } from 'mongodb';
 import crypto from 'crypto';
-import { createAuditLog } from '@/lib/audit-logger';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
+import { createAuditLog } from '@/lib/audit/logger';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
 
 /**
  * Secure Document Access Endpoint

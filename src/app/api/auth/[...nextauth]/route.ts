@@ -4,7 +4,7 @@
  */
 
 import NextAuth from "next-auth";
-import authOptions from "@/lib/auth-minimal";
+import authOptions from "@/lib/auth/auth-minimal";
 
 
 

@@ -2,7 +2,7 @@
  * Organization-scoped utilities for multi-tenant data access
  */
 
-import clientPromise from '@/lib/mongodb';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId } from 'mongodb';
 
 export type OrgRole = 'admin' | 'org_admin' | 'supervisor' | 'case_manager' | 'provider';

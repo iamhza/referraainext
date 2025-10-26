@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
-import clientPromise from '@/lib/mongodb';
-import { validateCommentData, validateObjectId, validateRequestSize } from '@/lib/validation';
-import { createSecureMessage, getMessagesForReferral } from '@/lib/secure-messaging';
-import { auditConversationAccess } from '@/lib/hipaa-audit';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import clientPromise from '@/lib/mongodb/client';
+import { validateCommentData, validateObjectId, validateRequestSize } from '@/lib/shared/validation';
+import { createSecureMessage, getMessagesForReferral } from '@/lib/services/messaging';
+import { auditConversationAccess } from '@/lib/audit/hipaa';
 
 // Comment categories for better organization
 type CommentCategory = 'status' | 'request' | 'progress' | 'issue' | 'platform_admin';

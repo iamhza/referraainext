@@ -5,7 +5,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserOrgContext, type OrganizationUser, type OrgRole } from './organization';
+import { getUserOrgContext, type OrganizationUser, type OrgRole } from '../organizations/utils';
 
 export interface AuthenticatedUser {
   id: string;

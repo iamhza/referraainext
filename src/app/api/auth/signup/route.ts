@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import clientPromise from '@/lib/mongodb/client';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { ObjectId } from 'mongodb';

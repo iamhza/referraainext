@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import clientPromise from '@/lib/mongodb/client';
 import { WithId, Document } from 'mongodb';
 
 interface ServiceDocument extends WithId<Document> {

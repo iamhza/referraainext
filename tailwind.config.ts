@@ -1,5 +1,5 @@
 import type { Config } from "tailwindcss";
-import { brandColors } from "./src/lib/themes";
+import { brandColors } from "./src/lib/shared/themes";
 
 const config: Config = {
   darkMode: ["class"],

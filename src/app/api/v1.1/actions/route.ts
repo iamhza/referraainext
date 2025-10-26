@@ -9,8 +9,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
-import clientPromise from '@/lib/mongodb';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId } from 'mongodb';
 import type { ActionTypeV1_1, ActionStatusV1_1, ActionPriorityV1_1, SubjectType } from '@/types/actions-v1.1';
 

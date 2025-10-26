@@ -20,7 +20,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 
 type Step = 'account' | 'tier' | 'role' | 'creating';
 type Tier = 'micro' | 'mid' | 'enterprise';

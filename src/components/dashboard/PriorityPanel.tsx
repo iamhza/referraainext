@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, SkipForward, Eye, X, Clock, AlertCircle } from 'lucide-react';
 import { useState } from 'react';

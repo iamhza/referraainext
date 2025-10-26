@@ -13,7 +13,7 @@ import { config } from 'dotenv';
 import { resolve } from 'path';
 config({ path: resolve(process.cwd(), '.env.local') });
 
-import clientPromise from '@/lib/mongodb';
+import clientPromise from '@/lib/mongodb/client';
 import { SANDBOX_INDEXES } from './schemas';
 
 export async function initSandboxCollections() {

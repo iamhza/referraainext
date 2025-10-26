@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
-import clientPromise from '@/lib/mongodb';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import clientPromise from '@/lib/mongodb/client';
 
 // GET: Fetch all tasks for a referral
 export async function GET(request: Request, { params }: { params: { id: string } }) {

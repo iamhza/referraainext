@@ -4,10 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withOrgAuth } from '@/lib/api-auth';
-import clientPromise from '@/lib/mongodb';
+import { withOrgAuth } from '@/lib/auth/api-auth';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId } from 'mongodb';
-import { createOrgAuditLog } from '@/lib/organization';
+import { createOrgAuditLog } from '@/lib/organizations/utils';
 
 // POST /api/org/invitations/[id]/resend - Resend an invitation
 export const POST = withOrgAuth(async (user, request: NextRequest, { params }: { params: { id: string } }) => {

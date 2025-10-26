@@ -1,4 +1,4 @@
-import clientPromise from './mongodb';
+import clientPromise from './client';
 
 // This function ensures the required collections exist
 // and creates them with appropriate indexes if they don't

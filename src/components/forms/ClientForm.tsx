@@ -25,7 +25,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/shared/utils';
 
 const clientSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
-import { getSecureClientsForProvider } from '@/lib/secure-client';
+import clientPromise from '@/lib/mongodb/client';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { getSecureClientsForProvider } from '@/lib/clients/secure';
 
 
 

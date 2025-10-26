@@ -1,6 +1,6 @@
 'use server';
 
-import clientPromise from './mongodb';
+import clientPromise from '../mongodb/client';
 import { headers } from 'next/headers';
 
 export interface AuditLogEntry {

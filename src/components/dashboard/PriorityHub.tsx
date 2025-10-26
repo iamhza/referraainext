@@ -5,7 +5,7 @@ import { X, AlertCircle, FileText, Calendar, Clock, MessageSquare, Zap, ChevronR
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import type { Action } from '@/types/actions';
 
 interface PriorityHubProps {

@@ -47,8 +47,8 @@ You are working on **Referra**, a multi-tenant referral management platform for 
 ### Tech Stack
 - **Framework**: Next.js 14+ (App Router, React Server Components)
 - **Language**: TypeScript (strict mode)
-- **Database**: Supabase (PostgreSQL with Row Level Security)
-- **Auth**: Supabase Auth
+- **Database**: MongoDB (native driver with custom connection pooling)
+- **Auth**: NextAuth (with custom MongoDB adapter)
 - **UI**: Tailwind CSS + shadcn/ui components
 - **State**: React hooks, Server Actions for mutations
 - **Testing**: Playwright for E2E tests

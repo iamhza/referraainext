@@ -4,8 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
-import clientPromise from '@/lib/mongodb';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId } from 'mongodb';
 
 export async function GET(request: NextRequest) {

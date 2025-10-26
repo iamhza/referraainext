@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
-import { createAuditLog } from '@/lib/hipaa-audit';
+import clientPromise from '@/lib/mongodb/client';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { createAuditLog } from '@/lib/audit/hipaa';
 
 /**
  * PMI-Based Client Matching for ServiceConnection

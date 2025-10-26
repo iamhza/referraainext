@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-minimal';
+import { authOptions } from '@/lib/auth/auth-minimal';
 import { createSandboxOrg } from '@/lib/sandbox/sandbox-manager';
 import { seedSandboxData } from '@/lib/sandbox/dummy-data-seeder';
 import { z } from 'zod';

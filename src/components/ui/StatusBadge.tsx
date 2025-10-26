@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Shield, AlertTriangle, User } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import type { ClientStatus } from '@/types';
 
 interface StatusBadgeProps {

@@ -7,7 +7,7 @@
  * Performance target: Seed data in <3 seconds
  */
 
-import clientPromise from '@/lib/mongodb';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId } from 'mongodb';
 
 // ============================================================================

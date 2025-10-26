@@ -5,7 +5,7 @@
  * This is the central module for all sandbox operations.
  */
 
-import clientPromise from '@/lib/mongodb';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId } from 'mongodb';
 import { 
   SandboxOrganization, 

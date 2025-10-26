@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
-import { getSecureClientsForCaseManager, getSecureClientsForProvider } from '@/lib/secure-client';
-import { decryptPHI } from '@/lib/encryption';
+import clientPromise from '@/lib/mongodb/client';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { getSecureClientsForCaseManager, getSecureClientsForProvider } from '@/lib/clients/secure';
+import { decryptPHI } from '@/lib/shared/encryption';
 
 function normalizeKey(firstName?: string, lastName?: string, dob?: string) {
   const f = (firstName || '').trim().toLowerCase();

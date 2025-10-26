@@ -29,7 +29,7 @@ import {
   Mail,
   Building
 } from 'lucide-react';
-import { formatSafeDate } from '@/lib/date-utils';
+import { formatSafeDate } from '@/lib/shared/date-utils';
 
 interface Submission {
   _id: string;

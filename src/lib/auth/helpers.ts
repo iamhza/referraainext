@@ -4,9 +4,9 @@
  */
 
 import { getServerSession } from "next-auth";
-import authOptions from "@/lib/auth-minimal";
+import authOptions from "./auth-minimal";
 import { NextRequest, NextResponse } from "next/server";
-import { createAuditLog } from "./hipaa-audit";
+import { createAuditLog } from "../audit/hipaa";
 
 // v1.1 Data Model - Updated for org_members junction table
 export interface AuthenticatedUser {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';

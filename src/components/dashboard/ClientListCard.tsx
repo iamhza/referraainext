@@ -5,7 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { SmartStatusBar } from './SmartStatusBar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import type { Client } from '@/types';
 
 interface ClientListCardProps {

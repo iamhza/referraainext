@@ -3,14 +3,14 @@
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { formatDistanceToNow, parseISO } from 'date-fns';
-import { capitalizeName, formatWaiverTypeShort } from '@/lib/formatting';
+import { capitalizeName, formatWaiverTypeShort } from '@/lib/shared/formatting';
 import { useWorkspaceStatus } from '@/hooks/use-workspace-status';
 import { 
   getPrimaryContact, 
   getPrimaryPMI, 
   formatConnectionSummary, 
   formatReferralSummary 
-} from '@/lib/client-data-enhancer';
+} from '@/lib/clients/enhancer';
 import { SmartStatusBar } from './SmartStatusBar';
 import type { Client as ClientType } from '@/types';
 

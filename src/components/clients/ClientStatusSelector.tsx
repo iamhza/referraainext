@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/select';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { ChevronDown, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import type { ClientStatus } from '@/types';
 
 interface ClientStatusSelectorProps {

@@ -10,7 +10,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover as CalendarPopover, PopoverContent as CalendarPopoverContent, PopoverTrigger as CalendarPopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarIcon, Check, X, Trash2, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import { Badge } from '@/components/ui/badge';
 
 interface Authorization {

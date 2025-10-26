@@ -4,9 +4,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { validateInvitationToken, completeInvitation } from '@/lib/invitations';
-import { sendWelcomeEmail } from '@/lib/email';
-import clientPromise from '@/lib/mongodb';
+import { validateInvitationToken, completeInvitation } from '@/lib/invitations/utils';
+import { sendWelcomeEmail } from '@/lib/shared/email';
+import clientPromise from '@/lib/mongodb/client';
 import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {

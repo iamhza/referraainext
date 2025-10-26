@@ -4,9 +4,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, withRole, withOrgAccess } from '@/lib/nextauth-helpers';
-import { createSecureClientWithAuth, getSecureClientsForCaseManager } from '@/lib/secure-client';
-import clientPromise from '@/lib/mongodb';
+import { withAuth, withRole, withOrgAccess } from '@/lib/auth/helpers';
+import { createSecureClientWithAuth, getSecureClientsForCaseManager } from '@/lib/clients/secure';
+import clientPromise from '@/lib/mongodb/client';
 
 // GET /api/clients/nextauth - List clients with org isolation
 export const GET = withAuth(async (user: any, request: NextRequest) => {

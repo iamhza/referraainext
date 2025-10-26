@@ -2,7 +2,7 @@ import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/shared/utils'
 
 // Extend Select to properly support modal prop for nested modals
 interface SelectProps extends React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root> {

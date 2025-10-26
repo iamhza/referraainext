@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import clientPromise from '@/lib/mongodb/client';
 
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
 // GET: Fetch recent comments (last 7 days) across all referrals for dashboard
 export async function GET(request: Request) {
   try {

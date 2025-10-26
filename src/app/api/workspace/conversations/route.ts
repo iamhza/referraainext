@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
-import { capitalizeName, formatServiceType } from '@/lib/formatting';
-import { auditConversationAccess } from '@/lib/hipaa-audit';
-import { getUnreadMessageCount } from '@/lib/secure-messaging';
+import clientPromise from '@/lib/mongodb/client';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { capitalizeName, formatServiceType } from '@/lib/shared/formatting';
+import { auditConversationAccess } from '@/lib/audit/hipaa';
+import { getUnreadMessageCount } from '@/lib/services/messaging';
 
 export async function GET(request: Request) {
   try {

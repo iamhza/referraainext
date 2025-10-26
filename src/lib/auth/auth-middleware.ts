@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
-import { getCurrentUser, CustomUser } from '@/lib/custom-auth';
+import { getCurrentUser, CustomUser } from '@/lib/auth/custom';
 
 export interface AuthenticatedUser {
   id: string;

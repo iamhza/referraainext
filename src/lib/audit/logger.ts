@@ -1,4 +1,4 @@
-import clientPromise from './mongodb';
+import clientPromise from '../mongodb/client';
 import { ObjectId } from 'mongodb';
 
 export interface AuditLogEntry {

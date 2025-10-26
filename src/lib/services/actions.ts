@@ -1,8 +1,8 @@
 'use server';
 
-import clientPromise from './mongodb';
-import { encryptMessage, decryptMessage, type EncryptedData } from './encryption';
-import { createAuditLog } from './hipaa-audit';
+import clientPromise from '../mongodb/client';
+import { encryptMessage, decryptMessage, type EncryptedData } from '../shared/encryption';
+import { createAuditLog } from '../audit/hipaa';
 import { ObjectId } from 'mongodb';
 import type { Action, ActionType, ActionStatus, ActionUrgency } from '@/types/actions';
 

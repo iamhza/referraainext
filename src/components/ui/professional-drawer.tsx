@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { X, ChevronRight } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/shared/utils'
 
 interface ProfessionalDrawerProps {
   isOpen: boolean

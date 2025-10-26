@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import { signIn } from 'next-auth/react';
 
 export async function GET() {

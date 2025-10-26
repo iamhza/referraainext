@@ -17,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Shield, Loader2, Trash2, Calendar, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import {
   AlertDialog,
   AlertDialogAction,

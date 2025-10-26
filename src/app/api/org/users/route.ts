@@ -4,12 +4,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
-import clientPromise from '@/lib/mongodb';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId } from 'mongodb';
 import bcrypt from 'bcryptjs';
-import { createInvitation, generateInviteLink } from '@/lib/invitations';
-import { sendInvitationEmail, sendWelcomeEmail } from '@/lib/email';
+import { createInvitation, generateInviteLink } from '@/lib/invitations/utils';
+import { sendInvitationEmail, sendWelcomeEmail } from '@/lib/shared/email';
 
 export async function GET(request: NextRequest) {
   const user = await getAuthenticatedUser();

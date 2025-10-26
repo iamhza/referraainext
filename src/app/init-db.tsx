@@ -1,4 +1,4 @@
-import { initializeMongoDBCollections } from '@/lib/init-mongodb';
+import { initializeMongoDBCollections } from '@/lib/mongodb/init';
 
 // This is a server component that runs only on the server
 export async function InitDatabase() {

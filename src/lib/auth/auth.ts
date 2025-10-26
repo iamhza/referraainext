@@ -1,10 +1,10 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { MongoDBAdapter } from "./mongodb-nextauth-adapter";
-import clientPromise from "./mongodb";
+import { MongoDBAdapter } from "../mongodb/nextauth-adapter";
+import clientPromise from "../mongodb/client";
 import { User } from "next-auth";
 import { JWT } from "next-auth/jwt";
-import { createAuditLog } from "./hipaa-audit";
+import { createAuditLog } from "../audit/hipaa";
 import bcrypt from 'bcryptjs';
 import { ObjectId } from 'mongodb';
 
@@ -133,8 +133,8 @@ const authOptions: NextAuthOptions = {
         // Store all user data in JWT for multi-tenant support
         token.id = user.id;
         token.role = user.role;
-        token.org_id = user.org_id;
-        token.team_id = user.team_id;
+        token.organizationId = user.organizationId;
+        token.teamId = user.teamId;
         token.permissions = user.permissions;
         token.organization = user.organization;
         token.team = user.team;
@@ -145,9 +145,9 @@ const authOptions: NextAuthOptions = {
       if (token) {
         // Pass all data to session for client use
         session.user.id = token.id as string;
-        session.user.role = token.role as 'platform_admin' | 'org_admin' | 'supervisor' | 'case_manager' | 'provider';
-        session.user.org_id = token.org_id as string;
-        session.user.team_id = token.team_id as string;
+        session.user.role = token.role as 'PLATFORM_ADMIN' | 'ORG_ADMIN' | 'SUPERVISOR' | 'CASE_MANAGER' | 'PROVIDER_USER';
+        session.user.organizationId = token.organizationId as string;
+        session.user.teamId = token.teamId as string;
         session.user.permissions = token.permissions as string[];
         session.user.organization = token.organization;
         session.user.team = token.team;

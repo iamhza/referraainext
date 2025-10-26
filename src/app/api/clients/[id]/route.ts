@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import clientPromise from '@/lib/mongodb';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
+import clientPromise from '@/lib/mongodb/client';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import { ObjectId } from 'mongodb';
-import { getSecureClient, updateSecureClient, deleteSecureClient } from '@/lib/secure-client';
+import { getSecureClient, updateSecureClient, deleteSecureClient } from '@/lib/clients/secure';
 
 export async function DELETE(
   request: Request,

@@ -1,8 +1,8 @@
-import clientPromise from '@/lib/mongodb';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId } from 'mongodb';
-import { encryptMessage as encryptPHI, decryptMessage as decryptPHI, EncryptedData } from './encryption';
-import { createAuditLog } from './hipaa-audit';
-import { getAuthenticatedUser } from './nextauth-helpers';
+import { encryptMessage as encryptPHI, decryptMessage as decryptPHI, EncryptedData } from '../shared/encryption';
+import { createAuditLog } from '../audit/hipaa';
+import { getAuthenticatedUser } from '../auth/helpers';
 
 const CLIENTS_COLLECTION = 'clients';
 const CLIENT_RETENTION_YEARS = 7; // HIPAA requirement for client data retention

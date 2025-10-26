@@ -12,7 +12,7 @@ import { useTour } from '@/contexts/TourContext';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Clock, Sparkles, X, PlayCircle } from 'lucide-react';
 import { useState } from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 
 export function SandboxBanner() {
   const { sandbox, actions, isLoading } = useSandbox();

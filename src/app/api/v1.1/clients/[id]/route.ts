@@ -7,11 +7,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
-import clientPromise from '@/lib/mongodb';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId } from 'mongodb';
-import { clientToFlat, mergeNestedUpdate, isV1_1Format, flatToNested } from '@/lib/client-v1.1-adapter';
-import type { ClientInput } from '@/lib/client-v1.1-adapter';
+import { clientToFlat, mergeNestedUpdate, isV1_1Format, flatToNested } from '@/lib/clients/adapter';
+import type { ClientInput } from '@/lib/clients/adapter';
 
 // GET /api/v1.1/clients/[id] - Get single client
 export async function GET(

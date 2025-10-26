@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
-import clientPromise from '@/lib/mongodb';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId } from 'mongodb';
-import { createAuditLog } from '@/lib/audit';
+import { createAuditLog } from '@/lib/audit/utils';
 
 /**
  * GET /api/clients/[id]/service-relationships

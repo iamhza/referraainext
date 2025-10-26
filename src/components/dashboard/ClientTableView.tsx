@@ -5,7 +5,7 @@ import useSWR from 'swr';
 import { AdvancedFilterBar, type AdvancedFilters, type SortOption } from './AdvancedFilterBar';
 import type { Client as ClientType } from '@/types.d';
 import { getServiceRelationshipStatusConfig, type ServiceRelationship, type ServiceRelationshipStatus } from '@/types/service-relationships';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import { formatDistanceToNow, format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';

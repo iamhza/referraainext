@@ -4,9 +4,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withOrgAuth } from '@/lib/api-auth';
-import { getOrgReferrals, getOrgFilter } from '@/lib/organization';
-import clientPromise from '@/lib/mongodb';
+import { withOrgAuth } from '@/lib/auth/api-auth';
+import { getOrgReferrals, getOrgFilter } from '@/lib/organizations/utils';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId } from 'mongodb';
 
 export const GET = withOrgAuth(async (user, request: NextRequest) => {

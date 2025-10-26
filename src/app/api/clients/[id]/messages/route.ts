@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
-import { createSecureMessage, getMessagesForClient } from '@/lib/secure-messaging';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { createSecureMessage, getMessagesForClient } from '@/lib/services/messaging';
 
 export async function GET(
   request: Request,

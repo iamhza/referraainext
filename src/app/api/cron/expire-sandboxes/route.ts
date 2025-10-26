@@ -15,7 +15,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import clientPromise from '@/lib/mongodb/client';
 import { expireSandbox } from '@/lib/sandbox/sandbox-manager';
 
 export const dynamic = 'force-dynamic';

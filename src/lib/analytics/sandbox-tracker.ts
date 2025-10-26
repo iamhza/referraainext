@@ -5,7 +5,7 @@
  * Calculates lead scores and identifies hot prospects.
  */
 
-import clientPromise from '@/lib/mongodb';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId } from 'mongodb';
 
 // ============================================================================

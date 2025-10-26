@@ -4,7 +4,7 @@
 
 import { NextAuthOptions, DefaultSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import clientPromise from "./mongodb";
+import clientPromise from "../mongodb/client";
 import bcrypt from 'bcryptjs';
 import { ObjectId } from 'mongodb';
 

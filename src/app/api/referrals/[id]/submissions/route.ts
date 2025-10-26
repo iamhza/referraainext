@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
+import clientPromise from '@/lib/mongodb/client';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import { ObjectId } from 'mongodb';
-import { computeSubmissionScore } from '@/lib/scoring';
-import { ensureProviderSubscription, canSubmitToNetwork, incrementSubmissionUsage } from '@/lib/supabase-quota';
+import { computeSubmissionScore } from '@/lib/shared/scoring';
+import { ensureProviderSubscription, canSubmitToNetwork, incrementSubmissionUsage } from '@/lib/shared/quota';
 
 
 

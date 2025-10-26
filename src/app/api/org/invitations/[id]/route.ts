@@ -4,8 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withOrgAuth } from '@/lib/api-auth';
-import clientPromise from '@/lib/mongodb';
+import { withOrgAuth } from '@/lib/auth/api-auth';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId } from 'mongodb';
 
 // DELETE /api/org/invitations/[id] - Cancel a specific invitation

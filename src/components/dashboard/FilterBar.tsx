@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Clock, FileText, Calendar, Users } from 'lucide-react';
 import { useEffect } from 'react';

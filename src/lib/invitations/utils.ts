@@ -4,7 +4,7 @@
  */
 
 import crypto from 'crypto';
-import clientPromise from '@/lib/mongodb';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId } from 'mongodb';
 
 interface CreateInvitationProps {

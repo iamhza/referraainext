@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { formatDistanceToNow, parseISO } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import { Action } from '@/types/actions';
 import { useToast } from '@/hooks/use-toast';
 import {

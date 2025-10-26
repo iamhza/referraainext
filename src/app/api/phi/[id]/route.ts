@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
-import clientPromise from '@/lib/mongodb';
-import { validateObjectId } from '@/lib/validation';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import clientPromise from '@/lib/mongodb/client';
+import { validateObjectId } from '@/lib/shared/validation';
 
 export async function GET(
   request: Request,

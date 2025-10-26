@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 
 interface LogoProps {
   className?: string;

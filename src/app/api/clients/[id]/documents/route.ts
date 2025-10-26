@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId, GridFSBucket } from 'mongodb';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import crypto from 'crypto';
-import { createAuditLog } from '@/lib/audit-logger';
+import { createAuditLog } from '@/lib/audit/logger';
 import { Readable } from 'stream';
 
 // GET - Fetch all documents for a client (HIPAA Compliant)

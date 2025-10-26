@@ -34,7 +34,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import { Issue, ISSUE_TYPE_CONFIG, ISSUE_STATUS_CONFIG } from '@/types/issues';
 import { Task, TASK_STATUS_CONFIG } from '@/types/tasks';
 import { formatDistanceToNow } from 'date-fns';

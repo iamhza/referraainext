@@ -20,7 +20,7 @@ import {
   ExternalLink,
   Activity
 } from 'lucide-react';
-import { formatSafeDate } from '@/lib/date-utils';
+import { formatSafeDate } from '@/lib/shared/date-utils';
 import Link from 'next/link';
 
 interface Connection {

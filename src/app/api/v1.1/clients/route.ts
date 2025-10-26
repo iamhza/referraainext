@@ -8,11 +8,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
-import clientPromise from '@/lib/mongodb';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId } from 'mongodb';
-import { flatToNested, nestedToFlat, clientToFlat, mergeNestedUpdate } from '@/lib/client-v1.1-adapter';
-import type { ClientInput } from '@/lib/client-v1.1-adapter';
+import { flatToNested, nestedToFlat, clientToFlat, mergeNestedUpdate } from '@/lib/clients/adapter';
+import type { ClientInput } from '@/lib/clients/adapter';
 
 // GET /api/v1.1/clients - List all clients for current user
 export async function GET(request: NextRequest) {

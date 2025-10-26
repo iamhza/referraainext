@@ -4,15 +4,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import { 
   createInvitation, 
   generateInviteLink,
   getOrganizationInvitations,
   cancelInvitation,
   resendInvitation
-} from '@/lib/invitations';
-import { sendInvitationEmail } from '@/lib/email';
+} from '@/lib/invitations/utils';
+import { sendInvitationEmail } from '@/lib/shared/email';
 
 export async function GET(request: NextRequest) {
   const user = await getAuthenticatedUser();

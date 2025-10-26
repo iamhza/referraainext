@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-minimal';
+import { authOptions } from '@/lib/auth/auth-minimal';
 import { trackEvent } from '@/lib/analytics/sandbox-tracker';
 import { z } from 'zod';
 

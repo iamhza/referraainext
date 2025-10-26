@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import clientPromise from '@/lib/mongodb/client';
 import { ObjectId } from 'mongodb';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
-import { getSecureClientsForCaseManager, getSecureClientsForProvider, createSecureClient } from '@/lib/secure-client';
-import { computeSmartStatus } from '@/lib/smart-status-computer';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { getSecureClientsForCaseManager, getSecureClientsForProvider, createSecureClient } from '@/lib/clients/secure';
+import { computeSmartStatus } from '@/lib/services/status-computer';
 
 const COLLECTION = 'clients';
 

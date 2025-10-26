@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
-import { getAuthenticatedUser } from '@/lib/nextauth-helpers';
-import { ensureProviderSubscription, isOverClientLimit } from '@/lib/supabase-quota';
+import clientPromise from '@/lib/mongodb/client';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { ensureProviderSubscription, isOverClientLimit } from '@/lib/shared/quota';
 
 export async function POST(request: Request) {
   try {

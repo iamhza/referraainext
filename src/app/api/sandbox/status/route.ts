@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-minimal';
+import { authOptions } from '@/lib/auth/auth-minimal';
 import { getSandboxOrg } from '@/lib/sandbox/sandbox-manager';
 
 export async function GET(request: NextRequest) {

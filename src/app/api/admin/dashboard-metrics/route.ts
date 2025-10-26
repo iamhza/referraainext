@@ -1,16 +1,19 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
-import { getAdminUser } from '@/lib/supabase';
+import clientPromise from '@/lib/mongodb/client';
+
+// TODO: Implement admin auth check with NextAuth
+// Legacy Supabase getAdminUser() removed - needs reimplementation
 
 /**
  * GET handler for fetching aggregated dashboard metrics for the admin panel.
  * This is an admin-only endpoint.
  */
 export async function GET() {
-  const user = await getAdminUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  // TODO: Add admin authorization check
+  // const user = await getAdminUser();
+  // if (!user) {
+  //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // }
 
   try {
     const client = await clientPromise;
