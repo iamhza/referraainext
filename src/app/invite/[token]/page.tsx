@@ -172,7 +172,7 @@ export default function InviteSignupPage() {
           </div>
           <CardTitle className="text-2xl">Complete Your Registration</CardTitle>
           <p className="text-gray-600">
-            You've been invited by <strong>{invitation?.inviter_name}</strong>
+            You&apos;ve been invited by <strong>{invitation?.inviter_name}</strong>
           </p>
         </CardHeader>
 

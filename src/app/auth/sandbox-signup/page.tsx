@@ -299,7 +299,7 @@ export default function SandboxSignupPage() {
                   What size is your organization?
                 </h2>
                 <p className="text-gray-600">
-                  We'll customize your demo experience based on your organization's scale
+                  We&apos;ll customize your demo experience based on your organization&apos;s scale
                 </p>
               </div>
               
@@ -408,10 +408,10 @@ export default function SandboxSignupPage() {
             <div>
               <div className="text-center mb-8">
                 <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                  What's your role?
+                  What&apos;s your role?
                 </h2>
                 <p className="text-gray-600">
-                  We'll tailor the demo to show features relevant to your daily work
+                  We&apos;ll tailor the demo to show features relevant to your daily work
                 </p>
               </div>
               

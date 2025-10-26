@@ -136,7 +136,7 @@ export default function SignInPage() {
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome back!</h1>
             <p className="text-gray-600">
-              Don't have an account yet?{' '}
+              Don&apos;t have an account yet?{' '}
               <Link href="/auth/signup" className="text-blue-600 hover:underline font-medium">
                 Sign up now
               </Link>
@@ -202,7 +202,7 @@ export default function SignInPage() {
                   placeholder="Organization domain (e.g., riverside-social)"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Enter your organization's domain or slug
+                  Enter your organization&apos;s domain or slug
                 </p>
               </div>
             )}

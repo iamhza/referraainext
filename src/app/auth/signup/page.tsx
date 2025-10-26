@@ -157,7 +157,7 @@ export default function SignUpPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      I'm a case manager
+                      I&apos;m a case manager
                     </h3>
                     <p className="text-gray-600 text-sm leading-relaxed">
                       I want to manage my team or recruit new talent.
@@ -180,10 +180,10 @@ export default function SignUpPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      I'm a service provider
+                      I&apos;m a service provider
                     </h3>
                     <p className="text-gray-600 text-sm leading-relaxed">
-                      I'm a freelancer, job seeker, or employee.
+                      I&apos;m a freelancer, job seeker, or employee.
                     </p>
                   </div>
                   <div className="ml-4 flex-shrink-0">

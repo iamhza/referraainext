@@ -210,7 +210,7 @@ export function CreateIssueDialog({
               <p className="font-semibold">This will create a collaborative workspace</p>
               <p className="text-xs text-amber-700 mt-1">
                 Team members can discuss this issue, add comments, and create tasks to resolve it.
-                You'll be redirected to the workspace after creation.
+                You&apos;ll be redirected to the workspace after creation.
               </p>
             </div>
           </div>
