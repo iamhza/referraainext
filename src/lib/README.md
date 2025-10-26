@@ -10,10 +10,7 @@
 src/lib/
 ├── auth/                  # Authentication & Authorization
 │   ├── api-auth.ts        # API authentication utilities
-│   ├── auth.ts            # NextAuth configuration
-│   ├── auth-middleware.ts # Auth middleware
-│   ├── auth-minimal.ts    # Minimal auth types/utils
-│   ├── custom.ts          # Custom auth logic
+│   ├── auth-minimal.ts    # NextAuth configuration (ACTIVE)
 │   ├── helpers.ts         # Auth helper functions
 │   └── provider.tsx       # SessionProvider component
 │
@@ -68,7 +65,6 @@ src/lib/
     ├── encryption.ts      # Encryption helpers
     ├── formatting.ts      # Data formatting
     ├── logger.ts          # Logging utilities
-    ├── quota.ts           # Quota management
     ├── rate-limit.ts      # Rate limiting
     ├── scoring.ts         # Scoring algorithms
     ├── server-utils.ts    # Server-side utilities

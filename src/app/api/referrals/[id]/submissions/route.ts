@@ -3,7 +3,8 @@ import clientPromise from '@/lib/mongodb/client';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import { ObjectId } from 'mongodb';
 import { computeSubmissionScore } from '@/lib/shared/scoring';
-import { ensureProviderSubscription, canSubmitToNetwork, incrementSubmissionUsage } from '@/lib/shared/quota';
+// TODO: Re-implement quota system for provider side
+// import { ensureProviderSubscription, canSubmitToNetwork, incrementSubmissionUsage } from '@/lib/shared/quota';
 
 
 
@@ -71,24 +72,25 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json({ submission: res.value });
   }
 
+  // TODO: Re-implement quota enforcement for provider side
   // Quota enforcement for providers (admins bypass)
-  if (user.role === 'provider') {
-    try {
-      const subscription = await ensureProviderSubscription(providerId);
-      if (!canSubmitToNetwork(subscription)) {
-        return NextResponse.json({ 
-          error: 'Submission quota exceeded. Upgrade your plan to submit more.',
-          needsUpgrade: true 
-        }, { status: 403 });
-      }
+  // if (user.role === 'provider') {
+  //   try {
+  //     const subscription = await ensureProviderSubscription(providerId);
+  //     if (!canSubmitToNetwork(subscription)) {
+  //       return NextResponse.json({ 
+  //         error: 'Submission quota exceeded. Upgrade your plan to submit more.',
+  //         needsUpgrade: true 
+  //       }, { status: 403 });
+  //     }
 
-      // Increment usage counter
-      await incrementSubmissionUsage(providerId);
-    } catch (error) {
-      console.error('Quota check failed:', error);
-      return NextResponse.json({ error: 'Failed to verify submission quota' }, { status: 500 });
-    }
-  }
+  //     // Increment usage counter
+  //     await incrementSubmissionUsage(providerId);
+  //   } catch (error) {
+  //     console.error('Quota check failed:', error);
+  //     return NextResponse.json({ error: 'Failed to verify submission quota' }, { status: 500 });
+  //   }
+  // }
 
   // Minimal scoring context (can be expanded)
   const score = computeSubmissionScore(body, {
