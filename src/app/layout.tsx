@@ -6,9 +6,7 @@ import { TourProvider } from "@/contexts/TourContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
-import InitDatabase from "./init-db";
 import { SandboxBanner } from "@/components/sandbox/SandboxBanner";
-// import { ConversionModalProvider } from "@/components/sandbox/ConversionModalProvider"; // DELETED
 
 // Configure Manrope font
 const manrope = localFont({
@@ -40,8 +38,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${manrope.variable} font-sans antialiased`}>
-        {/* Initialize MongoDB collections */}
-        <InitDatabase />
         <Providers>
           <ThemeProvider>
             <TourProvider>
