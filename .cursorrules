@@ -7,14 +7,26 @@
 
 **When citing rules, use these reference tags:**
 
+**Security & Scripts:**
 - `[CRITICAL: SECURITY-FIRST]` - Security requirements (non-negotiable)
 - `[RULE: SCRIPTS-SECURITY]` - Never commit secrets in scripts
 - `[PATTERN: SAFE-SCRIPT]` - Secure script template
 - `[ANTI-PATTERN: UNSAFE-SCRIPT]` - Never do this in scripts
 - `[RULE: GITIGNORE-SCRIPTS]` - Protecting risky scripts
 - `[RULE: NO-CONSOLE-IN-PRODUCTION]` - Logging best practices
-- `[REFERENCE: PROJECT-STRUCTURE]` - File organization
-- `[PATTERN: API-ROUTE]` - Standard API route pattern
+
+**Project Structure:**
+- `[REFERENCE: SRC-ARCHITECTURE]` - Production-grade src/ organization
+- `[REFERENCE: PROJECT-STRUCTURE]` - Root directory structure
+- `[PATTERN: ROLE-BASED-PAGES]` - Adding new user role pages
+- `[PATTERN: API-ROUTES]` - Organizing API routes by domain
+- `[PATTERN: COMPONENTS]` - Organizing components by domain
+- `[PATTERN: LIB-ORGANIZATION]` - Organizing business logic
+- `[RULE: CONTINUOUS-BUILDING]` - Structure for future growth
+- `[ANTI-PATTERN: AVOID-THESE]` - Bad organization patterns
+
+**Code Patterns:**
+- `[PATTERN: API-ROUTE]` - Standard API route implementation
 - `[PATTERN: SERVER-ACTION]` - Server action pattern
 - `[RULE: RLS-REQUIRED]` - Row Level Security requirements
 
@@ -47,6 +59,440 @@ You are working on **Referra**, a multi-tenant referral management platform for 
 - **User Roles**: case_manager, provider, supervisor, org_admin
 - **Core Workflow**: Case managers create referrals → Providers receive/respond → Status tracking
 - **Compliance**: HIPAA-adjacent (handles sensitive client information)
+
+---
+
+## 🏗️ PRODUCTION-GRADE PROJECT STRUCTURE
+
+### **[REFERENCE: SRC-ARCHITECTURE]** The `src/` Directory
+
+**Core Principle**: Domain-driven organization with clear separation of concerns.
+
+```
+src/
+├── app/                          # Next.js App Router (Pages & Layouts)
+│   ├── (auth)/                  # Auth-protected route group
+│   │   ├── case-manager/        # Case Manager role pages
+│   │   ├── org-admin/           # Organization Admin role pages
+│   │   ├── supervisor/          # Supervisor role pages
+│   │   └── provider/            # Provider role pages (future)
+│   ├── auth/                    # Authentication pages (public)
+│   ├── invite/                  # Invitation/onboarding flow
+│   ├── api/                     # API routes (organized by domain)
+│   └── layout.tsx               # Root layout
+│
+├── components/                   # React components (organized by domain)
+│   ├── [domain]/                # Domain-specific components
+│   │   ├── [Component].tsx      # Main component files
+│   │   ├── drawer/              # Drawer/modal components
+│   │   └── hooks/               # Component-specific hooks
+│   ├── layout/                  # Layout components (nav, sidebar)
+│   ├── shared/                  # Shared/generic components
+│   └── ui/                      # shadcn/ui base components
+│
+├── lib/                         # Business logic & utilities (organized by domain)
+│   ├── [domain]/                # Domain-specific logic
+│   │   ├── client.ts            # Client for API/DB calls
+│   │   ├── actions.ts           # Server actions
+│   │   ├── utils.ts             # Domain utilities
+│   │   └── validation.ts        # Zod schemas
+│   ├── supabase/                # Supabase clients
+│   │   ├── client.ts            # Client-side
+│   │   ├── server.ts            # Server-side
+│   │   └── middleware.ts        # Middleware
+│   └── [utility].ts             # Shared utilities (auth, email, etc.)
+│
+├── hooks/                       # Global React hooks
+│   └── use-[feature].ts         # Custom hooks
+│
+├── types/                       # TypeScript type definitions
+│   ├── [domain].ts              # Domain-specific types
+│   └── index.ts                 # Shared types
+│
+├── contexts/                    # React Context providers
+│   └── [Context]Provider.tsx
+│
+└── styles/                      # Global styles
+    └── globals.css
+```
+
+---
+
+### **[PATTERN: ROLE-BASED-PAGES]** Adding New User Role Pages
+
+**When creating pages for a new user role (e.g., `provider`, `vendor`), follow this structure:**
+
+```
+src/app/[role]/
+├── layout.tsx                   # Role-specific layout wrapper
+├── page.tsx                     # Main dashboard for this role
+├── clients/                     # Client management (if applicable)
+│   └── page.tsx
+├── settings/                    # Role-specific settings
+│   └── page.tsx
+├── [feature-1]/                 # Feature-specific pages
+│   ├── page.tsx
+│   └── [id]/
+│       └── page.tsx
+└── [feature-2]/
+    └── page.tsx
+```
+
+**Example: Adding Provider Role Pages**
+
+```typescript
+// src/app/provider/layout.tsx
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { CleanTopBar } from '@/components/layout/CleanTopBar';
+
+export default function ProviderLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <DashboardLayout>
+      <CleanTopBar userRole="provider" />
+      <main className="flex-1 overflow-auto">
+        {children}
+      </main>
+    </DashboardLayout>
+  );
+}
+
+// src/app/provider/page.tsx
+import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import { ProviderDashboard } from '@/components/provider/ProviderDashboard';
+
+export default async function ProviderPage() {
+  const supabase = createClient();
+  
+  // Auth check
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/auth/signin');
+  
+  // Get user profile
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('role, organization_id')
+    .eq('user_id', user.id)
+    .single();
+  
+  // Role check
+  if (profile?.role !== 'provider') {
+    redirect('/unauthorized');
+  }
+  
+  return <ProviderDashboard />;
+}
+```
+
+**Checklist for New Role Pages:**
+- [ ] Create `src/app/[role]/layout.tsx` with role-specific nav
+- [ ] Create `src/app/[role]/page.tsx` with auth + role checks
+- [ ] Add role-specific components in `src/components/[role]/`
+- [ ] Add API routes in `src/app/api/[role]/` if needed
+- [ ] Update `CleanTopBar.tsx` with role-specific navigation
+- [ ] Add types in `src/types/[role].ts`
+- [ ] Implement RLS policies for role in database
+- [ ] Add E2E tests in `tests/[role]/`
+
+---
+
+### **[PATTERN: API-ROUTES]** Organizing API Routes by Domain
+
+**Structure API routes by business domain, not HTTP method:**
+
+```
+src/app/api/
+├── clients/                     # Client management
+│   ├── route.ts                # GET /api/clients, POST /api/clients
+│   ├── [id]/
+│   │   ├── route.ts            # GET, PATCH, DELETE /api/clients/:id
+│   │   └── documents/
+│   │       └── route.ts        # GET, POST /api/clients/:id/documents
+│   └── import/
+│       └── route.ts            # POST /api/clients/import
+│
+├── service-relationships/       # Service relationship management
+│   ├── route.ts                # GET, POST /api/service-relationships
+│   ├── [id]/
+│   │   ├── route.ts            # GET, PATCH /api/service-relationships/:id
+│   │   ├── messages/
+│   │   │   └── route.ts        # GET, POST messages for service
+│   │   └── issues/
+│   │       └── route.ts        # GET, POST issues for service
+│
+├── referrals/                   # Referral management
+│   ├── route.ts
+│   ├── [id]/
+│   │   └── route.ts
+│   └── drafts/
+│       └── route.ts
+│
+├── organizations/               # Organization management
+│   ├── route.ts
+│   └── [id]/
+│       ├── route.ts
+│       ├── members/
+│       │   └── route.ts
+│       └── settings/
+│           └── route.ts
+│
+└── auth/                        # Authentication
+    ├── signin/
+    ├── signup/
+    └── callback/
+```
+
+**API Route Naming Rules:**
+- Use **plural nouns** for collections: `/api/clients`, `/api/providers`
+- Use **nested routes** for relationships: `/api/clients/[id]/documents`
+- Use **action verbs** for non-CRUD operations: `/api/clients/import`, `/api/service-relationships/[id]/accept`
+- Keep routes **shallow** (max 3-4 levels deep)
+
+---
+
+### **[PATTERN: COMPONENTS]** Organizing Components by Domain
+
+**Organize components by business domain, not by type:**
+
+```
+src/components/
+├── clients/                     # Client-related components
+│   ├── ClientCard.tsx
+│   ├── ClientList.tsx
+│   ├── drawer/                  # Client drawer components
+│   │   ├── ClientDrawer.tsx
+│   │   ├── ClientProfileSection.tsx
+│   │   ├── ClientServicesList.tsx
+│   │   ├── types.ts
+│   │   └── hooks/
+│   │       ├── use-client-drawer.ts
+│   │       └── use-client-services.ts
+│
+├── services/                    # Service-related components
+│   ├── ServiceCard.tsx
+│   ├── drawer/
+│   │   ├── ServiceDrawer.tsx
+│   │   ├── OverviewTab.tsx
+│   │   ├── MessagesTab.tsx
+│   │   ├── types.ts
+│   │   └── hooks/
+│   │       ├── use-service-details.ts
+│   │       └── use-service-messages.ts
+│
+├── referrals/                   # Referral-related components
+│   ├── ReferralForm.tsx
+│   ├── ReferralFormTypes.ts
+│   └── hooks/
+│       └── use-referral-form.ts
+│
+├── dashboard/                   # Dashboard components
+│   ├── ClientTableView.tsx
+│   ├── StatsCard.tsx
+│   └── QuickActions.tsx
+│
+├── layout/                      # Layout components
+│   ├── CleanTopBar.tsx
+│   ├── DashboardLayout.tsx
+│   └── Sidebar.tsx
+│
+├── shared/                      # Shared generic components
+│   ├── EmptyState.tsx
+│   ├── LoadingSpinner.tsx
+│   └── ErrorBoundary.tsx
+│
+└── ui/                          # shadcn/ui base components
+    ├── button.tsx
+    ├── dialog.tsx
+    ├── input.tsx
+    └── ...
+```
+
+**Component Organization Rules:**
+- **Domain folders** (`clients/`, `services/`) for business logic
+- **`drawer/` subfolder** for complex modal/drawer components
+- **`hooks/` subfolder** for component-specific custom hooks
+- **`types.ts`** file for component-specific TypeScript types
+- **Layout components** in `layout/` (navigation, shells)
+- **Generic components** in `shared/` (reusable across domains)
+- **UI primitives** in `ui/` (shadcn components only)
+
+---
+
+### **[PATTERN: LIB-ORGANIZATION]** Organizing Business Logic
+
+**Organize `lib/` by domain for scalability:**
+
+```
+src/lib/
+├── clients/                     # Client domain logic
+│   ├── client.ts               # Supabase client for clients
+│   ├── actions.ts              # Server actions
+│   ├── validation.ts           # Zod schemas
+│   └── utils.ts                # Domain utilities
+│
+├── services/                    # Service domain logic
+│   ├── client.ts
+│   ├── actions.ts
+│   ├── validation.ts
+│   └── status-computer.ts      # Domain-specific logic
+│
+├── referrals/                   # Referral domain logic
+│   ├── client.ts
+│   ├── actions.ts
+│   ├── validation.ts
+│   └── matching.ts
+│
+├── organizations/               # Organization domain logic
+│   ├── client.ts
+│   ├── actions.ts
+│   └── validation.ts
+│
+├── auth/                        # Authentication logic
+│   ├── client.ts
+│   ├── middleware.ts
+│   ├── session.ts
+│   └── helpers.ts
+│
+├── supabase/                    # Supabase clients
+│   ├── client.ts               # Client-side
+│   ├── server.ts               # Server-side
+│   └── middleware.ts           # Middleware
+│
+└── [utility].ts                 # Shared utilities
+    ├── email.ts
+    ├── formatting.ts
+    ├── date-utils.ts
+    └── encryption.ts
+```
+
+**When to Create a Domain Folder in `lib/`:**
+- When you have **3+ files** related to the same domain
+- When domain logic is **shared across multiple pages/components**
+- When you need **server actions, validation, and utilities** for a domain
+
+**Domain Folder Structure:**
+```
+lib/[domain]/
+├── client.ts                    # Database/API client functions
+├── actions.ts                   # Server actions (mutations)
+├── validation.ts                # Zod schemas for input validation
+├── utils.ts                     # Domain-specific utilities
+└── [feature].ts                 # Feature-specific logic
+```
+
+---
+
+### **[RULE: CONTINUOUS-BUILDING]** Structure for Future Growth
+
+**As you add new features/domains, maintain this hierarchy:**
+
+1. **New Domain** (e.g., `appointments`, `billing`):
+   ```
+   ✅ Create: src/components/appointments/
+   ✅ Create: src/lib/appointments/
+   ✅ Create: src/types/appointments.ts
+   ✅ Create: src/app/api/appointments/
+   ```
+
+2. **New User Role** (e.g., `vendor`, `admin`):
+   ```
+   ✅ Create: src/app/vendor/layout.tsx
+   ✅ Create: src/app/vendor/page.tsx
+   ✅ Create: src/components/vendor/
+   ✅ Update: CleanTopBar.tsx with vendor nav
+   ✅ Add: RLS policies for vendor role
+   ```
+
+3. **New Complex Component** (e.g., `AppointmentScheduler`):
+   ```
+   ✅ Create: src/components/appointments/AppointmentScheduler.tsx
+   ✅ Create: src/components/appointments/hooks/use-appointment-scheduler.ts
+   ✅ Create: src/components/appointments/types.ts
+   ```
+
+4. **New API Endpoint** (e.g., `/api/appointments`):
+   ```
+   ✅ Create: src/app/api/appointments/route.ts
+   ✅ Create: src/lib/appointments/client.ts (if needed)
+   ✅ Create: src/lib/appointments/validation.ts
+   ```
+
+**File Naming Consistency:**
+- **Components**: `PascalCase.tsx` (e.g., `ClientCard.tsx`)
+- **Hooks**: `kebab-case.ts` with `use-` prefix (e.g., `use-client-drawer.ts`)
+- **Types**: `kebab-case.ts` (e.g., `service-relationships.ts`)
+- **Utils**: `kebab-case.ts` (e.g., `date-utils.ts`)
+- **Server Actions**: `actions.ts` inside domain folder
+- **Validation**: `validation.ts` inside domain folder
+
+---
+
+### **[ANTI-PATTERN: AVOID-THESE]** Bad Organization Patterns
+
+❌ **Organizing by technical layer instead of domain:**
+```
+src/
+├── hooks/                       # Don't put ALL hooks here
+│   ├── use-client-drawer.ts
+│   ├── use-service-messages.ts
+│   └── use-referral-form.ts
+├── utils/                       # Don't put ALL utils here
+│   ├── client-utils.ts
+│   ├── service-utils.ts
+│   └── referral-utils.ts
+```
+
+✅ **Instead, organize by domain:**
+```
+src/
+├── components/
+│   ├── clients/
+│   │   └── hooks/
+│   │       └── use-client-drawer.ts
+│   ├── services/
+│   │   └── hooks/
+│   │       └── use-service-messages.ts
+```
+
+❌ **Flat `lib/` directory with 40+ files:**
+```
+src/lib/
+├── client-actions.ts
+├── client-utils.ts
+├── client-validation.ts
+├── service-actions.ts
+├── service-utils.ts
+... (40+ files)
+```
+
+✅ **Instead, group by domain:**
+```
+src/lib/
+├── clients/
+│   ├── actions.ts
+│   ├── utils.ts
+│   └── validation.ts
+├── services/
+│   ├── actions.ts
+│   ├── utils.ts
+│   └── validation.ts
+```
+
+❌ **Creating components in wrong folders:**
+```
+src/components/shared/ClientDrawer.tsx  # Wrong! Not shared
+src/components/modals/ServiceDrawer.tsx # Wrong! Organized by type
+```
+
+✅ **Instead, use domain folders:**
+```
+src/components/clients/drawer/ClientDrawer.tsx
+src/components/services/drawer/ServiceDrawer.tsx
+```
 
 ---
 
@@ -1817,56 +2263,67 @@ git push                           # Push to remote
 
 ### **[REFERENCE: PROJECT-STRUCTURE]** File Paths
 
+**See the comprehensive "PRODUCTION-GRADE PROJECT STRUCTURE" section above for detailed `src/` organization.**
+
 ```
-📁 Production-Grade Project Structure
+📁 Root Directory Structure (keep minimal):
 
-Root Level (keep minimal):
-├── src/                           # Application code
+/next-referra/
+├── src/                           # Application code (see detailed structure above)
+│   ├── app/                      # Next.js App Router (pages, layouts, API routes)
+│   ├── components/               # React components (organized by domain)
+│   ├── lib/                      # Business logic (organized by domain)
+│   ├── hooks/                    # Global React hooks
+│   ├── types/                    # TypeScript definitions
+│   ├── contexts/                 # React Context providers
+│   └── styles/                   # Global styles
+│
 ├── docs/                          # ALL documentation
+│   ├── architecture/             # System design, data models
+│   ├── planning/                 # Product plans, roadmaps
+│   ├── development/              # Dev guides, workflows
+│   ├── user-flows/               # User stories, personas
+│   ├── testing/                  # QA guides, test plans
+│   └── archived/                 # Legacy docs
+│
 ├── scripts/                       # ALL utility scripts
-├── ai-dev-tasks/                 # AI development workflow
-├── tasks/                        # PRDs and task lists
-├── tests/                        # E2E tests
-├── public/                       # Static assets
-├── .cursorrules                  # THIS FILE - team coding standards
-├── package.json
-└── [config files only]
-
-Application Code (src/):
-├── app/api/[resource]/route.ts          # API routes
-├── app/[role]/[page]/page.tsx           # Pages
-├── components/[category]/[Component].tsx # React components
-├── lib/actions/[resource]-actions.ts    # Server actions
-├── lib/utils/[util].ts                  # Utilities
-├── types/[category].ts                  # TypeScript types
-└── hooks/[use-feature].ts               # Custom hooks
-
-Documentation (docs/):
-├── architecture/                  # System design, data models
-├── planning/                     # Product plans, roadmaps
-├── development/                  # Dev guides, workflows
-├── user-flows/                   # User stories, personas
-├── testing/                      # QA guides, test plans
-└── archived/                     # Legacy docs
-
-Scripts (scripts/):
-├── dev/                          # Development utilities
-├── migrations/                   # Data migrations & seeding
-├── tools/                        # Reusable utilities
-└── test-data/                    # Test fixtures
-
-Tasks & Planning:
-├── ai-dev-tasks/                 # AI workflow templates
+│   ├── dev/                      # Development utilities
+│   ├── migrations/               # Data migrations & seeding
+│   ├── tools/                    # Reusable utilities
+│   └── test-data/                # Test fixtures
+│
+├── ai-dev-tasks/                 # AI development workflow templates
 │   ├── create-prd.md
 │   ├── generate-tasks.md
 │   └── process-task-list.md
-└── tasks/                        # Project tasks
-    ├── [n]-prd-[feature].md     # PRDs
-    └── tasks-[n]-prd-[feature].md # Task lists
-
-Tests:
-└── tests/[feature].spec.ts       # Playwright E2E tests
+│
+├── tasks/                        # PRDs and task lists
+│   ├── [n]-prd-[feature].md     # PRDs
+│   └── tasks-[n]-prd-[feature].md # Task lists
+│
+├── tests/                        # E2E tests
+│   └── [feature].spec.ts        # Playwright E2E tests
+│
+├── public/                       # Static assets
+│   ├── fonts/                    # Font files
+│   ├── images/                   # Images
+│   └── icons/                    # Icons
+│
+├── .cursorrules                  # THIS FILE - team coding standards
+├── .gitignore                    # Git ignore patterns
+├── package.json                  # Dependencies
+├── tsconfig.json                 # TypeScript config
+├── next.config.js                # Next.js config
+├── tailwind.config.ts            # Tailwind config
+└── [other config files]
 ```
+
+**Key Principles:**
+- Keep root directory minimal (only config files and top-level folders)
+- All application code in `src/` (domain-organized)
+- All documentation in `docs/` (categorized)
+- All scripts in `scripts/` (categorized by purpose)
+- All tests in `tests/` (feature-organized)
 
 ---
 
